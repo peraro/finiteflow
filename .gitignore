@@ -17,7 +17,7 @@ INSTALL
 MANIFEST
 Makefile
 config.hh
-config.hh.in*
+config.hh.in.*
 *Minibuf*
 *.dSYM
 compile_commands.json

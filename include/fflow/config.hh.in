@@ -1,0 +1,2 @@
+#cmakedefine01 FFLOW_BIG_ENDIAN
+#cmakedefine01 FFLOW_THREAD_POOL
