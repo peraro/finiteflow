@@ -10,7 +10,7 @@ Installation
 
 FiniteFlow uses the CMake build system, which comes preinstalled on
 many systems, or can be installed with available package managers for
-most Linux distrubutions and using Homebrew for MAC OSX.  Binary
+most Linux distrubutions and using Homebrew for macOS.  Binary
 installers for several operating systems, as well as additional
 information, can be found at [https://cmake.org/](https://cmake.org/).
 
@@ -18,7 +18,7 @@ information, can be found at [https://cmake.org/](https://cmake.org/).
 #### GMP
 
 GMP is preinstalled on many systems.  A `gmp` package is available on
-many Linux distrubutions and on Homebrew for MAC OSX.  For more
+many Linux distrubutions and on Homebrew for macOS.  For more
 information see [https://gmplib.org/](https://gmplib.org/).
 
 
@@ -28,7 +28,7 @@ FiniteFlow uses a few functions and macros from the FLINT library.
 For the installation of FLINT you have two options:
 
 - Install the full FLINT library.  Installation packages are available
-  for some Linux distrubutions (including Debian/Ubuntu) and MAC OSX.
+  for some Linux distrubutions (including Debian/Ubuntu) and macOS.
   See [http://www.flintlib.org/](http://www.flintlib.org/) for more
   information about FLINT and its installation.
 
@@ -63,10 +63,10 @@ In order to use FiniteFlow from the Mathematica interface, consider
 adding the following to your Mathematica `init.m` file
 ```
 (* the next two lines are only needed if a custom MATHLIBINSTALL path was chosen when running cmake *)
-$FiniteFlowLibPath = "/mathlib/install/path"
+$FiniteFlowLibPath = "/mathematica/interface/installation/path"
 If[Not[MemberQ[$LibraryPath,$FiniteFlowLibPath]],$LibraryPath = Flatten[{$LibraryPath, $FiniteFlowLibPath }]];
 
 (* the next two lines are needed to locate FiniteFlow.m, if not already in your $Path *)
-$FiniteFlowPath = "/path/to/finiteflow/mathlink/FiniteFlow.m"
+$FiniteFlowPath = "/path/to/finiteflow/mathlink"
 If[Not[MemberQ[$Path,$FiniteFlowPath]],$Path = Flatten[{$Path, $FiniteFlowPath }]];
 ```

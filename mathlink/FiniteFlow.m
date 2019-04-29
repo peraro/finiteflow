@@ -5,131 +5,139 @@ BeginPackage["FiniteFlow`"]
 
 FFInt64Max::usage = "Maximum 64-bit integer."
 
-FFLoadLib::usage = "FFLoadLib[] (re)loads the fflow library."
+FFLoadLib::usage = "FFLoadLib[] (re)loads the finiteflow library."
 
-FFBadShift::usage = "Returned by the reconstruction routines when a bad shift is specified."
-FFImpossible::usage = "Returned by the solve routines when an impossible system is specified."
+FFBadShift::usage = "Returned by the reconstruction routines when there is a bad shift."
+FFImpossible::usage = "Returned by the solve routines when the system is impossible."
 FFSingularMatrix::usage = "Returned by FFInverse when the input matrix is singular."
 
-FFCoefficientRules::usage = "Alternative to mathematica CoefficientRules (faster in most cases)"
-FFLinearCoefficients::usage=""
-FFSparseRowRules::usage=""
+FFCoefficientRules::usage = "FFCoefficientRules[expr,vars] is an alternative to the builtin CoefficientRules[expr,vars] which uses CoefficientList internally."
+FFLinearCoefficients::usage = "FFLinearCoefficients[c1 x1 + c2 x2 + ..., {x1,x2,...}] returns the list of linear coefficients {c1,c2,...}.  Constant or higher-degree terms in the variables {x1,x2,...} are neglected."
+FFSparseRowRules::usage = "FFSparseRowRules[c1 x1 + c2 x2 + ..., {x1,x2,...}] returns a list of rules of the form i -> ci,  where i is an integer and ci is the coefficient multiplying the i-th variable in {x1,x2,...}, for all non-vanishing coefficients.  Constant or higher-degree terms in the variables {x1,x2,...} are neglected."
 
-FFDenseSolve::usage = "FFDenseSolve[eqs_, vars_] returns the solutions of a linear system."
-FFSparseSolve::usage = ""
-FFLinearFit::usage = ""
-FFInverse::usage = "Inverts a matrix via Gauss-Jordan elimination (calls FFDenseSolve internally and accepts the same options)."
+FFDenseSolve::usage = "FFDenseSolve[eqs,vars] reconstructs and returns the solutions of the linear system eqs in the variables vars using a dense linear solver."
+FFSparseSolve::usage = "FFSparseSolve[eqs,vars] reconstructs and returns the solutions of the linear system eqs in the variables vars using a sparse linear solver."
+FFLinearFit::usage = "FFLinearFit[params, ansatz, rhs, vars, coeffs] reconstructs the coefficients coeffs, as functions of the free parameters params, which solve the linear fit equation ansatz == rhs.  The ansatz must be a linear expression of the form c1 f1 + c2 f2 + ... + f0, where {c1,c2,...} is the input list coeffs and {f1,f2,...} are rational functions of params and vars.  The ansatz can also be specified as a list {f1,f2,f3,...,f0} where f0 can be omitted if vanishing.  The input rhs is also a rational function of params and vars or a list of rational functions to be summed.  Both the functions f1,f2,... and rhs may also depend on additional auxiliary variables, which are rational functions of params and vars, to be defined via the option \"Substitutions\"."
+FFInverse::usage = "FFInverse[mat] reconstructs the inverse of the square matrix mat via Gauss-Jordan elimination.  By default it uses a dense solver for the inversion.  The option \"Sparse\"->True can be passed to use a sparse solver instead."
 
-FFFunDeg::usage = "FFFunDeg[numdeg,dendeg] represents a generic rational functions with the specified degrees for numerator and denominator."
+FFFunDeg::usage = "FFFunDeg[numdeg,dendeg] represents a generic rational functions with the total degree numdeg and dendeg for numerator and denominator respectively."
 
-FFNewGraph::usage = "FFNewGraph[graphname]"
-FFNewDummyGraph::usage = "FFNewDummyGraph[graphname,nparsin,nparsout]"
-FFDeleteGraph::usage = "FFDeleteGraph[graphname]"
-FFDeleteNode::usage = ""
-FFGraphInputVars::usage = ""
-FFGraphOutput::usage = "FFGraphOutput[graphid,nodeid]"
-FFGraphDraw::usage = ""
-FFGraphEdges::usage = ""
-FFAlgDenseSolver::usage = ""
-FFAlgSparseSolver::usage = ""
-FFAlgNodeDenseSolver::usage = ""
-FFAlgSubgraphFit::usage = ""
-FFAlgSubgraphMultiFit::usage = ""
-FFSerializeSparseEqs::usage=""
-FFAlgSerializedSparseSolver::usage=""
-FFAlgDebug::usage = ""
-FFAllAlgs::usage = ""
-FFClearAlgs::usage = ""
-FFAlgQ::usage = ""
-FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[id, vars, neededvars]"
-FFSolverOnlyHomogeneous::usage =  ""
-FFLearn::usage = ""
-FFDenseSolverLearn::usage = ""
-FFSparseSolverLearn::usage = ""
-FFDenseSolverGetInfo::usage = ""
-FFSparseSolverGetInfo::usage = ""
-FFNonZeroesLearn::usage = ""
-FFNonZeroesGetInfo::usage = ""
-FFMultiFitLearn::usage = ""
-FFMultiFitGetInfo::usage = ""
-FFMultiFitSol::usage = ""
-FFAlgSimpleSubgraph::usage = ""
-FFAlgMemoizedSubgraph::usage = ""
-FFAlgSubgraphMap::usage = ""
-FFSolverNIndepEqs::usage = ""
-FFSolverIndepEqs::usage = ""
-FFSparseSolverMarkAndSweepEqs::usage = ""
-FFSparseSolverDeleteUnneededEqs::usage = ""
-FFIndependentOf::usage = ""
-FFAlgMul::usage = ""
-FFAlgRatFunEval::usage = ""
-FFAlgRatNumEval::usage = ""
-FFAlgChain::usage = ""
-FFAlgTake::usage=""
-FFAlgSlice::usage=""
-FFAlgAdd::usage = ""
-FFAlgMul::usage = ""
-FFAlgMatMul::usage = ""
-FFAlgSparseMatMul::usage = ""
-FFAlgNonZeroes::usage = ""
-FFAlgTakeAndAdd::usage=""
-FFTotalDegrees::usage=""
-FFVarsDegrees::usage=""
-FFAllDegrees::usage=""
-FFSample::usage=""
-FFReconstructFromCurrentEvaluations::usage=""
-FFReconstructFromCurrentEvaluationsNumeric::usage=""
-FFMissingPoints::usage = "Returned when there are not enough sample points for reconstructing a function."
+FFNewGraph::usage = "FFNewGraph[graphname] defines a new graph with name graphname.
+FFNewGraph[graphname,inputnode,vars] is equivalent to FFNewGraph[graphname] followed by FFGraphInputVars[graphname,inputnode,vars]."
+FFNewDummyGraph::usage = "FFNewDummyGraph[graphname,nparsin,nparsout] defines a dummy graph with nparsin input variables and nparsout output elements.  This graph cannot be evaluated but it can be used for functional reconstruction from stored evalutions."
+FFDeleteGraph::usage = "FFDeleteGraph[graphname] deletes the graph with name graphname."
+FFDeleteNode::usage = "FFDeleteNode[graph,node] deletes the specified node from a graph."
+FFGraphInputVars::usage = "FFGraphInputVars[graph,nodename,vars] creates an input node representing the list of input variables vars.  Only the length of vars is relevant, and the names of the variables are not stored."
+FFGraphOutput::usage = "FFGraphOutput[graph,node] selects the output node for a graph."
+FFGraphDraw::usage = "FFGraphDraw[graph] returns a graphical representation of the specified dataflow graph.  With the option \"Pruned\"->True, only the nodes which are needed for evaluating the graph are drawn."
+FFGraphEdges::usage = "FFGraphEdges[graph] returns a list of edges for the graph."
+
+FFAlgDenseSolver::usage = "FFAlgDenseSolver[graph,node,{input},params,eqs,vars] defines a dense linear solver returning the solution of the equations eqs in the variables vars as function of the free input parameters params.  Only the solution for the non-vanishing variables is returned."
+FFAlgSparseSolver::usage = "FFAlgSparseSolver[graph,node,{input},params,eqs,vars] defines a sparse linear solver returning the solution of the equations eqs in the variables vars as function of the free input parameters params."
+FFAlgNodeDenseSolver::usage = "FFAlgNodeDenseSolver[graph,node,{input},neqs,vars] defines a dense linear solver returning the solution of the equations A[[i,1]] vars[[1]] + A[[i,2]] vars[[2]] + ... == b[[i]] in the variables vars, for i=1,...,neqs, where the entries returned by the input node are interpreted as the elements of the matrix (A b) in row-major order."
+FFAlgSubgraphFit::usage = "FFAlgSubgraphFit[graph,node,{input},subgraph,vars,coeffs] is a subgraph algorithm which returns the solution for the coefficients coeffs, as functions of the input parameters, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the list of variables vars concatenated with the input parameters represented by the input node.
+FFAlgSubgraphFit[graph,node,{},subgraph,vars,coeffs] is a subgraph algorithm which returns the numerical solution for the coefficients coeffs, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the variables vars."
+FFAlgSubgraphMultiFit::usage = "FFAlgSubgraphMultiFit[graph,node,inputs,subgraph,vars,take] is a subgraph node which performs several linear fits of the form c1 f1 + c2 f2 + ... == f0, where the elements {f1,f2,...,f0} are taken from the output of subgraph based on the pattern take."
+FFSerializeSparseEqs::usage="FFSerializeSparseEqs[filename, params, eqs, vars, pattern, position] serializes the equations eqs in \"MX\" format in the file filename, formatted for communication with the finiteflow library."
+FFAlgSerializedSparseSolver::usage="FFAlgSerializedSparseSolver[graph,node,{input},params,files,vars] defines a sparse solver using the equations serialized in files using FFSerializeSparseEqs, with respect to the variables vars, as a function of the free parameters params."
+FFAlgDebug::usage = "FFAlgDebug[] shows a list of graphs and nodes defined in Mathematica, with their corresponding integer IDs, for debugging purposes."
+FFAllAlgs::usage = "FFAllAlgs[] returns a list with all the algorithms in all the current graphs."
+(*FFClearAlgs::usage = ""*)
+FFAlgQ::usage = "FFAlgQ[graphname, nodename] returns True if the specified algorithm exists."
+FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, neededvars] redefines the set of needed variables of a dense or sparse linear system."
+FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
+FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
+FFDenseSolverLearn::usage = "FFDenseSolverLearn[graph] executes the learning phase on a dense solver or a linear fit, which must be the output node of graph."
+FFSparseSolverLearn::usage = "FFSparseSolverLearngraph] executes the learning phase on a sparse solver, which must be the output node of graph."
+FFDenseSolverGetInfo::usage = "FFDenseSolverGetInfo[graph,node] returns the info about a dense solver or a linear fit obtained during the learning step, namely dependent variables, independent variables and zero variables."
+FFSparseSolverGetInfo::usage = "FFSparseSolverGetInfo[graph,node] returns the info on a sparse solver obtained during the learning step, namely dependent variables, independent variables and zero variables."
+FFNonZeroesLearn::usage = "FFNonZeroesLearn[graph] executes the learning phase on a NonZero algorithm, which must be the output node of graph."
+FFNonZeroesGetInfo::usage = "FFNonZeroesGetInfo[graph,ndode] returns the info on a NonZero algorithm obtained during the learning step."
+FFMultiFitLearn::usage = "FFMultiFitLearn[graph] executes the learning phase on a multi-fit subgraph algorithm, which must be the output node of graph."
+FFMultiFitGetInfo::usage = "FFMultiFitGetInfo[graph,node] returns the info on a multi-fit subgraph algorithm obtained during the learning step."
+FFMultiFitSol::usage = "FFMultiFitSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a multi-fit algorithm, and learinfo is the information obtained during its learning phase, formats expr as list of lists of substitution rules representing the solutions of the fits."
+FFAlgSimpleSubgraph::usage = "FFAlgSimpleSubgraph[graph,node,{input},subgraph] creates a simple subgraph node."
+FFAlgMemoizedSubgraph::usage = "FFAlgMemoizedSubgraph[graph,node,{input},subgraph] creates a subgraph node which remembers the input and output of its last evaluation, avoiding repeated evaluations with the same input."
+FFAlgSubgraphMap::usage = "FFAlgSubgraphMap[graph,node,inputs,subgraph] executes subgraph several times, using each list in inputs as input variables, and chains the outputs together."
+FFSolverNIndepEqs::usage = "FFSolverNIndepEqs[graph,node] returns the number of independent equations of a linear system."
+FFSolverIndepEqs::usage = "FFSolverIndepEqs[graph,node] returns a list of integers representing the indpendent equations of a linear system."
+FFSparseSolverMarkAndSweepEqs::usage = "FFSparseSolverMarkAndSweepEqs[graph,node] executes the mark-and-sweep algorithm on a sparse system filtering out a subset of equations sufficient for returning the solution for the needed variables."
+FFSparseSolverDeleteUnneededEqs::usage = "FFSparseSolverDeleteUnneededEqs[graph,node] frees some memory by deleting the unneeded equations in a linear solver."
+FFIndependentOf::usage = "FFIndependentOf[graph,varslist,var] returns True if the output of graph, as a function of the variables in varslist, is independent of the variable var, and False otherwise."
+FFAlgRatFunEval::usage = "FFAlgRatFunEval[graph,node,{input},vars,funs] evaluates and returns the list of rational functions funs in the variables vars."
+FFAlgRatNumEval::usage = "FFAlgRatFunEval[graph,node,ratnums] evaluates and returns the list of rational numbers ratnums."
+FFAlgChain::usage = "FFAlgChain[graph,node,inputs] chains together the lists returned by its inputs."
+FFAlgTake::usage="FFAlgTake[graph,node,inputs,takepattern] takes and returns selected elements from its inputs, as specified in takepattern."
+FFAlgSlice::usage="FFAlgSlice[graph,node,{input},start,end], with integers start and end, returns the elements from position start to position end of its input.
+FFAlgSlice[graph,node,{input},start], with integer start, returns the elements of its input starting from position start until the last one."
+FFAlgAdd::usage = "FFAlgAdd[graph,node,inputs] adds the lists returned by the inputs element-wise and returns the result."
+FFAlgMul::usage = "FFAlgMul[graph,node,inputs] multiplies the lists returned by the inputs element-wise and returns the result."
+FFAlgMatMul::usage = "FFAlgMatMul[graph,node,{input1,input2},r1,c1,c2], with integers r1,c1,c2, interprets input1 and input2 as the elements of a r1 \[Times] c1 matrix and a c1 \[Times] c2 matrix respectively, in row-major order, and returns the result of the matrix multiplication input1.input2."
+FFAlgSparseMatMul::usage = "FFAlgSparseMatMul[graph,node,{input1,input2},r1,c1,c2,nonzerocols1,nonzerocols2] is analogous to FFAlgMatMul[graph,node,{input1,input2},r1,c1,c2] except that input1 and input2 only return the potentially non-vanishing matrix elements of the inputs.  The arguments nonzerocols1 and nonzerocols2 are lists of lists with the potentially non-vanishing columns in each row for the two input matrices respectively."
+FFAlgNonZeroes::usage = "FFAlgNonZeroes[graph,node,{input}] returns the non-vanishing elements of its input."
+FFAlgTakeAndAdd::usage="FFAlgTakeAndAdd[graph,node,inputs,takeelements] is a TakeAndAdd algorithm which takes lists of selected elements from its inputs, according to the takeelements pattern, and adds all elements in each list."
+FFTotalDegrees::usage="FFTotalDegrees[graph] computes and returns the total degrees of each entry of the output of a graph."
+FFVarsDegrees::usage="FFVarsDegrees[graph] computes and internally stores the degrees with respect to each variable, for all the outputs of a graph."
+FFAllDegrees::usage="FFAllDegrees[graph] computes the total degrees, as well as the partial degrees with respect to each variable, for all the outputs of a graph.  The total degrees are also returned."
+FFSample::usage="FFSample[graph] evaluates a graph for a set of sample points, which depends on the reconstruction options."
+FFReconstructFromCurrentEvaluations::usage="FFReconstructFromCurrentEvaluations[graph,vars] attempts to analytically reconstruct the output of a graph using the numerical evaluations which have already been performed and stored."
+FFReconstructNumeric::usage="FFReconstructNumeric[graph] performs a numerical reconstruction over the rational field of the output of a graph with no input node."
+FFMissingPoints::usage = "Returned when there are not enough sample points for reconstructing a function on a given prime field."
 FFMissingPrimes::usage = "Returned when sample points from additional prime fields are needed for reconstructing a function."
 
-FFRegisterAlgorithm::usage = "Low level interface for implementing new native algorithms"
+FFRegisterAlgorithm::usage = "Low level interface for implementing new native algorithms."
 
-FFSparseEqsToJSON::usage=""
-FFSparseSystemToJSON::usage=""
-FFAlgJSONSparseSolver::usage = ""
+FFSparseEqsToJSON::usage="FFSparseEqsToJSON[outputfilename,params,eqs,vars,pattern,position] serializes the equations eqs in the variables vars, and depending of the free parameters params, in JSON format."
+FFSparseSystemToJSON::usage="FFSparseSystemToJSON[outputfilename,neqs,vars,pars,filelist] creates a JSON file with the information about a sparse system of equations in the variables vars, and depending of the free parameters params, which have been serialized in JSON format in the files of the list filelist.  These JSON files can be created using FFSparseEqsToJSON."
+FFAlgJSONSparseSolver::usage = "FFAlgJSONSparseSolver[graph,node,{input},filename] defines a sparse solver for a system defined in the JSON file filename.  The JSON file can be created using FFSparseSystemToJSON."
 
-FFRatFunToJSON::usage=""
-FFAlgJSONRatFunEval::usage=""
-FFRatFunFromJSON::usage=""
+FFRatFunToJSON::usage="FFRatFunToJSON[outputfilename,vars,funcs] exports the list of rational functions funcs in the variables vars in JSON format."
+FFAlgJSONRatFunEval::usage="FFAlgJSONRatFunEval[graph,node,{input},filename] creates a node evaluating the list of rational functions serialized in JSON format in the file filename.  The JSON file can be created using FFRatFunToJSON."
+FFRatFunFromJSON::usage="FFRatFunFromJSON[filename,vars] unserialized and returns a list of rational functions in the variables vars, stored in JSON format in the file filename."
 
-FFListSubsetToJSON::usage = ""
-FFListSubsetFromJSON::usage ""
+FFListSubsetToJSON::usage = "FFListSubsetToJSON[outputfilename,list,subset] defines a subset of the input list and serialized it JSON format."
+FFListSubsetFromJSON::usage "FFListSubsetFromJSON[filename,list] returns a subset of list, specified by the JSON file filename."
 
-FFAlgLinearFit::usage = ""
+FFAlgLinearFit::usage = "FFAlgLinearFit[graph,node,{input},params,ansatz, rhs, vars, coeffs] returns a node performing a linear fit.  See the usage FFLinearFit for more information."
 
-FFAlgLaurent::usage = ""
-FFLaurentSol::usage = ""
+FFAlgLaurent::usage = "FFAlgLaurent[graph,node,{input},subgraph,order] defines a subgraph node which computes the coefficients of the Laurent expansion of the output of subgraph around x=0, where x is the first input variable of subgraph.  If order is an integer, the expansion is truncated at x^order for all output elements.  If order is a list, the expansion of the i-th output element is truncated at x^order[[i]]."
+FFLaurentSol::usage = "FFLaurentSol[expr,x,learninfo] formats the output of a Laurent expansion node as series expansion in x, using the information learninfo returned by FFLearn."
 
-FFReconstructFunction::usage = ""
-FFParallelReconstructUnivariate::usage = ""
+FFReconstructFunction::usage = "FFReconstructFunction[graph,vars] analytically reconstructs the output of graph as a rational function in the variables vars, by performing several numerical evaluations and reconstructing analytic expressions from these.  Note that for univariate functions, multi-threading is not used during the evaluation of the graph (for that, FFParallelReconstructUnivariate can be used)."
+FFParallelReconstructUnivariate::usage = "FFParallelReconstructUnivariate[graph,{x}] reconstructs the output of graph as a univariate rational function in the variable x.  Numerical evaluations are performed in parallel, and additional sample points are added until the reconstruction is successful."
 
-FFDenseSolverSol::usage = ""
-FFSparseSolverSol::usage = ""
-FFNonZeroesSol::usage = ""
+FFDenseSolverSol::usage = "FFDenseSolverSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a dense solver or a linear fit, and learinfo is the information obtained during its learning phase, formats expr as list of substitution rules representing the solution of the system."
+FFSparseSolverSol::usage = "FFSparseSolverSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a sparse solver, and learinfo is the information obtained during its learning phase, formats expr as list of substitution rules representing the solution of the system."
+FFNonZeroesSol::usage = "FFNonZeroesSol[expr,learninfo], where the list expr is the output of a NonZero algorithm and learninfo is the information returned by its learning phase, puts back the zero elements in the list expr."
 
 FFNThreads::usage = "Default number of threads used (default: Automatic)"
 
 FFAutomaticNThreads::usage = "FFAutomaticNThreads[] returns the default number of threads used when Automatic is selected"
 
-FFNParsOut::usage = "FFNParsOut[graph] or FFNParsOut[graph,node]"
+FFNParsOut::usage = "FFNParsOut[graph] returns the length of the output of a graph.
+FFNParsOut[graph,node] returns the length of the output list of a node in a graph."
 
-FFMakeMutable::usage = ""
-FFGraphPrune::usage = ""
+FFMakeMutable::usage = "FFMakeMutable[graph,node] makes a node mutable, if possible."
+FFGraphPrune::usage = "FFGraphPrune[graph] deletes all the nodes of graph which are not needed for the evaluation of its output node."
 
-FFDumpDegrees::usage=""
-FFLoadDegrees::usage=""
-FFDumpSamplePoints::usage=""
-FFDumpEvaluations::usage=""
-FFLoadEvaluations::usage=""
-FFSamplesFileSize::usage=""
-FFNParsFromDegreesFile::usage=""
-FFSampleFromPoints::usage=""
-FFNSamplePoints::usage = ""
+FFDumpDegrees::usage="FFDumpDegrees[graph,outputfilename] serializes the information on the total and partial degrees of the output of graph.  It must be called after FFAllDegrees."
+FFLoadDegrees::usage="FFDumpDegrees[graph,filename] loads the information on total and partial degrees of graph, as stored in the file filename."
+FFDumpSamplePoints::usage="FFDumpSamplePoints[graph,outputfilename] serializes a list of sample points, i.e. a list of inputs at which graph needs to be evaluated in order to reconstruct the analytic expression of its output."
+FFDumpEvaluations::usage="FFDumpEvaluations[graph,outputfilename] serializes the currently stored evaluations of graph."
+FFLoadEvaluations::usage="FFLoadEvaluations[graph,filelist] loads the evaluations of graph serialized in the files listed in filelist."
+FFSamplesFileSize::usage="FFSamplesFileSize[filename] returns the number of sample points listed in the file filename."
+FFNParsFromDegreesFile::usage="FFNParsFromDegreesFile[filename] returns the number of input parameters of a graph, reading it from the file filename which stores the information on its degrees."
+FFSampleFromPoints::usage="\
+FFSampleFromPoints[graph,filename] evaluates the graph at the points stored in filename.  The evaluations are parallelized over an automatically chosen number of threads.
+FFSampleFromPoints[graph,filename,nthreads] is equivalent to FFSampleFromPoints[graph,filename], but the evaluations are parallelized over nthreads threads.
+FFSampleFromPoints[graph,filename,start,npoints] evaluates the graph at a contiguous subset of npoints sample points, taken from the ones stored in filename, starting from the one at position start (counting from zero).  The evaluations are parallelized over an automatically chosen number of threads.
+FFSampleFromPoints[graph,filename,start,npoints,nthreads] is equivalent to FFSampleFromPoints[graph,filename,start,npoints], but the evaluations are parallelized over nthreads threads."
+FFNSamplePoints::usage = "FFNSamplePoints[graph] returns a list of length two.  The first element is the total number of sample points needed for recostructing the full output of graph.  The second element is a list of integers representing the number of sample points needed for the reconstruction of each element of the output of graph."
 
-FFGraphEvaluate::usage=""
-FFPrimeNo::usage="FFPrimeNo[i] with i>=0"
-FFMulInv::usage=""
-FFRatMod::usage=""
+FFGraphEvaluate::usage="FFGraphEvaluate[graph,point] evaluates graph at point, where point is a list of integers.  The prime field may be changed passing the option \"PrimeNo\"."
+FFPrimeNo::usage="FFPrimeNo[i] with i>=0 returns the i-th hardcoded prime used by finiteflow."
+FFMulInv::usage="FFMulInv[z,p] returns the multiplicative inverse of the integer z module a prime p."
+FFRatMod::usage="FFRatMod[z,p] returns z mod p, where z is a rational number and p is a prime."
 
 
 FF::badrational = "Argument `1` is not a rational number."
@@ -438,9 +446,9 @@ FFGraphPrune[gid_]:=Module[
 ];
 
 
-FFReconstructFromCurrentEvaluationsionOptions = {"Checks", "UChecks", "MaxSingularPoints", "StartingPrimeNo", "MaxPrimes", "MaxDegree", "PrintDebugInfo"};
-Options[FFAlgorithmSetReconstructionOptions]=Options[FFAlgorithmSetDefaultReconstructionOptions]=(#->Automatic)&/@FFReconstructFromCurrentEvaluationsionOptions;
-FFAlgorithmSetReconstructionOptions[OptionsPattern[]]:=toFFInternalUnsignedFlag[#,OptionValue[#]]&/@FFReconstructFromCurrentEvaluationsionOptions;
+FFReconstructOptions = {"Checks", "UChecks", "MaxSingularPoints", "StartingPrimeNo", "MaxPrimes", "MaxDegree", "PrintDebugInfo"};
+Options[FFAlgorithmSetReconstructionOptions]=Options[FFAlgorithmSetDefaultReconstructionOptions]=(#->Automatic)&/@FFReconstructOptions;
+FFAlgorithmSetReconstructionOptions[OptionsPattern[]]:=toFFInternalUnsignedFlag[#,OptionValue[#]]&/@FFReconstructOptions;
 
 
 Options[FFTotalDegrees]:=Options[FFAlgorithmSetReconstructionOptions];
@@ -487,10 +495,10 @@ FFReconstructFromCurrentEvaluations[gid_,vars_, nthreads_:FFNThreads, opt:Option
 FFReconstructFromCurrentEvaluations[gid_,vars_, opt:OptionsPattern[]]:=FFReconstructFromCurrentEvaluations[gid,vars,FFNThreads,opt];
 
 
-Options[FFReconstructFromCurrentEvaluationsUnivariate]:=Options[FFAlgorithmSetReconstructionOptions];
-FFReconstructFromCurrentEvaluationsUnivariate[gid_,vars_, opt:OptionsPattern[]]:=Module[
+Options[FFReconstructUnivariate]:=Options[FFAlgorithmSetReconstructionOptions];
+FFReconstructUnivariate[gid_,vars_, opt:OptionsPattern[]]:=Module[
   {res},
-  res = FFReconstructFromCurrentEvaluationsUnivariateImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
+  res = FFReconstructUnivariateImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
   If[!TrueQ[res[[0]]==List], Return[res]];
   fromFFInternalRatFun[#,vars]&/@res
 ];
@@ -500,10 +508,10 @@ FFToExpression[0]=0;
 FFToExpression[a_]:=ToExpression[a];
 
 
-Options[FFReconstructFromCurrentEvaluationsNumeric]:=Options[FFAlgorithmSetReconstructionOptions];
-FFReconstructFromCurrentEvaluationsNumeric[gid_, opt:OptionsPattern[]]:=Module[
+Options[FFReconstructNumeric]:=Options[FFAlgorithmSetReconstructionOptions];
+FFReconstructNumeric[gid_, opt:OptionsPattern[]]:=Module[
   {res},
-  res = FFReconstructFromCurrentEvaluationsNumericImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
+  res = FFReconstructNumericImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
   If[!TrueQ[res[[0]]==List], Return[res]];
   FFToExpression/@res
 ];
@@ -943,8 +951,8 @@ FFReconstructFunction[id_,vars_,OptionsPattern[]] := Module[
   nthreads = OptionValue["NThreads"];
   If[TrueQ[nthreads==Automatic], nthreads = If[TrueQ[Length[vars]==1],1,FFAutomaticNThreads[]]];
   If[Length[vars]==1,
-    thisopt = Join[{"MaxPrimes"->maxnp},FilterRules[opt,Select[Options[FFReconstructFromCurrentEvaluationsUnivariate],FreeQ[#,"MaxPrimes"]&]]];
-    Return[FFReconstructFromCurrentEvaluationsUnivariate[id,vars,Sequence@@thisopt]]
+    thisopt = Join[{"MaxPrimes"->maxnp},FilterRules[opt,Select[Options[FFReconstructUnivariate],FreeQ[#,"MaxPrimes"]&]]];
+    Return[FFReconstructUnivariate[id,vars,Sequence@@thisopt]]
   ];
   res = FFAllDegrees[id, nthreads, Sequence@@FilterRules[opt,Options[FFAllDegrees]]];
   If[TrueQ[res == $Failed], Return[$Failed]];
@@ -1057,7 +1065,7 @@ FFDenseSolve[eqs_, vars_, OptionsPattern[]] := Module[
       If[TrueQ[OptionValue["IndepVarsOnly"]], Throw["IndepVars"/.learn]];
       
       res = If[TrueQ[params == {}],
-                FFReconstructFromCurrentEvaluationsNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructFromCurrentEvaluationsNumeric]]],
+                FFReconstructNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                 FFReconstructFunction[graph,params, Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
              ];
        If[!TrueQ[res[[0]]==List],Throw[res]];
@@ -1097,7 +1105,7 @@ FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
       ];
       
       res = If[TrueQ[params == {}],
-               FFReconstructFromCurrentEvaluationsNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructFromCurrentEvaluationsNumeric]]],
+               FFReconstructNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                FFReconstructFunction[graph,params, Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
              ];
        If[!TrueQ[res[[0]]==List],Throw[res]];
@@ -1150,7 +1158,7 @@ FFInverse[mat_List, OptionsPattern[]]:=Module[
       If[!TrueQ[("DepVars"/.learn) == varsx && ("IndepVars"/.learn) == varsy],Throw[FFSingularMatrix]];
       
       res = If[TrueQ[params == {}],
-               FFReconstructFromCurrentEvaluationsNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructFromCurrentEvaluationsNumeric]]],
+               FFReconstructNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                FFReconstructFunction[graph,params, Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
              ];
        If[!TrueQ[res[[0]]==List],Throw[res]];
@@ -1303,7 +1311,7 @@ FFLinearFit[params_,delta_,integrandin_, tauvarsin_,varsin_,opt:OptionsPattern[]
       If[TrueQ[OptionValue["IndepVarsOnly"]], Throw["IndepVars"/.learn]];
       
       res = If[TrueQ[params == {}],
-               FFReconstructFromCurrentEvaluationsNumeric[graph,Sequence@@FilterRules[{opt}, Options[FFReconstructFromCurrentEvaluationsNumeric]]],
+               FFReconstructNumeric[graph,Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                FFReconstructFunction[graph,params,Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
              ];
        If[!TrueQ[res[[0]]==List],Throw[res]];
@@ -1362,8 +1370,8 @@ FFLoadLibObjects[] := Module[
     FFSampleImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_sample", LinkObject, LinkObject];
     FFSampleFromPointsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_sample_from_points", LinkObject, LinkObject];
     FFReconstructFromCurrentEvaluationsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_reconstruct", LinkObject, LinkObject];
-    FFReconstructFromCurrentEvaluationsUnivariateImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_univariate_reconstruct", LinkObject, LinkObject];
-    FFReconstructFromCurrentEvaluationsNumericImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_numeric_reconstruct", LinkObject, LinkObject];
+    FFReconstructUnivariateImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_univariate_reconstruct", LinkObject, LinkObject];
+    FFReconstructNumericImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_numeric_reconstruct", LinkObject, LinkObject];
     FFAlgMakeNodeMutableImplem = LibraryFunctionLoad[fflowlib, "fflowml_node_set_mutable", LinkObject, LinkObject];
     FFGraphNodesImplem = LibraryFunctionLoad[fflowlib, "fflowml_graph_nodes", LinkObject, LinkObject];
     FFGraphPruneImplem = LibraryFunctionLoad[fflowlib, "fflowml_graph_prune", LinkObject, LinkObject];
