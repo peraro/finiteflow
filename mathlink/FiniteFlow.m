@@ -634,7 +634,7 @@ RegisterSparseSolver[gid_,inputs_,{params_,eqsin_,vars_,neededvarsin_,applyfun_}
   Catch[
     xvars = xx/@Range[Length[vars]];
     varmap = Dispatch[Inner[Rule, vars, xvars, List]];
-    RegisterSparseSolver[gid,inputs, {params,eqsin,xvars,(Union[Cases[#,_xx,Infinity]]&),neededvarsin,applyfun}/.varmap]
+    RegisterSparseSolver[gid,inputs, {params,eqsin,xvars,(Union[Cases[{#},_xx,Infinity]]&),neededvarsin,applyfun}/.varmap]
   ]
 ];
 
