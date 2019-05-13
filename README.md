@@ -1,6 +1,30 @@
 FiniteFlow
 ==========
 
+A proof-of-concept implementation of the `FiniteFlow` framework.
+
+FiniteFlow is a framework for defining and executing numerical
+algorithms over finite fields and reconstructing multivariate rational
+functions from numerical evaluations. Within this framework, complex
+algorithms are easily defined by combining basic building blocks into
+computational graphs, known as dataflow graphs. This allows to easily
+implement complex methods over finite fields from high-level languages
+and computer algebra systems, without being concerned with the
+low-level details of the numerical implementation. Multivariate
+analytic results are then reconstructed from these numerical
+evaluations. The algorithm sidesteps the appearance of large
+intermediate expressions and can be massively parallelized.
+
+It is based on the following publication:
+
+- Tiziano Peraro, *FiniteFlow: multivariate functional reconstruction
+  using finite fields and dataflow graphs* (to appear)
+
+This implementation is written in C++ and includes a Mathematica
+interface.  The latter is currently the most usable, complete and
+documented way of using this library.
+
+
 Installation
 ------------
 
@@ -32,11 +56,11 @@ For the installation of FLINT you have two options:
   See [http://www.flintlib.org/](http://www.flintlib.org/) for more
   information about FLINT and its installation.
 
-- Alternatively, you can install the `flint-finiteflow-dep` library,
-  which is a stripped down version of FLINT which includes the
-  dependencies needed by FiniteFlow.  Unlike the full FLINT library,
-  this version has no external dependencies besides GMP and can
-  therefore be easier to install from source (see the README file of
+- Alternatively, you can install the `flint-finiteflow-dep` library, a
+  stripped down version of FLINT which includes the dependencies
+  needed by FiniteFlow.  Unlike the full FLINT library, this version
+  has no external dependency besides GMP and can therefore be easier
+  to install from source (see the README file of
   `flint-finiteflow-dep` for more information).
 
 
@@ -70,3 +94,10 @@ If[Not[MemberQ[$LibraryPath,$FiniteFlowLibPath]],$LibraryPath = Flatten[{$Librar
 $FiniteFlowPath = "/path/to/finiteflow/mathlink"
 If[Not[MemberQ[$Path,$FiniteFlowPath]],$Path = Flatten[{$Path, $FiniteFlowPath }]];
 ```
+
+
+Tutorial
+--------
+
+A tutorial using the Mathematica interface is included, in the file
+[mathlink/tutorial.wl](mathlink/tutorial.wl).
