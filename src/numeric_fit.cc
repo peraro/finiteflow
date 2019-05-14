@@ -14,7 +14,7 @@ namespace fflow {
 
     dest = c.data();
     for (auto & cf : alg.cmap) {
-      if ((*xinf++ && LSVar::IS_NON_ZERO))
+      if ((*xinf++ & LSVar::IS_NON_ZERO))
         horner_ratfunmap_mprational(cf, mod, *dest);
       ++dest;
     }
@@ -143,7 +143,7 @@ namespace fflow {
     auto * c = data.c.data();
 
     for (unsigned i=0; i<ncoeffs(); ++i)
-      if (xinfo()[i] && LSVar::IS_NON_ZERO) {
+      if (xinfo()[i] & LSVar::IS_NON_ZERO) {
         const unsigned * deltavarlv = deltavar[i].get();
         unsigned lsubvarsize = deltavarlv[0];
         for (unsigned j=0; j<lsubvarsize; ++j) {
