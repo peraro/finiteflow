@@ -49,6 +49,15 @@ namespace fflow {
       build_from_monomials_();
     }
 
+    // Copies result with integer coefficients, without doing any
+    // rational reconstruction
+    void copy_exactly(SparsePoly && oth)
+    {
+      op_ = oth.op();
+      monomials_ = std::move(oth.monomials_);
+      build_from_monomials_exactly_();
+    }
+
     void swap(MPReconstructedPoly & oth)
     {
       std::swap(op_,oth.op_);
@@ -121,6 +130,7 @@ namespace fflow {
 
   private:
     void build_from_monomials_();
+    void build_from_monomials_exactly_();
 
     template <typename SparsePolyT>
     void merge_(SparsePolyT && oth,
@@ -232,6 +242,12 @@ namespace fflow {
     {
       num_.copy(std::move(oth.numerator()));
       den_.copy(std::move(oth.denominator()));
+    }
+
+    void copy_exactly(SparseRationalFunction && oth)
+    {
+      num_.copy_exactly(std::move(oth.numerator()));
+      den_.copy_exactly(std::move(oth.denominator()));
     }
 
     UInt eval(const UInt x[], Mod mod) const

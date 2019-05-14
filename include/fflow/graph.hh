@@ -359,6 +359,18 @@ namespace fflow {
                             ReconstructionOptions opt,
                             unsigned min_primes = 1);
 
+    Ret reconstruct_mod(unsigned graphid, MPReconstructedRatFun res[],
+                        const ReconstructionOptions & opt);
+    Ret parallel_reconstruct_mod(unsigned graphid, MPReconstructedRatFun res[],
+                                 unsigned nthreads,
+                                 const ReconstructionOptions & opt);
+    Ret reconstruct_univariate_mod(unsigned graphid,
+                                   MPReconstructedRatFun res[],
+                                   const ReconstructionOptions & opt);
+    Ret full_reconstruction_mod(unsigned graphid, MPReconstructedRatFun res[],
+                                unsigned nthreads,
+                                ReconstructionOptions opt);
+
     // Checks that the output of an algorithm is independent of the
     // variable "var".  Returns 1=True, 0=false, or FAILED
     UInt independent_of_var(unsigned graphid, unsigned var);
@@ -438,6 +450,12 @@ namespace fflow {
                      const std::vector<unsigned> & to_reconstruct,
                      const ReconstructionOptions & opt);
 
+    Ret reconstruct_mod_(unsigned graphid,
+                         unsigned var_beg, unsigned step,
+                         const std::vector<unsigned> & to_reconstruct,
+                         const ReconstructionOptions & opt,
+                         Mod mod);
+
     void share_with_subctxt_(unsigned graphid, unsigned i);
     void share_with_subctxt_(unsigned graphid, Context & sctxt);
 
@@ -464,6 +482,7 @@ namespace fflow {
     friend struct GraphParallelVarDegs;
     friend struct GraphParallelEvaluate;
     friend struct GraphParallelReconstruct;
+    friend struct GraphParallelReconstructMod;
 
   private:
     std::vector<GraphPtr> graphs_;

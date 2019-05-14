@@ -364,7 +364,7 @@ FFGraphOutput[g2,laurent]
 (*Laurent expansion algorithms need a learning phase, where the starting order of the expansion and other information is obtained.*)
 
 
-laurentlearn = FFLearn[g2]
+laurentlearn = FFLaurentLearn[g2]
 
 
 (* ::Text:: *)

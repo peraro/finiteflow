@@ -222,6 +222,12 @@ namespace fflow {
   const UInt SMALLEST_PRIME = BIG_UINT_PRIMES[BIG_UINT_PRIMES_SIZE-1];
 
 
+  inline UInt prime_no(unsigned i)
+  {
+    return BIG_UINT_PRIMES[i % BIG_UINT_PRIMES_SIZE];
+  }
+
+
   // A vector of prime numbers computed using the segmented sieve
   // method
   class PrimeVector {

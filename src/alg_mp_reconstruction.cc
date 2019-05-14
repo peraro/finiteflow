@@ -42,6 +42,32 @@ namespace fflow {
       return ret;
     }
 
+    Ret algorithm_rec_univariate_mod(Mod mod,
+                                     AlgorithmRatFun & fun,
+                                     const UInt shift[],
+                                     const ReconstructionOptions & opt,
+                                     MPReconstructedRatFun & res)
+    {
+      unsigned nparsin = fun.get_alg()->nparsin[0];
+      if (nparsin != 1)
+        return FAILED;
+
+      MPRatFunReconstruction funrec(nparsin);
+      set_mp_rec_options(opt, shift, funrec);
+
+      RatFunReconstruction rec(nparsin, RatFunReconstruction::DEFAULT_MAX_DEG);
+      funrec.setup_rat_rec(rec);
+
+      Ret ret = rec.reconstruct(fun, mod);
+
+      if (ret == SUCCESS) {
+        SparseRationalFunction tmp = std::move(rec.getFunction());
+        res.copy_exactly(std::move(tmp));
+      }
+
+      return ret;
+    }
+
   } // namespace
 
 
@@ -261,6 +287,30 @@ namespace fflow {
     for (unsigned idx=0; idx<nparsout; ++idx) {
       fun.idx = idx;
       Ret ret = algorithm_rec_univariate(fun, shift, opt, res[idx]);
+      if (ret != SUCCESS)
+        return ret;
+    }
+    return SUCCESS;
+  }
+
+  Ret algorithm_reconstruct_univariate_mod(Mod mod,
+                                           const Algorithm & alg,
+                                           AlgorithmData * data,
+                                           Context * ctxt,
+                                           const UInt shift[],
+                                           const ReconstructionOptions & opt,
+                                           MPReconstructedRatFun res[])
+  {
+    unsigned nparsout = alg.nparsout;
+
+    AlgorithmRatFun fun;
+    fun.set_algorithm(alg);
+    fun.set_algorithm_data(data);
+    fun.set_context(ctxt);
+
+    for (unsigned idx=0; idx<nparsout; ++idx) {
+      fun.idx = idx;
+      Ret ret = algorithm_rec_univariate_mod(mod, fun, shift, opt, res[idx]);
       if (ret != SUCCESS)
         return ret;
     }
@@ -528,6 +578,44 @@ namespace fflow {
 
     if (ret == FAILED)
       ret = algorithm_get_rec_fail_status(sampledfun.missing_mods(), opt);
+
+    return ret;
+  }
+
+
+  Ret algorithm_sparse_reconstruct_mod(Mod mod,
+                                       const UIntCache & cache,
+                                       unsigned nparsin, unsigned nparsout,
+                                       unsigned idx,
+                                       const UInt shift[],
+                                       const ReconstructionOptions & opt,
+                                       const RatFunVarDegrees degs[],
+                                       const unsigned numdeg[],
+                                       const unsigned dendeg[],
+                                       MPReconstructedRatFun & recf)
+  {
+    SparselySampledRatFun sampledfun;
+    sampledfun.set_function_cache(&cache, nparsin, nparsout);
+    sampledfun.idx = idx;
+
+    MPRatFunReconstruction funrec(nparsin);
+    set_mp_rec_options(opt, shift, funrec);
+
+    RatFunReconstruction rec(nparsin, RatFunReconstruction::DEFAULT_MAX_DEG);
+    funrec.setup_rat_rec(rec);
+
+    Ret ret = 0;
+
+    if (nparsin != 1)
+      ret = rec.reconstructWithDegs(sampledfun, mod,
+                                    numdeg[idx], dendeg[idx], degs[idx]);
+    else
+      ret = rec.reconstruct(sampledfun, mod);
+
+    if (ret == SUCCESS) {
+      SparseRationalFunction tmp = std::move(rec.getFunction());
+      recf.copy_exactly(std::move(tmp));
+    }
 
     return ret;
   }

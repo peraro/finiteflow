@@ -83,6 +83,7 @@ FFAllDegrees::usage="FFAllDegrees[graph] computes the total degrees, as well as 
 FFSample::usage="FFSample[graph] evaluates a graph for a set of sample points, which depends on the reconstruction options."
 FFReconstructFromCurrentEvaluations::usage="FFReconstructFromCurrentEvaluations[graph,vars] attempts to analytically reconstruct the output of a graph using the numerical evaluations which have already been performed and stored."
 FFReconstructNumeric::usage="FFReconstructNumeric[graph] performs a numerical reconstruction over the rational field of the output of a graph with no input node."
+FFReconstructFromCurrentEvaluationsMod::usage="FFReconstructFromCurrentEvaluationsMod[graph,vars] is the same as FFReconstructFromCurrentEvaluations[graph,vars] but the reconstruction is performed modulo the prime specified in the options."
 FFMissingPoints::usage = "Returned when there are not enough sample points for reconstructing a function on a given prime field."
 FFMissingPrimes::usage = "Returned when sample points from additional prime fields are needed for reconstructing a function."
 
@@ -106,6 +107,7 @@ FFLaurentSol::usage = "FFLaurentSol[expr,x,learninfo] formats the output of a La
 
 FFReconstructFunction::usage = "FFReconstructFunction[graph,vars] analytically reconstructs the output of graph as a rational function in the variables vars, by performing several numerical evaluations and reconstructing analytic expressions from these.  Note that for univariate functions, multi-threading is not used during the evaluation of the graph (for that, FFParallelReconstructUnivariate can be used)."
 FFParallelReconstructUnivariate::usage = "FFParallelReconstructUnivariate[graph,{x}] reconstructs the output of graph as a univariate rational function in the variable x.  Numerical evaluations are performed in parallel, and additional sample points are added until the reconstruction is successful."
+FFReconstructFunctionMod::usage = "FFReconstructFunctionMod[graph,vars] is the same as FFReconstructFunction[graph,vars] but reconstruction is performed modulo the prime specified in the options."
 
 FFDenseSolverSol::usage = "FFDenseSolverSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a dense solver or a linear fit, and learinfo is the information obtained during its learning phase, formats expr as list of substitution rules representing the solution of the system."
 FFSparseSolverSol::usage = "FFSparseSolverSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a sparse solver, and learinfo is the information obtained during its learning phase, formats expr as list of substitution rules representing the solution of the system."
@@ -496,10 +498,29 @@ FFReconstructFromCurrentEvaluations[gid_,vars_, nthreads_:FFNThreads, opt:Option
 FFReconstructFromCurrentEvaluations[gid_,vars_, opt:OptionsPattern[]]:=FFReconstructFromCurrentEvaluations[gid,vars,FFNThreads,opt];
 
 
+Options[FFReconstructFromCurrentEvaluationsMod]:=Options[FFAlgorithmSetReconstructionOptions];
+FFReconstructFromCurrentEvaluationsMod[gid_,vars_, nthreads_:FFNThreads, opt:OptionsPattern[]]:=Module[
+  {res},
+  res = FFReconstructFromCurrentEvaluationsModImplem[GetGraphId[gid], toFFInternalUnsignedFlag["nthreads", nthreads], FFAlgorithmSetReconstructionOptions[opt]];
+  If[!TrueQ[res[[0]]==List], Return[res]];
+  fromFFInternalRatFun[#,vars]&/@res
+];
+FFReconstructFromCurrentEvaluationsMod[gid_,vars_, opt:OptionsPattern[]]:=FFReconstructFromCurrentEvaluationsMod[gid,vars,FFNThreads,opt];
+
+
 Options[FFReconstructUnivariate]:=Options[FFAlgorithmSetReconstructionOptions];
 FFReconstructUnivariate[gid_,vars_, opt:OptionsPattern[]]:=Module[
   {res},
   res = FFReconstructUnivariateImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
+  If[!TrueQ[res[[0]]==List], Return[res]];
+  fromFFInternalRatFun[#,vars]&/@res
+];
+
+
+Options[FFReconstructUnivariateMod]:=Options[FFAlgorithmSetReconstructionOptions];
+FFReconstructUnivariateMod[gid_,vars_, opt:OptionsPattern[]]:=Module[
+  {res},
+  res = FFReconstructUnivariateModImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
   If[!TrueQ[res[[0]]==List], Return[res]];
   fromFFInternalRatFun[#,vars]&/@res
 ];
@@ -979,6 +1000,32 @@ FFReconstructFunction[id_,vars_,OptionsPattern[]] := Module[
 ];
 
 
+Options[FFReconstructFunctionMod]:=Join[Options[FFAlgorithmSetReconstructionOptions],{"NThreads"->FFNThreads}];
+FFReconstructFunctionMod[id_,vars_,OptionsPattern[]] := Module[
+  {np,maxnp,opt,res,nthreads,tmp,thisopt},
+  opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFReconstructFunctionMod];
+  maxnp = 1;
+  If[TrueQ[maxnp==Automatic], maxnp = 5];
+  nthreads = OptionValue["NThreads"];
+  If[TrueQ[nthreads==Automatic], nthreads = If[TrueQ[Length[vars]==1],1,FFAutomaticNThreads[]]];
+  If[Length[vars]==1,
+    thisopt = Join[{"MaxPrimes"->maxnp},FilterRules[opt,Select[Options[FFReconstructUnivariate],FreeQ[#,"MaxPrimes"]&]]];
+    Return[FFReconstructUnivariateMod[id,vars,Sequence@@thisopt]]
+  ];
+  res = FFAllDegrees[id, nthreads, Sequence@@FilterRules[opt,Options[FFAllDegrees]]];
+  If[TrueQ[res == $Failed], Return[$Failed]];
+  np = 1;
+  tmp = FFMissingPoints;
+  res = Catch[
+    thisopt = Join[{"MaxPrimes"->np},FilterRules[opt,Select[Options[FFSample],FreeQ[#,"MaxPrimes"]&]]];
+    FFSample[id,nthreads,Sequence@@thisopt];
+    tmp = FFReconstructFromCurrentEvaluationsMod[id,vars,nthreads,Sequence@@thisopt];
+    Throw[tmp];
+  ];
+  res
+];
+
+
 Options[FFParallelReconstructUnivariate]=Join[Options[FFReconstructFunction],{"MinDegree"->Automatic,"DegreeStep"->Automatic}];
 FFParallelReconstructUnivariate[id_,vars_,OptionsPattern[]]:=Module[
   {opt,mindeg,maxdeg,degstep,deg,maxsp,maxnp,nthreads,sp,np,tmp,res,thisopt},
@@ -1374,7 +1421,9 @@ FFLoadLibObjects[] := Module[
     FFSampleImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_sample", LinkObject, LinkObject];
     FFSampleFromPointsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_sample_from_points", LinkObject, LinkObject];
     FFReconstructFromCurrentEvaluationsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_reconstruct", LinkObject, LinkObject];
+    FFReconstructFromCurrentEvaluationsModImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_reconstruct_mod", LinkObject, LinkObject];
     FFReconstructUnivariateImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_univariate_reconstruct", LinkObject, LinkObject];
+    FFReconstructUnivariateModImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_univariate_reconstruct_mod", LinkObject, LinkObject];
     FFReconstructNumericImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_numeric_reconstruct", LinkObject, LinkObject];
     FFAlgMakeNodeMutableImplem = LibraryFunctionLoad[fflowlib, "fflowml_node_set_mutable", LinkObject, LinkObject];
     FFGraphNodesImplem = LibraryFunctionLoad[fflowlib, "fflowml_graph_nodes", LinkObject, LinkObject];

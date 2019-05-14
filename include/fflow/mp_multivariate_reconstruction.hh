@@ -96,7 +96,6 @@ namespace fflow {
                 unsigned numdeg, unsigned dendeg,
                 const RatFunVarDegrees & degs);
 
-  private:
     void setup_rat_rec(RatFunReconstruction & rec)
     {
       rec.setT0(t0_);
@@ -107,6 +106,8 @@ namespace fflow {
       rec.n_uchecks = n_uchecks;
       rec.n_singular = n_singular;
     }
+
+  private:
 
     Ret reconstruct_(RatFun & f,
                      unsigned numdeg, unsigned dendeg,

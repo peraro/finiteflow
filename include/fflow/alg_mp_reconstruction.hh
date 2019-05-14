@@ -128,12 +128,30 @@ namespace fflow {
                                    const unsigned dendeg[],
                                    MPReconstructedRatFun & recf);
 
+  Ret algorithm_sparse_reconstruct_mod(Mod mod,
+                                       const UIntCache & cache,
+                                       unsigned nparsin, unsigned,
+                                       unsigned idx,
+                                       const UInt shift[],
+                                       const ReconstructionOptions & opt,
+                                       const RatFunVarDegrees degs[],
+                                       const unsigned numdeg[],
+                                       const unsigned dendeg[],
+                                       MPReconstructedRatFun & recf);
+
   Ret algorithm_reconstruct_univariate(const Algorithm & alg,
                                        AlgorithmData * data,
                                        Context * ctxt,
                                        const UInt shift[],
                                        const ReconstructionOptions & opt,
                                        MPReconstructedRatFun res[]);
+
+  Ret algorithm_reconstruct_univariate_mod(Mod mod, const Algorithm & alg,
+                                           AlgorithmData * data,
+                                           Context * ctxt,
+                                           const UInt shift[],
+                                           const ReconstructionOptions & opt,
+                                           MPReconstructedRatFun res[]);
 
   Ret algorithm_reconstruct_numeric(const Algorithm & alg,
                                     AlgorithmData * data,

@@ -2288,6 +2288,60 @@ extern "C" {
   }
 
 
+  int fflowml_alg_reconstruct_mod(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int one;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &one);
+
+    int id, nthreads;
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nthreads);
+    if (nthreads < 0)
+      nthreads = 0;
+    ReconstructionOptions opt = get_rec_opt(mlp);
+    MLNewPacket(mlp);
+
+    Graph * g = session.graph(id);
+
+    if (!g) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    typedef MPReconstructedRatFun ResT;
+    const unsigned nparsout = g->nparsout;
+    std::unique_ptr<ResT[]> res (new ResT[nparsout]);
+
+    Ret ret = session.parallel_reconstruct_mod(id, res.get(), nthreads, opt);
+
+    if (ret != SUCCESS) {
+
+      if (ret == MISSING_SAMPLES) {
+        MLPutSymbol(mlp, "FiniteFlow`FFMissingPoints");
+        return LIBRARY_NO_ERROR;
+      }
+
+      if (ret == MISSING_PRIMES) {
+        MLPutSymbol(mlp, "FiniteFlow`FFMissingPrimes");
+        return LIBRARY_NO_ERROR;
+      }
+
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    MLPutFunction(mlp, "List", nparsout);
+    for (unsigned i=0; i<nparsout; ++i)
+      put_sparse_ratfun(mlp, res[i]);
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_univariate_reconstruct(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);
@@ -2314,6 +2368,47 @@ extern "C" {
     std::unique_ptr<ResT[]> res (new ResT[nparsout]);
 
     Ret ret = session.reconstruct_univariate(id, res.get(), opt);
+
+    if (ret != SUCCESS) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    MLPutFunction(mlp, "List", nparsout);
+    for (unsigned i=0; i<nparsout; ++i)
+      put_sparse_ratfun(mlp, res[i]);
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
+  int fflowml_alg_univariate_reconstruct_mod(WolframLibraryData libData,
+                                             MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int one;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &one);
+
+    int id;
+    MLGetInteger32(mlp, &id);
+    ReconstructionOptions opt = get_rec_opt(mlp);
+    MLNewPacket(mlp);
+
+    Graph * g = session.graph(id);
+
+    if (!g) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    typedef MPReconstructedRatFun ResT;
+    const unsigned nparsout = g->nparsout;
+    std::unique_ptr<ResT[]> res (new ResT[nparsout]);
+
+    Ret ret = session.reconstruct_univariate_mod(id, res.get(), opt);
 
     if (ret != SUCCESS) {
       MLPutSymbol(mlp, "$Failed");

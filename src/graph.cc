@@ -1405,6 +1405,45 @@ namespace fflow {
     return final_ret;
   }
 
+  Ret Session::reconstruct_mod_(unsigned graphid,
+                                unsigned var_beg, unsigned step,
+                                const std::vector<unsigned> & to_rec,
+                                const ReconstructionOptions & opt,
+                                Mod mod)
+  {
+    if (!graph_can_be_evaluated(graphid))
+      return FAILED;
+    Graph & a = *graphs_[graphid];
+    if (!a.nparsin[0])
+      return FAILED;
+    if (!a.rec_data_.get())
+      return MISSING_SAMPLES;
+    Graph::AlgRecData & arec = a.rec_data();
+    Graph::AlgDegs & degs = arec.degs;
+    UIntCache  & cache = *arec.cache;
+    MPReconstructedRatFun * res = arec.recratfun_.get();
+
+    unsigned nparsin = a.nparsin[0], nparsout = a.nparsout;
+
+    Ret final_ret = SUCCESS;
+    for (unsigned i=var_beg; i<to_rec.size(); i+=step) {
+      Ret ret = algorithm_sparse_reconstruct_mod(mod,
+                                                 cache, nparsin, nparsout,
+                                                 to_rec[i],
+                                                 arec.shift.get(), opt,
+                                                 degs.vdegs.get(),
+                                                 degs.numdeg.get(),
+                                                 degs.dendeg.get(),
+                                                 res[to_rec[i]]);
+      if (ret != SUCCESS) {
+        if (final_ret == SUCCESS)
+          final_ret = ret;
+      }
+    }
+
+    return final_ret;
+  }
+
   void Session::set_up_to_rec_(unsigned id, std::vector<unsigned> & to_rec)
   {
     if (!graph_can_be_evaluated(id))
@@ -1449,6 +1488,18 @@ namespace fflow {
     return ret;
   }
 
+  Ret Session::reconstruct_mod(unsigned id, MPReconstructedRatFun res[],
+                               const ReconstructionOptions & opt)
+  {
+    Mod mod(prime_no(opt.start_mod));
+    std::vector<unsigned> to_rec;
+    set_up_to_rec_(id, to_rec);
+    Ret ret = reconstruct_mod_(id, 0, 1, to_rec, opt, mod);
+    if (ret == SUCCESS)
+      move_rec_(id, res);
+    return ret;
+  }
+
   struct GraphParallelReconstruct {
 
     Ret operator() (unsigned var_beg, unsigned step,
@@ -1457,6 +1508,21 @@ namespace fflow {
       return session->reconstruct_(graphid, var_beg, step, to_rec, *opt);
     }
 
+    Session * session;
+    const ReconstructionOptions * opt;
+    unsigned graphid;
+  };
+
+  struct GraphParallelReconstructMod {
+
+    Ret operator() (unsigned var_beg, unsigned step,
+                    const std::vector<unsigned> & to_rec)
+    {
+      return session->reconstruct_mod_(graphid, var_beg, step,
+                                       to_rec, *opt, mod);
+    }
+
+    Mod mod;
     Session * session;
     const ReconstructionOptions * opt;
     unsigned graphid;
@@ -1503,6 +1569,49 @@ namespace fflow {
     return retv;
   }
 
+  Ret Session::parallel_reconstruct_mod(unsigned graphid,
+                                        MPReconstructedRatFun res[],
+                                        unsigned nthreads,
+                                        const ReconstructionOptions & opt)
+  {
+    if (nthreads == 1)
+      return reconstruct_mod(graphid, res, opt);
+
+    Mod mod(prime_no(opt.start_mod));
+
+    if (nthreads == 0)
+      nthreads = std::thread::hardware_concurrency();
+
+    if (!graph_can_be_evaluated(graphid))
+      return FAILED;
+
+    std::vector<unsigned> to_rec;
+    set_up_to_rec_(graphid, to_rec);
+
+    nthreads = std::min(nthreads, unsigned(to_rec.size()));
+    alloc_threads_(nthreads);
+
+    std::vector<GraphParallelReconstructMod> t_eval(nthreads);
+    std::vector<std::future<Ret>> ret(nthreads);
+    for (unsigned i=0; i<nthreads; ++i)
+      t_eval[i] = GraphParallelReconstructMod{mod, this, &opt, graphid};
+
+    for (unsigned i=0; i<nthreads; ++i)
+      ret[i] = enqueue_(t_eval[i], i, nthreads, to_rec);
+
+    Ret retv = SUCCESS;
+    for (unsigned i=0; i<nthreads; ++i) {
+      Ret reti = ret[i].get();
+      if (reti != SUCCESS && retv == SUCCESS)
+        retv = reti;
+    }
+
+    if (retv == SUCCESS)
+      move_rec_(graphid, res);
+
+    return retv;
+  }
+
   Ret Session::reconstruct_univariate(unsigned graphid,
                                       MPReconstructedRatFun res[],
                                       const ReconstructionOptions & opt)
@@ -1518,6 +1627,25 @@ namespace fflow {
     return algorithm_reconstruct_univariate(a,
                                             ctxt_.graph_data(graphid), &ctxt_,
                                             arec.shift.get(), opt, res);
+  }
+
+  Ret Session::reconstruct_univariate_mod(unsigned graphid,
+                                          MPReconstructedRatFun res[],
+                                          const ReconstructionOptions & opt)
+  {
+    if (!graph_can_be_evaluated(graphid))
+      return FAILED;
+    Graph & a = *graphs_[graphid];
+    if (a.nparsin[0] != 1)
+      return FAILED;
+    make_reconstructible_(graphid);
+    Graph::AlgRecData & arec = a.rec_data();
+
+    Mod mod(prime_no(opt.start_mod));
+    return algorithm_reconstruct_univariate_mod(mod, a,
+                                                ctxt_.graph_data(graphid),
+                                                &ctxt_,
+                                                arec.shift.get(), opt, res);
   }
 
   Ret Session::reconstruct_numeric(unsigned graphid, MPRational res[],
@@ -1566,6 +1694,38 @@ namespace fflow {
         return ret;
 
       ++min_primes;
+    }
+
+    return ret;
+  }
+
+  Ret Session::full_reconstruction_mod(unsigned graphid,
+                                       MPReconstructedRatFun res[],
+                                       unsigned nthreads,
+                                       ReconstructionOptions opt)
+  {
+    if (!graph_can_be_evaluated(graphid))
+      return FAILED;
+    Graph & a = *graphs_[graphid];
+
+    if (a.nparsin[0] < 1)
+      return FAILED;
+
+    if (a.nparsin[0] == 1)
+      return reconstruct_univariate(graphid, res, opt);
+
+    Ret ret = parallel_all_degrees(graphid, nthreads, opt);
+    if (ret != SUCCESS)
+      return ret;
+
+    {
+      opt.max_primes = 1;
+
+      parallel_sample(graphid, nthreads, opt);
+
+      ret = parallel_reconstruct_mod(graphid, res, nthreads, opt);
+      if (ret != SUCCESS && ret != MISSING_PRIMES)
+        return ret;
     }
 
     return ret;

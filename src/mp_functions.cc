@@ -50,6 +50,20 @@ namespace fflow {
     }
   }
 
+  void MPReconstructedPoly::build_from_monomials_exactly_()
+  {
+    std::size_t newsize = monomials_.size();
+    cq_.resize(newsize);
+    cz_.resize(newsize);
+
+    const Monomial * m = monomials_.data();
+
+    for (std::size_t i = 0; i<newsize; ++i) {
+      cz_[i] = m[i].coeff();
+      cq_[i] = MPRational(m[i].coeff());
+    }
+  }
+
   template <typename SparsePolyT>
   void MPReconstructedPoly::merge_(SparsePolyT && oth,
                                    const MPInt & c1, const MPInt & c2,
