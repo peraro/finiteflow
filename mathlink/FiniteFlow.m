@@ -47,6 +47,7 @@ FFAlgQ::usage = "FFAlgQ[graphname, nodename] returns True if the specified algor
 FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, neededvars] redefines the set of needed variables of a dense or sparse linear system."
 FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
 FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
+FFLaurentLearn::usage = "FFLaurentLearn[graph] executes the learning phase on a Laurent expansion node, which must be the output node of graph.  It returns a list of two lists.  The first contains the starting power of the Laurent expansion of each element.  The second contains the order of the expansion requested for each element."
 FFDenseSolverLearn::usage = "FFDenseSolverLearn[graph,vars] executes the learning phase on a dense solver or a linear fit, with unknowns vars, which must be the output node of graph."
 FFSparseSolverLearn::usage = "FFSparseSolverLearn[graph,vars] executes the learning phase on a sparse solver, with unknowns vars, which must be the output node of graph."
 FFDenseSolverGetInfo::usage = "FFDenseSolverGetInfo[graph,node,vars] returns the info about a dense solver or a linear fit, with unknowns vars, obtained during the learning step, namely dependent variables, independent variables and zero variables."
@@ -793,6 +794,9 @@ FFSolverOnlyHomogeneous[gid_,id_]:=Catch[FFSolverOnlyHomogeneousImplem[GetGraphI
 
 
 FFLearn[gid_]:=Catch[FFLearnImplem[GetGraphId[gid]]];
+
+
+FFLaurentLearn[graph_]:=FFLearn[graph];
 
 
 FFDenseSolverLearn[gid_,vars_]:=Module[
