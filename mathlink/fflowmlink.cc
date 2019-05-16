@@ -145,6 +145,14 @@ namespace  {
     MLReleaseString(mlp, coeff);
   }
 
+  void get_integer(MLINK mlp, MPInt & c)
+  {
+    const char * coeff;
+    MLGetString(mlp, &coeff);
+    c = MPInt(coeff);
+    MLReleaseString(mlp, coeff);
+  }
+
 
   void MathGetHornerCutFun::get_horner_subpoly(MLINK mlp,
                                                HornerPtr & poly,
@@ -3873,6 +3881,42 @@ extern "C" {
       MLPutInteger64(mlp, ret);
       MLPutInteger32List(mlp, (int*)(count.get()), nparsout);
     }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
+  int fflowml_alg_rat_rec(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int two, nints;
+    MLNewPacket(mlp);
+    MLTestHead(mlp, "List", &two);
+
+    MLTestHead(mlp, "List", &nints);
+    std::vector<MPInt> vec;
+    vec.resize(nints);
+    for (int j=0; j<nints; ++j)
+      get_integer(mlp,vec[j]);
+
+    MPInt p;
+    get_integer(mlp,p);
+
+    MLNewPacket(mlp);
+
+    std::vector<MPRational> qvec;
+    qvec.resize(nints);
+    for (int j=0; j<nints; ++j)
+      rat_rec(vec[j], p, qvec[j]);
+
+    void (*gmpfreefunc) (void *, size_t);
+    mp_get_memory_functions(0, 0, &gmpfreefunc);
+
+    MLPutFunction(mlp, "List", nints);
+    for (int i=0; i<nints; ++i)
+      put_mprat(mlp, qvec[i], gmpfreefunc);
 
     return LIBRARY_NO_ERROR;
   }

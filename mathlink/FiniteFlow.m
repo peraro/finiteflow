@@ -142,6 +142,9 @@ FFPrimeNo::usage="FFPrimeNo[i] with i>=0 returns the i-th hardcoded prime used b
 FFMulInv::usage="FFMulInv[z,p] returns the multiplicative inverse of the integer z module a prime p."
 FFRatMod::usage="FFRatMod[z,p] returns z mod p, where z is a rational number and p is a prime."
 
+FFRatRec::usage="FFRatRec[a,n], where a and n are integers, returns a rational q such that q mod n = a, computed using Wang's rational reconstruction algorithm.
+FFRatRec[{a1,a2,...},n] is equivalent to {FFRatRec[a1],n],FFRatRec[a2],n],...}."
+
 
 FF::badrational = "Argument `1` is not a rational number."
 FF::badfun = "Argument is not a polynomial or a rational function in the specified variables `1` with rational coefficients."
@@ -1373,6 +1376,10 @@ FFLinearFit[params_,delta_,integrandin_, tauvarsin_,varsin_,opt:OptionsPattern[]
 ];
 
 
+FFRatRec[a_List,p_]:=Catch[FFRatRecImplem[ToString[CheckedInt[#]]&/@a,ToString[CheckedInt[p]]]];
+FFRatRec[a_,p_]:=Catch[FFRatRecImplem[{ToString[CheckedInt[a]]},ToString[CheckedInt[p]]][[1]]];
+
+
 fflowlib = $Failed;
 
 FFLoadLib[] := Module[
@@ -1460,6 +1467,7 @@ FFLoadLibObjects[] := Module[
     FFGraphEvaluateImplem=LibraryFunctionLoad[fflowlib, "fflowml_graph_evaluate", LinkObject, LinkObject];
     FFPrimeNoImplem=LibraryFunctionLoad[fflowlib, "fflowml_prime_no", LinkObject, LinkObject];
     FFNSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_count_sample_points", LinkObject, LinkObject];
+    FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
 ];
 
 
