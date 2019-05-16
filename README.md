@@ -61,7 +61,8 @@ For the installation of FLINT you have two options:
   needed by FiniteFlow.  Unlike the full FLINT library, this version
   has no external dependency besides GMP and can therefore be easier
   to install from source (see the README file of
-  `flint-finiteflow-dep` for more information).
+  `flint-finiteflow-dep` for more information).  You can obtain it at
+  this [link](https://github.com/peraro/flint-finiteflow-dep).
 
 
 ### Installing FiniteFlow
@@ -96,8 +97,10 @@ If[Not[MemberQ[$Path,$FiniteFlowPath]],$Path = Flatten[{$Path, $FiniteFlowPath }
 ```
 
 
-Tutorial
---------
+Tutorial and FAQ
+----------------
 
 A tutorial using the Mathematica interface is included, in the file
-[mathlink/tutorial.wl](mathlink/tutorial.wl).
+[mathlink/tutorial.wl](mathlink/tutorial.wl).  A list of frequently
+asked questions, is in the file [FAQ.md](FAQ.md).  We kindly ask users
+to read it before reporting an issue.
