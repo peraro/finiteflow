@@ -5,7 +5,7 @@
 
 
 (* ::Text:: *)
-(*This is a tutorial introducing the FiniteFlow Mathematica package, which interfaces to the finiteflow C++ library.*)
+(*This is a tutorial introducing the FiniteFlow Mathematica package, which interfaces to the FiniteFlow C++ library.*)
 
 
 (* ::Text:: *)
@@ -73,7 +73,7 @@ Options[FFSparseSolve]
 
 
 (* ::Text:: *)
-(*As an example you can speed up communication of large and sparse linear systems between Mathematica and the finiteflow library, and/or optimize the evaluation, by specifying additional options, e.g.*)
+(*As an example you can speed up communication of large and sparse linear systems between Mathematica and the FiniteFlow library, and/or optimize the evaluation, by specifying additional options, e.g.*)
 
 
 FFSparseSolve[{a1 x[1] + b1 x[2] == c1, a2 x[1] + b2 x[2] == c2},{x[1],x[2]},
@@ -124,7 +124,7 @@ FFNewGraph[mygraph,input,{x1,x2,x3}]
 (**)
 (*  FFAlgXXX[graphname,nodename,{input1,input2,...},args...]*)
 (**)
-(*where XXX is the name of the algorithm.  The first argument is the ID of the graph.  The second is the ID of the new node to be created.  The third is a list of IDs corresponding to the input nodes.  Additional arguments, which are specific to the algorithm XXX,  are added later.*)
+(*where XXX is the name of the algorithm.  The first argument is the ID of the graph.  The second is the ID of the new node to be created.  The third is a list of IDs corresponding to the input nodes.  Additional arguments and options, which are specific to the algorithm XXX, are added at the end.*)
 
 
 (* ::Text:: *)
@@ -253,7 +253,7 @@ FFAlgRatFunEval[mygraph,m1,{input}, {x1,x2,x3}, Join@@mat1]
 (* ::Text:: *)
 (*As for the inverse of mat2, we can define it, using the Gauss-Jordan method, as the solution of the following linear system:*)
 (**)
-(*  mat2[[i]].{x[1],x[2]} - t[i] == 0  for i=1,2*)
+(*  Sum[ mat2[[i,j]]*x[j] , {j,2}] - t[i] == 0  for i=1,2*)
 (*  *)
 (*with respect to the unknowns (sorted by weight) {x[1],x[2],t[1],t[2]}.  Notice that the ordering is important.*)
 
@@ -351,7 +351,7 @@ FFNewGraph[g2,input,{x2,x3}]
 
 
 (* ::Text:: *)
-(*We define the node in g2 which computes the Laurent expansion, taking g1 as subgraph.*)
+(*We define the node in g2 which computes the Laurent expansion up to the selected order, taking g1 as subgraph.*)
 
 
 FFAlgLaurent[g2,laurent,{input},g1,order]
