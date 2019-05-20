@@ -118,7 +118,6 @@ set(FFLOW_SOURCES
 set(FFLOW_HEADERS
     include/fflow/config.hh
 
-    include/fflow/basis.hh
     include/fflow/common.hh
     include/fflow/small_vector.hh
     include/fflow/refcounted_ptr.hh
