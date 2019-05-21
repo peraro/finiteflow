@@ -18,7 +18,8 @@ intermediate expressions and can be massively parallelized.
 It is based on the following publication:
 
 - Tiziano Peraro, *FiniteFlow: multivariate functional reconstruction
-  using finite fields and dataflow graphs* (to appear)
+  using finite fields and dataflow graphs*,
+  [arXiv:1905.08019](https://arxiv.org/abs/1905.08019)
 
 This implementation is written in C++ and includes a Mathematica
 interface.  The latter is currently the most usable, complete and
