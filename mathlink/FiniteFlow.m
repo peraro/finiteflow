@@ -553,23 +553,23 @@ FFNParsFromDegreesFile[file_String]:=If[TrueQ[#==$Failed],$Failed,{"NParsIn"->#[
 
 
 RegisterSimpleSubgraph[gid_,inputs_,{subgraphid_}]:=Catch[FFSimpleSubGraphImplem[gid,inputs,GetGraphId[subgraphid]]];
-FFAlgSimpleSubgraph[gid_,id_,inputs_,subgraphid_]:=FFRegisterAlgorithm[RegisterSimpleSubgraph,gid,id,inputs,{subgraphid}];
-FFAlgSimpleSubgraph[gid_,id_,inputs_]:=FFAlgSimpleSubgraph[gid,id,inputs,id];
+FFAlgSimpleSubgraph[gid_,id_,inputs_List,subgraphid_]:=FFRegisterAlgorithm[RegisterSimpleSubgraph,gid,id,inputs,{subgraphid}];
+FFAlgSimpleSubgraph[gid_,id_,inputs_List]:=FFAlgSimpleSubgraph[gid,id,inputs,id];
 
 
 RegisterMemoizedSubgraph[gid_,inputs_,{subgraphid_}]:=Catch[FFMemoizedSubGraphImplem[gid,inputs,GetGraphId[subgraphid]]];
-FFAlgMemoizedSubgraph[gid_,id_,inputs_,subgraphid_]:=FFRegisterAlgorithm[RegisterMemoizedSubgraph,gid,id,inputs,{subgraphid}];
-FFAlgMemoizedSubgraph[gid_,id_,inputs_]:=FFAlgMemoizedSubgraph[gid,id,inputs,id];
+FFAlgMemoizedSubgraph[gid_,id_,inputs_List,subgraphid_]:=FFRegisterAlgorithm[RegisterMemoizedSubgraph,gid,id,inputs,{subgraphid}];
+FFAlgMemoizedSubgraph[gid_,id_,inputs_List]:=FFAlgMemoizedSubgraph[gid,id,inputs,id];
 
 
 RegisterSubgraphMap[gid_,inputs_,{subgraphid_}]:=Catch[FFSubGraphMapImplem[gid,inputs,GetGraphId[subgraphid]]];
-FFAlgSubgraphMap[gid_,id_,inputs_,subgraphid_]:=FFRegisterAlgorithm[RegisterSubgraphMap,gid,id,inputs,{subgraphid}];
-FFAlgSubgraphMap[gid_,id_,inputs_]:=FFAlgSubgraphMap[gid,id,inputs,id];
+FFAlgSubgraphMap[gid_,id_,inputs_List,subgraphid_]:=FFRegisterAlgorithm[RegisterSubgraphMap,gid,id,inputs,{subgraphid}];
+FFAlgSubgraphMap[gid_,id_,inputs_List]:=FFAlgSubgraphMap[gid,id,inputs,id];
 
 
 RegisterAlgLaurent[gid_,inputs_,{subgraphid_,order_}]:=Catch[FFAlgLaurentImplem[gid,inputs,GetGraphId[subgraphid],CheckedInt32List[order]]];
-FFAlgLaurent[gid_,id_,inputs_,subgraphid_,order_Integer]:=FFAlgLaurent[gid,id,inputs,subgraphid,{order}];
-FFAlgLaurent[gid_,id_,inputs_,subgraphid_,order_List]:=FFRegisterAlgorithm[RegisterAlgLaurent,gid,id,inputs,{subgraphid,order}];
+FFAlgLaurent[gid_,id_,inputs_List,subgraphid_,order_Integer]:=FFAlgLaurent[gid,id,inputs,subgraphid,{order}];
+FFAlgLaurent[gid_,id_,inputs_List,subgraphid_,order_List]:=FFRegisterAlgorithm[RegisterAlgLaurent,gid,id,inputs,{subgraphid,order}];
 
 PartitionsWithLen[l_, p_]:=PartitionsWithLenImpl[l,Accumulate[p]];
 PartitionsWithLenImpl[l_, p_]:=Inner[l[[#1;;#2]]&,Join[{0},Most[p]]+1,p,List];
@@ -603,7 +603,7 @@ RegisterDenseSolver[gid_,inputs_,{params_,eqsin_,vars_,neededvarsin_,applyfun_}]
 ];
 
 Options[FFAlgDenseSolver]:={"NeededVars"->Automatic, "ApplyFunction"->Identity};
-FFAlgDenseSolver[gid_,id_,inputs_,params_,eqs_,vars_,OptionsPattern[]]:=Module[{},
+FFAlgDenseSolver[gid_,id_,inputs_List,params_,eqs_,vars_,OptionsPattern[]]:=Module[{},
   FFRegisterAlgorithm[RegisterDenseSolver, gid, id, inputs, {params, eqs, vars, OptionValue["NeededVars"], OptionValue["ApplyFunction"]}]
 ];
 
@@ -620,7 +620,7 @@ RegisterNodeDenseSolver[gid_,inputs_,{neqs_,vars_,neededvarsin_}]:=Module[
 ];
 
 Options[FFAlgNodeDenseSolver]:={"NeededVars"->Automatic};
-FFAlgNodeDenseSolver[gid_,id_,inputs_,neqs_,vars_,OptionsPattern[]]:=Module[{},
+FFAlgNodeDenseSolver[gid_,id_,inputs_List,neqs_,vars_,OptionsPattern[]]:=Module[{},
   FFRegisterAlgorithm[RegisterNodeDenseSolver, gid, id, inputs, {neqs, vars, OptionValue["NeededVars"]}]
 ];
 
@@ -696,7 +696,7 @@ RegisterSparseSolver[gid_,inputs_,{params_,eqsin_,vars_,pattern_,neededvarsin_,a
 ];
 
 Options[FFAlgSparseSolver]:={"NeededVars"->Automatic, "ApplyFunction"->Identity, "VarsPattern"->Automatic};
-FFAlgSparseSolver[gid_,id_,inputs_,params_,eqs_,vars_,OptionsPattern[]]:=Module[{},
+FFAlgSparseSolver[gid_,id_,inputs_List,params_,eqs_,vars_,OptionsPattern[]]:=Module[{},
   If[TrueQ[OptionValue["VarsPattern"]==Automatic],
    FFRegisterAlgorithm[RegisterSparseSolver, gid, id, inputs, {params, eqs, vars, OptionValue["NeededVars"], OptionValue["ApplyFunction"]}],
    FFRegisterAlgorithm[RegisterSparseSolver, gid, id, inputs, {params, eqs, vars, OptionValue["VarsPattern"], OptionValue["NeededVars"], OptionValue["ApplyFunction"]}]
@@ -738,7 +738,7 @@ RegisterSparseSerializedEqs[gid_, inputs_, {params_, files_, vars_, neededvarsin
 ];
 
 Options[FFAlgSerializedSparseSolver]:={"NeededVars"->Automatic};
-FFAlgSerializedSparseSolver[gid_,id_,inputs_,params_,files_List,vars_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterSparseSerializedEqs, gid, id, inputs, {params, files, vars, OptionValue["NeededVars"]}];
+FFAlgSerializedSparseSolver[gid_,id_,inputs_List,params_,files_List,vars_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterSparseSerializedEqs, gid, id, inputs, {params, files, vars, OptionValue["NeededVars"]}];
 
 
 Options[FFSparseEqsToJSON]={"ApplyFunction"->Identity};
@@ -782,12 +782,12 @@ FFSparseSystemToJSON[file_,neqs_,vars_,pars_,files_List,OptionsPattern[]]:=Modul
 RegisterSparseEqsFromJSON[gid_,inputs_,{file_}]:=FFAlgJSONSparseSolverImplem[gid,inputs,file];
 
 Options[FFAlgJSONSparseSolver]:={"NeededVars"->Automatic};
-FFAlgJSONSparseSolver[gid_,id_,inputs_,file_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterSparseEqsFromJSON, gid, id, inputs, {file}];
+FFAlgJSONSparseSolver[gid_,id_,inputs_List,file_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterSparseEqsFromJSON, gid, id, inputs, {file}];
 
 
 FFRatFunToJSON[filename_,vars_,funcs_]:=Catch[Export[filename,{Length[funcs],Length[vars],toFFJSONRatFun[#,vars]&/@funcs},"RawJSON","Compact"->True]];
 RegisterJSONRatFunEval[gid_,inputs_,{file_}]:=FFAlgJSONRatFunEvalImplem[gid,inputs,file];
-FFAlgJSONRatFunEval[gid_,id_,inputs_,file_]:=FFRegisterAlgorithm[RegisterJSONRatFunEval, gid, id, inputs, {file}];
+FFAlgJSONRatFunEval[gid_,id_,inputs_List,file_]:=FFRegisterAlgorithm[RegisterJSONRatFunEval, gid, id, inputs, {file}];
 
 
 FFPolyFromJSON[expr_,vars_]:=Plus@@((ToExpression[#[[1]]] Times@@(vars^#[[2]]))&/@expr);
@@ -902,7 +902,7 @@ FFSparseSolverDeleteUnneededEqs[gid_,id_]:=FFSparseSolverDeleteUnneededEqsImplem
 
 
 RegisterAlgRatFunEval[gid_,inputs_,{vars_List,functions_}]:=Catch[FFAlgRatFunEvalImplem[gid,inputs,Length[vars],toFFInternalRatFun[#,vars]&/@functions]];
-FFAlgRatFunEval[gid_,id_,inputs_,params_,functions_List]:=FFRegisterAlgorithm[RegisterAlgRatFunEval,gid,id,inputs,{params,functions}];
+FFAlgRatFunEval[gid_,id_,inputs_List,params_,functions_List]:=FFRegisterAlgorithm[RegisterAlgRatFunEval,gid,id,inputs,{params,functions}];
 
 
 RegisterAlgRatNumEval[gid_,{},{numbers_}]:=Catch[If[!AllTrue[numbers,FFRationalQ],Throw[$Failed]]; FFAlgRatNumEvalImplem[gid,{},ToString[#,InputForm]&/@numbers]];
@@ -910,7 +910,7 @@ FFAlgRatNumEval[gid_,id_,numbers_List]:=FFRegisterAlgorithm[RegisterAlgRatNumEva
 
 
 RegisterAlgChain[gid_,inputs_,{}]:=Catch[FFAlgChainImplem[gid,inputs]];
-FFAlgChain[gid_,id_,inputs_]:=FFRegisterAlgorithm[RegisterAlgChain,gid,id,inputs,{}];
+FFAlgChain[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgChain,gid,id,inputs,{}];
 
 
 ValidateTakeElemsList[a_List]:=If[AllTrue[a,#[[0]]==List && Length[#]==2&],a,Throw[$Failed]];
@@ -927,40 +927,40 @@ TakeElemsToInternal[full_List->subset_List]:=Module[{position,i,j,sublist,res},
   res-1
 ];
 RegisterAlgTake[gid_,inputs_,{elems_}]:=Catch[FFAlgTakeImplem[gid,inputs,Flatten[TakeElemsToInternal[elems]]]];
-FFAlgTake[gid_,id_,inputs_,elems_]:=FFRegisterAlgorithm[RegisterAlgTake,gid,id,inputs,{elems}];
+FFAlgTake[gid_,id_,inputs_List,elems_]:=FFRegisterAlgorithm[RegisterAlgTake,gid,id,inputs,{elems}];
 
 
 MultiTakeElemsToInternal[a_List]:=Flatten[TakeElemsToInternal[#]]&/@a;
 MultiTakeElemsToInternal[full_List->subsets_List]:=Flatten[TakeElemsToInternal[full->#]]&/@subsets;
 RegisterAlgTakeAndAdd[gid_,inputs_,{elems_}]:=Catch[FFAlgTakeAndAddImplem[gid,inputs,MultiTakeElemsToInternal[elems]]];
-FFAlgTakeAndAdd[gid_,id_,inputs_,elems_]:=FFRegisterAlgorithm[RegisterAlgTakeAndAdd,gid,id,inputs,{elems}];
+FFAlgTakeAndAdd[gid_,id_,inputs_List,elems_]:=FFRegisterAlgorithm[RegisterAlgTakeAndAdd,gid,id,inputs,{elems}];
 
 
 RegisterAlgSlice[gid_,inputs_,{start_,end_}]:=Catch[FFAlgSliceImplem[gid,inputs,start-1,end]];
-FFAlgSlice[gid_,id_,inputs_,start_,end_:-1]:=FFRegisterAlgorithm[RegisterAlgSlice,gid,id,inputs,{start,end}];
+FFAlgSlice[gid_,id_,inputs_List,start_,end_:-1]:=FFRegisterAlgorithm[RegisterAlgSlice,gid,id,inputs,{start,end}];
 
 
 RegisterAlgAdd[gid_,inputs_,{}]:=Catch[FFAlgAddImplem[gid,inputs]];
-FFAlgAdd[gid_,id_,inputs_]:=FFRegisterAlgorithm[RegisterAlgAdd,gid,id,inputs,{}];
+FFAlgAdd[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgAdd,gid,id,inputs,{}];
 
 
 RegisterAlgMul[gid_,inputs_,{}]:=Catch[FFAlgMulImplem[gid,inputs]];
-FFAlgMul[gid_,id_,inputs_]:=FFRegisterAlgorithm[RegisterAlgMul,gid,id,inputs,{}];
+FFAlgMul[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgMul,gid,id,inputs,{}];
 
 
 RegisterAlgMatMul[gid_,inputs_,{rows1_,cols1_,cols2_}]:=Catch[FFAlgMatMulImplem[gid,inputs,CheckedInt32[rows1],CheckedInt32[cols1],CheckedInt32[cols2]]];
-FFAlgMatMul[gid_,id_,inputs_,rows1_,cols1_,cols2_]:=FFRegisterAlgorithm[RegisterAlgMatMul,gid,id,inputs,{rows1,cols1,cols2}];
+FFAlgMatMul[gid_,id_,inputs_List,rows1_,cols1_,cols2_]:=FFRegisterAlgorithm[RegisterAlgMatMul,gid,id,inputs,{rows1,cols1,cols2}];
 
 
 ValidateSparseMatElemsList[a_List]:=If[AllTrue[a,#[[0]]==List&],a,Throw[$Failed]];
 GetSparseColumns[a_List] := ValidateSparseMatElemsList[a]-1;
 GetSparseColumns[full_->columns_] := #[[2]]&/@TakeElemsToInternal[{full}->#]&/@columns;
 RegisterAlgSparseMatMul[gid_,inputs_,{rows1_,cols1_,cols2_,columns1_,columns2_}]:=Catch[FFAlgSparseMatMulImplem[gid,inputs,CheckedInt32[rows1],CheckedInt32[cols1],CheckedInt32[cols2],GetSparseColumns[columns1],GetSparseColumns[columns2]]];
-FFAlgSparseMatMul[gid_,id_,inputs_,rows1_,cols1_,cols2_,columns1_,columns2_]:=FFRegisterAlgorithm[RegisterAlgSparseMatMul,gid,id,inputs,{rows1,cols1,cols2,columns1,columns2}];
+FFAlgSparseMatMul[gid_,id_,inputs_List,rows1_,cols1_,cols2_,columns1_,columns2_]:=FFRegisterAlgorithm[RegisterAlgSparseMatMul,gid,id,inputs,{rows1,cols1,cols2,columns1,columns2}];
 
 
 RegisterAlgNonZeroes[gid_,inputs_,{}]:=FFAlgNonZeroesImplem[gid,inputs];
-FFAlgNonZeroes[gid_,id_,inputs_]:=FFRegisterAlgorithm[RegisterAlgNonZeroes,gid,id,inputs,{}];
+FFAlgNonZeroes[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgNonZeroes,gid,id,inputs,{}];
 
 
 FFNonZeroesGetInfo[gid_,id_]:={"All"->#[[1]],"NonZero"->(#[[2]]+1)}&[FFAlgorithmGetInfoImplem[GetGraphId[gid],GetAlgId[gid,id]]];
@@ -1298,7 +1298,7 @@ RegisterAlgLinearFit[gid_,inputs_,{params_,
 ];
 
 Options[FFAlgLinearFit] = Join[{"ExtraEquations"->2,"Substitutions"->{}}, Options[FFAlgDenseSolver]];
-FFAlgLinearFit[gid_,id_,inputs_,params_,
+FFAlgLinearFit[gid_,id_,inputs_List,params_,
                   delta_,integrandin_, tauvarsin_,varsin_,OptionsPattern[]]:=
   FFRegisterAlgorithm[RegisterAlgLinearFit, gid, id, inputs, {params,
                          delta,integrandin, tauvarsin,varsin,
@@ -1316,7 +1316,7 @@ RegisterAlgSubgraphFit[gid_,inputs_,{subgraphid_,samplevars_,vars_,neededvarsin_
   ]
 ];
 Options[FFAlgSubgraphFit]={"NeededVars"->Automatic,"ExtraEquations"->2};
-FFAlgSubgraphFit[gid_,id_,inputs_,subgraphid_,samplevars_,coeffs_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgSubgraphFit,gid,id,inputs,{subgraphid,samplevars,coeffs,OptionValue["NeededVars"],OptionValue["ExtraEquations"]}];
+FFAlgSubgraphFit[gid_,id_,inputs_List,subgraphid_,samplevars_,coeffs_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgSubgraphFit,gid,id,inputs,{subgraphid,samplevars,coeffs,OptionValue["NeededVars"],OptionValue["ExtraEquations"]}];
 
 
 TakeMultiFitElemsToInternal[a___]:>Throw[$Failed];
@@ -1340,7 +1340,7 @@ RegisterAlgSubgraphMultiFit[gid_,inputs_,{subgraphid_,samplevars_,take_,neededva
   ]
 ];
 Options[FFAlgSubgraphMultiFit]={"NeededVars"->Automatic,"ExtraEquations"->2};
-FFAlgSubgraphMultiFit[gid_,id_,inputs_,subgraphid_,samplevars_,take_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgSubgraphMultiFit,gid,id,inputs,{subgraphid,samplevars,take,OptionValue["NeededVars"],OptionValue["ExtraEquations"]}];
+FFAlgSubgraphMultiFit[gid_,id_,inputs_List,subgraphid_,samplevars_,take_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgSubgraphMultiFit,gid,id,inputs,{subgraphid,samplevars,take,OptionValue["NeededVars"],OptionValue["ExtraEquations"]}];
 
 
 Options[FFLinearFit] := Join[{"IndepVarsOnly"->False},
