@@ -1,6 +1,15 @@
 FAQ
 ===
 
+The installation fails with the error "`cannot find -luuid`"
+----------------------------------------------------------
+
+This is generally a MathLink issue (not specific to FiniteFlow) on
+some Linux distributions.  It can be solved by installing the
+`uuid-dev` package or an equivalent one, depending on the
+distribution.
+
+
 A procedure fails saying the arguments are not polynomials or rational functions
 --------------------------------------------------------------------------------
 
