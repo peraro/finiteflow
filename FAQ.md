@@ -10,8 +10,8 @@ some Linux distributions.  It can be solved by installing the
 distribution.
 
 
-A procedure fails saying the arguments are not polynomials or rational functions
---------------------------------------------------------------------------------
+A procedure fails, saying the arguments are not polynomials or rational functions
+---------------------------------------------------------------------------------
 
 When passing rational functions to dataflow procedures, they should
 be collected under a common denominator, i.e. written as ratios of

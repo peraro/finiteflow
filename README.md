@@ -35,7 +35,7 @@ Installation
 
 FiniteFlow uses the CMake build system, which comes preinstalled on
 many systems, or can be installed with available package managers for
-most Linux distrubutions and using Homebrew for macOS.  Binary
+most Linux distributions and using Homebrew for macOS.  Binary
 installers for several operating systems, as well as additional
 information, can be found at [https://cmake.org/](https://cmake.org/).
 
@@ -43,7 +43,7 @@ information, can be found at [https://cmake.org/](https://cmake.org/).
 #### GMP
 
 GMP is preinstalled on many systems.  A `gmp` package is available on
-many Linux distrubutions and on Homebrew for macOS.  For more
+many Linux distributions and on Homebrew for macOS.  For more
 information see [https://gmplib.org/](https://gmplib.org/).
 
 
