@@ -485,7 +485,10 @@ namespace fflow {
 
     if (stage_ >= SECOND_) {
       learn_needed_(data);
-      nparsout = nndeps_ * (nnindeps_ + unsigned(!homog_));
+      if (output_is_sparse())
+        set_sparseout_data_(data);
+      else
+        nparsout = nndeps_ * (nnindeps_ + unsigned(!homog_));
     }
 
     return SUCCESS;
@@ -615,7 +618,10 @@ namespace fflow {
       return FAILED;
     }
 
-    nparsout = nndeps_ * (nnindeps_ + unsigned(!homog_));
+    if (output_is_sparse())
+      set_sparseout_data_(data);
+    else
+      nparsout = nndeps_ * (nnindeps_ + unsigned(!homog_));
 
     return SUCCESS;
   }
@@ -652,13 +658,37 @@ namespace fflow {
 
     unsigned pos = 0, ndeps = adata_(data).depv_.size();
     std::size_t * depv = adata_(data).depv_.data();
-    for (unsigned i=0; i<ndeps; ++i) {
 
-      if (xinfo_[depv[i]] & LSVar::IS_NEEDED) {
-        for (unsigned j=0; j<nnindeps_; ++j)
-          xout[pos++] = neg_mod(mat(i,needed_indep_[j]), mod);
-        if (!homog_)
-          xout[pos++] = mat(i, nvars());
+    if (!output_is_sparse()) {
+
+      for (unsigned i=0; i<ndeps; ++i) {
+
+        if (xinfo_[depv[i]] & LSVar::IS_NEEDED) {
+          for (unsigned j=0; j<nnindeps_; ++j)
+            xout[pos++] = neg_mod(mat(i,needed_indep_[j]), mod);
+          if (!homog_)
+            xout[pos++] = mat(i, nvars());
+        }
+
+      }
+
+    } else {
+
+      unsigned k=0;
+      for (unsigned i=0; i<ndeps; ++i) {
+
+        if (xinfo_[depv[i]] & LSVar::IS_NEEDED) {
+          const auto & elems = (*sparseout_data_)[k];
+          const unsigned elsize = elems.size();
+          for (unsigned j=0; j<elsize; ++j) {
+            if (homog_ || elems[j] != nvars())
+              xout[pos++] = neg_mod(mat(i,elems[j]), mod);
+            else
+              xout[pos++] = mat(i, nvars());
+          }
+          ++k;
+        }
+
       }
 
     }
@@ -721,6 +751,54 @@ namespace fflow {
     invalidate();
     homog_ = flag;
     return SUCCESS;
+  }
+
+  Ret SparseLinearSolver::sparse_output(bool flag)
+  {
+    if (!is_mutable())
+      return FAILED;
+    invalidate();
+
+    if (!flag) {
+      sparseout_data_.reset(nullptr);
+      return SUCCESS;
+    }
+
+    if (!output_is_sparse())
+      sparseout_data_.reset(new std::vector<std::vector<unsigned>>());
+
+    return SUCCESS;
+  }
+
+  void SparseLinearSolver::set_sparseout_data_(const AlgorithmData * data)
+  {
+    if (!output_is_sparse())
+      sparseout_data_.reset(new std::vector<std::vector<unsigned>>());
+
+    sparseout_data_->resize(nndeps_);
+
+    const SparseMatrix & mat = mat_(data);
+
+    const unsigned ndeps = adata_(data).depv_.size();
+    const std::size_t * depv = adata_(data).depv_.data();
+    unsigned nout = 0;
+    unsigned k=0;
+    for (unsigned i=0; i<ndeps; ++i) {
+      if (xinfo_[depv[i]] & LSVar::IS_NEEDED) {
+        auto & elems = (*sparseout_data_)[k];
+        const SparseMatrixRow & row = mat.row(i);
+        const unsigned elsize = row.size()-1;
+        elems.resize(elsize);
+        for (unsigned j=0; j<elsize; ++j)
+          elems[j] = row.el(j+1).col;
+        if (homog_ && elsize>=1 && elems[elsize-1] == nvars())
+          elems.pop_back();
+        nout += elems.size();
+        ++k;
+      }
+    }
+
+    nparsout = nout;
   }
 
 } // namespace fflow

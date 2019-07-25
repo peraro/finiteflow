@@ -1,6 +1,7 @@
 #ifndef FFLOW_ALG_LINEAR_SOLVER_HH
 #define FFLOW_ALG_LINEAR_SOLVER_HH
 
+#include <memory>
 #include <fflow/algorithm.hh>
 #include <fflow/matrix.hh>
 
@@ -310,6 +311,20 @@ namespace fflow {
       return marked_and_sweeped_;
     }
 
+    bool output_is_sparse() const
+    {
+      return sparseout_data_.get() != nullptr;
+    }
+
+    Ret sparse_output(bool flag = true);
+    //Ret sparse_output(unsigned maxrow);
+
+    // the returned pointer may be null
+    const std::vector<std::vector<unsigned>> * sparse_output_data() const
+    {
+      return sparseout_data_.get();
+    }
+
   private:
 
     static SparseLinearSolverData & adata_(AlgorithmData * data)
@@ -346,6 +361,8 @@ namespace fflow {
 
     void number_eqs_(AlgorithmData * data);
 
+    void set_sparseout_data_(const AlgorithmData * data);
+
     Ret learn_1_(Context * ctxt, AlgInput xin[], Mod mod, AlgorithmData * data);
     Ret learn_2_(Context * ctxt, AlgInput xin[], Mod mod, AlgorithmData * data);
 
@@ -377,6 +394,7 @@ namespace fflow {
     std::size_t nneeded_ext_;
     std::size_t nndeps_ = 0, nnindeps_ = 0, nnindepeqs_ = 0;
     std::vector<SparseMatrix::EqDeps> eqdeps_;
+    std::unique_ptr<std::vector<std::vector<unsigned>>> sparseout_data_;
     flag_t stage_ = FIRST_;
     bool homog_ = false, marked_and_sweeped_ = false;
   };

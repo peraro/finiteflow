@@ -636,7 +636,7 @@ namespace  {
     } else if(dynamic_cast<SparseLinearSolver*>(alg)) {
         SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
 
-        MLPutFunction(mlp, "List", 2);
+        MLPutFunction(mlp, "List", 3);
 
         if (sizeof(std::size_t) == 8)
           MLPutInteger64List(mlp,
@@ -647,14 +647,26 @@ namespace  {
                              (int*)ls.needed_depvars(),
                              ls.n_needed_depvars());
 
-        if (sizeof(std::size_t) == 8)
-          MLPutInteger64List(mlp,
-                             (mlint64*)ls.needed_indepvars(),
-                             ls.n_needed_indepvars());
-        else
-          MLPutInteger32List(mlp,
-                             (int*)ls.needed_indepvars(),
-                             ls.n_needed_indepvars());
+        if (!ls.output_is_sparse()) {
+          if (sizeof(std::size_t) == 8)
+            MLPutInteger64List(mlp,
+                               (mlint64*)ls.needed_indepvars(),
+                               ls.n_needed_indepvars());
+          else
+            MLPutInteger32List(mlp,
+                               (int*)ls.needed_indepvars(),
+                               ls.n_needed_indepvars());
+        } else {
+          const auto & spdata = *(ls.sparse_output_data());
+          MLPutFunction(mlp, "List", spdata.size());
+          for (const auto & elist : spdata) {
+            MLPutInteger32List(mlp,
+                               (int*)elist.data(),
+                               elist.size());
+          }
+        }
+
+        MLPutInteger32(mlp, int(ls.output_is_sparse()));
 
     } else if (dynamic_cast<LinearFit*>(alg) ||
                dynamic_cast<SubgraphFit*>(alg)) {
@@ -1856,6 +1868,43 @@ extern "C" {
           ls.only_homogeneous();
           session.invalidate_subctxt_alg_data(id, nodeid);
 
+      } else {
+        okay = false;
+      }
+    }
+    MLNewPacket(mlp);
+
+    if (okay)
+      MLPutSymbol(mlp, "Null");
+    else
+      MLPutSymbol(mlp, "$Failed");
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
+  int fflowml_alg_system_sparse_output(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int id, nodeid, nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    bool okay = true;
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+    if (!alg || !alg->is_mutable())
+      okay = false;
+
+    if (okay) {
+      if (dynamic_cast<SparseLinearSolver *>(alg)) {
+        SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+        ls.sparse_output();
+        session.invalidate_subctxt_alg_data(id, nodeid);
       } else {
         okay = false;
       }
