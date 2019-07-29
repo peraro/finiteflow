@@ -67,6 +67,84 @@ namespace fflow {
     std::vector<MPRational> val_;
   };
 
+
+  class FunctionFromCoeffs;
+
+  struct CoeffHornerMap {
+
+    std::unique_ptr<unsigned[]> coeff = nullptr;
+    std::unique_ptr<unsigned[]> pos = nullptr;
+    std::size_t size = 0;
+
+    void clear()
+    {
+      coeff.reset(nullptr);
+      pos.reset(nullptr);
+      size = 0;
+    }
+
+    void resize(std::size_t n)
+    {
+      coeff.reset(new unsigned[n]);
+      pos.reset(new unsigned[n]);
+      size = n;
+    }
+  };
+
+  struct CoeffHornerRatFunMap {
+    CoeffHornerMap num_map;
+    CoeffHornerMap den_map;
+
+    void clear()
+    {
+      num_map.clear();
+      den_map.clear();
+    }
+
+    void resize(std::size_t num_size, std::size_t den_size)
+    {
+      num_map.resize(num_size);
+      den_map.resize(den_size);
+    }
+  };
+
+  struct FunctionFromCoeffsData : public AlgorithmData {
+    std::unique_ptr<HornerRatFunPtr[]> f;
+
+  private:
+    friend class FunctionFromCoeffs;
+
+  private:
+    std::unique_ptr<UInt[]> xp_ = nullptr;
+  };
+
+  class FunctionFromCoeffs : public Algorithm {
+  public:
+
+    void init(unsigned ncoeffs, unsigned npars, unsigned nfunctions,
+              FunctionFromCoeffsData & data);
+
+    virtual Ret evaluate(Context * ctxt,
+                         AlgInput xin[], Mod mod, AlgorithmData * data,
+                         UInt xout[]) const override;
+
+    virtual AlgorithmData::Ptr
+    clone_data(const AlgorithmData * data) const override;
+
+  private:
+
+    static void coeff_polymap_(const UInt * coeff,
+                               const CoeffHornerMap & fmap,
+                               UInt * poly);
+
+    static void coeff_ratfunmap_(const UInt * coeff,
+                                 const CoeffHornerRatFunMap & fmap,
+                                 HornerRatFunPtr & f);
+
+  public:
+    std::unique_ptr<CoeffHornerRatFunMap[]> fmap;
+  };
+
 } // namespace fflow
 
 

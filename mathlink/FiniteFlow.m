@@ -67,6 +67,7 @@ FFSparseSolverMarkAndSweepEqs::usage = "FFSparseSolverMarkAndSweepEqs[graph,node
 FFSparseSolverDeleteUnneededEqs::usage = "FFSparseSolverDeleteUnneededEqs[graph,node] frees some memory by deleting the unneeded equations in a linear solver."
 FFIndependentOf::usage = "FFIndependentOf[graph,varslist,var] returns True if the output of graph, as a function of the variables in varslist, is independent of the variable var, and False otherwise."
 FFAlgRatFunEval::usage = "FFAlgRatFunEval[graph,node,{input},vars,funs] evaluates and returns the list of rational functions funs in the variables vars."
+FFAlgRatFunEvalFromCoeffs::usage = "FFAlgRatFunEvalFromCoeffs[graph,node,{coeffinput,varsinput},coeffs,vars,funs] evaluates and returns the list of rational functions funs in the variables vars, where the coefficients of the monomials in the numerator and the denominator of the function are listed in coeffs and taken from the first input node coeffinput."
 FFAlgRatNumEval::usage = "FFAlgRatFunEval[graph,node,ratnums] evaluates and returns the list of rational numbers ratnums."
 FFAlgChain::usage = "FFAlgChain[graph,node,inputs] chains together the lists returned by its inputs."
 FFAlgTake::usage="FFAlgTake[graph,node,inputs,takepattern] takes and returns selected elements from its inputs, as specified in takepattern."
@@ -150,6 +151,7 @@ FFRatRec[{a1,a2,...},n] is equivalent to {FFRatRec[a1],n],FFRatRec[a2],n],...}."
 FF::badrational = "Argument `1` is not a rational number."
 FF::badfun = "Argument is not a polynomial or a rational function in the specified variables `1` with rational coefficients."
 FF::badfunarg = "Argument `1` is not a polynomial or a rational function in the specified variables `2` with rational coefficients."
+FF::badfuncoeff = "Argument `1` is not a polynomial or a rational function in the specified variables `2` with the specified coefficients."
 FF::badvars = "`1` is not a non-empty list of variables."
 FF::badsystem = "Argument is not a list of equalities."
 FF::badbooleanflag = "The option `1` must be True, False or Automatic."
@@ -235,6 +237,12 @@ PolyCoefficientRules[poly_,vars_] :=  If[AllTrue[#,FFRationalQ[#[[2]]]&],
                                        ]&[FFCoefficientRules[poly,vars]];
 
 
+PolyCoefficientRulesCoeffMap[poly_,vars_,map_] :=  If[SubsetQ[Keys[map],(#[[2]]&/@#)],
+                                                    #,
+                                                    Message[FF::badfuncoeff, poly, vars]; Throw[$Failed]
+                                                    ]&[FFCoefficientRules[poly,vars]];
+
+
 LinearEqCoeffs[expr_, vars_, applyfun_] := Module[
     {res, nvars},
     nvars = Length[vars];
@@ -291,6 +299,11 @@ toFFInternalUnsignedFlag[var_, other_]:=(Message[FF::baduintflag, var]; Throw[$F
 toFFInternalPoly[poly_,vars_] := ({#[[1]],ToString[#[[2]],InputForm]})&/@PolyCoefficientRules[poly, vars];
 toFFInternalRatFun[ratfun_,vars_] := {toFFInternalPoly[Numerator[ratfun],vars],toFFInternalPoly[Denominator[ratfun],vars]};
 toFFInternalRatFun[0,vars_] := {Length[vars]}; (* optimization \[Rule] this represents a vanishing function *)
+
+
+toFFInternalPolyCoeffMap[poly_,vars_,coeffmap_] := ({#[[1]],coeffmap[#[[2]]]})&/@PolyCoefficientRulesCoeffMap[poly, vars, coeffmap];
+toFFInternalRatFunCoeffMap[ratfun_,vars_,coeffmap_] := {toFFInternalPolyCoeffMap[Numerator[ratfun],vars,coeffmap],toFFInternalPolyCoeffMap[Denominator[ratfun],vars,coeffmap]};
+toFFInternalRatFunCoeffMap[0,vars_,coeffmap_] := {Length[vars]}; (* optimization \[Rule] this represents a vanishing function *)
 
 
 fromFFInternalPoly[ipoly_,vars_] := Plus@@((ToExpression[#[[2]]]Times@@(vars^#[[1]]))&/@ipoly);
@@ -917,6 +930,17 @@ RegisterAlgRatFunEval[gid_,inputs_,{vars_List,functions_}]:=Catch[FFAlgRatFunEva
 FFAlgRatFunEval[gid_,id_,inputs_List,params_,functions_List]:=FFRegisterAlgorithm[RegisterAlgRatFunEval,gid,id,inputs,{params,functions}];
 
 
+RegisterAlgRatFunEvalFromCoeffs[gid_,inputs_,{coeffs_,vars_List,functions_}]:=Module[
+  {map},
+  map = Association[{}];
+  Do[map[coeffs[[ii]]] = ii-1;,{ii,Length[coeffs]}];
+  Catch[
+    FFAlgRatFunEvalFromCoeffsImplem[gid,inputs,Length[vars],Length[coeffs],toFFInternalRatFunCoeffMap[#,vars,map]&/@functions]
+  ]
+];
+FFAlgRatFunEvalFromCoeffs[gid_,id_,inputs_List,coeffs_,params_,functions_List]:=FFRegisterAlgorithm[RegisterAlgRatFunEvalFromCoeffs,gid,id,inputs,{coeffs,params,functions}];
+
+
 RegisterAlgRatNumEval[gid_,{},{numbers_}]:=Catch[If[!AllTrue[numbers,FFRationalQ],Throw[$Failed]]; FFAlgRatNumEvalImplem[gid,{},ToString[#,InputForm]&/@numbers]];
 FFAlgRatNumEval[gid_,id_,numbers_List]:=FFRegisterAlgorithm[RegisterAlgRatNumEval,gid,id,{},{numbers}];
 
@@ -1460,6 +1484,7 @@ FFLoadLibObjects[] := Module[
     FFSolverSparseOutputImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output", LinkObject, LinkObject];
     FFIndependentOfImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_independent_of_var", LinkObject, LinkObject];
     FFAlgRatFunEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratfun_eval", LinkObject, LinkObject];
+    FFAlgRatFunEvalFromCoeffsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_coeff_ratfun_eval", LinkObject, LinkObject];
     FFAlgRatNumEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratnum_eval", LinkObject, LinkObject];
     FFAlgChainImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_chain", LinkObject, LinkObject];
     FFAlgTakeImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_take", LinkObject, LinkObject];

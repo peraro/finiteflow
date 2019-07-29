@@ -97,9 +97,10 @@ namespace  {
 
   struct MathGetHornerFun {
 
+    template <typename FunMap>
     void get_horner_ratfun(MLINK mlp,
                            HornerRatFunPtr & f,
-                           MPHornerRatFunMap & map,
+                           FunMap & map,
                            HornerWorkspacePtr & workspace);
 
     void get_horner_poly(MLINK mlp,
@@ -109,6 +110,10 @@ namespace  {
 
     void get_exponents_and_coeffs_(MLINK mlp, int nterms,
                                    Monomial * data, MPRational * coeffs,
+                                   unsigned & nvars);
+
+    void get_exponents_and_coeffs_(MLINK mlp, int nterms,
+                                   Monomial * data, unsigned * coeffs,
                                    unsigned & nvars);
 
     unsigned nvars;
@@ -194,9 +199,10 @@ namespace  {
   }
 
 
+  template <typename FunMap>
   void MathGetHornerFun::get_horner_ratfun(MLINK mlp,
                                            HornerRatFunPtr & f,
-                                           MPHornerRatFunMap & map,
+                                           FunMap & map,
                                            HornerWorkspacePtr & ww)
   {
     long two;
@@ -245,6 +251,35 @@ namespace  {
     max_workspace = std::max(horner_required_workspace(f.den()),
                              max_workspace);
     ww.ensure_size(max_workspace);
+  }
+
+
+  void MathGetHornerFun::get_exponents_and_coeffs_(MLINK mlp, int nterms,
+                                                   Monomial * monomials,
+                                                   unsigned * coeffs,
+                                                   unsigned & nvars)
+  {
+    long two;
+    int * exponents;
+    int n;
+    unsigned this_deg;
+
+    for (long i=0; i<nterms; ++i) {
+      MLCheckFunction(mlp, "List", &two);
+
+      MLGetInteger32List(mlp, &exponents, &n);
+      monomials[i] = Monomial(n);
+      std::copy(exponents, exponents+n, monomials[i].exponents());
+      this_deg = std::accumulate(exponents, exponents+n, 0);
+      monomials[i].degree() = this_deg;
+
+      monomials[i].coeff() = 1;
+      MLGetInteger32(mlp, (int*)(&coeffs[i]));
+
+      MLReleaseInteger32List(mlp, exponents, n);
+    }
+
+    nvars = n;
   }
 
 
@@ -2635,6 +2670,59 @@ extern "C" {
     Graph * graph = session.graph(graphid);
 
     alg.init(nparsin, nfunctions, *data);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
+  int fflowml_alg_coeff_ratfun_eval(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int n_args, nfunctions, ncoeffs;
+    int nparsin=0;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &n_args);
+
+    int graphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+
+    typedef FunctionFromCoeffsData Data;
+    std::unique_ptr<FunctionFromCoeffs> algptr(new FunctionFromCoeffs());
+    std::unique_ptr<Data> data(new Data());
+    FunctionFromCoeffs & alg = *algptr;
+    MLGetInteger32(mlp, &nparsin);
+    MLGetInteger32(mlp, &ncoeffs);
+    MLTestHead( mlp, "List", &nfunctions);
+    data->f.reset(new HornerRatFunPtr[nfunctions]);
+    alg.fmap.reset(new CoeffHornerRatFunMap[nfunctions]);
+    for (int i=0; i<nfunctions; ++i) {
+      MathGetHornerFun getfun;
+      getfun.get_horner_ratfun(mlp, data->f[i], alg.fmap[i],
+                               session.main_context()->ww);
+    }
+
+    MLNewPacket(mlp);
+
+    if (!session.graph_exists(graphid) || inputnodes.size() != 2) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+
+    alg.init(ncoeffs, nparsin, nfunctions, *data);
     unsigned id = graph->new_node(std::move(algptr), std::move(data),
                                   inputnodes.data());
 
