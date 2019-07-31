@@ -17,6 +17,7 @@
 #include <fflow/numeric_fit.hh>
 #include <fflow/alg_laurent.hh>
 #include <fflow/subgraph_fit.hh>
+#include <fflow/subgraph_reconstruct.hh>
 #include <fflow/node_solver.hh>
 #include <mathlink.h>
 #include <WolframLibrary.h>
@@ -784,6 +785,22 @@ namespace  {
         salg.prefactor_exponent(pref_exp.data());
         MLPutInteger32List(mlp, pref_exp.data(), pref_exp.size());
         MLPutInteger32List(mlp, (int*)salg.order(), pref_exp.size());
+
+    } else if(dynamic_cast<SubgraphRec*>(alg)) {
+      SubgraphRec & ls = *static_cast<SubgraphRec*>(alg);
+      const SparseRationalFunction * fun = ls.rec_function();
+      const unsigned nout = ls.subgraph()->nparsout;
+      const unsigned nrec = ls.n_rec_vars();
+      MLPutFunction(mlp, "List", nout);
+      for (unsigned j=0; j<nout; ++j) {
+        MLPutFunction(mlp, "List", 2);
+        MLPutFunction(mlp, "List", fun[j].numerator().size());
+        for (const auto & mon : fun[j].numerator())
+          MLPutInteger16List(mlp, mon.exponents(), nrec);
+        MLPutFunction(mlp, "List", fun[j].denominator().size());
+        for (const auto & mon : fun[j].denominator())
+          MLPutInteger16List(mlp, mon.exponents(), nrec);
+      }
 
     } else {
       MLPutSymbol(mlp, "Null");
@@ -3637,6 +3654,69 @@ extern "C" {
       MLPutSymbol(mlp, "$Failed");
       return LIBRARY_NO_ERROR;
     }
+
+    MLNewPacket(mlp);
+
+    if (!session.graph_exists(graphid)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+  int fflowml_alg_subgraph_rec(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead(mlp, "List", &nargs);
+    int graphid, subgraphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+    MLGetInteger32(mlp, &subgraphid);
+
+    typedef SubgraphRecData Data;
+    std::unique_ptr<SubgraphRec> algptr(new SubgraphRec());
+    std::unique_ptr<Data> data(new Data());
+
+    int nrec=0, shiftvars=0;
+    MLGetInteger32(mlp, &nrec);
+    MLGetInteger32(mlp, &shiftvars);
+    //ReconstructionOptions opt = get_rec_opt(mlp);
+
+    Ret ret = FAILED;
+
+    if (inputnodes.size()==1) {
+      Node * node = session.node(graphid, inputnodes[0]);
+      if (node) {
+        unsigned npars = node->algorithm()->nparsout;
+        ret = algptr->init(session, subgraphid, *data,
+                           npars, nrec, shiftvars);
+      }
+    }
+
+    if (ret != SUCCESS) {
+      MLNewPacket(mlp);
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    //algptr->setOptions(opt);
 
     MLNewPacket(mlp);
 

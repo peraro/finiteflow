@@ -26,7 +26,7 @@ namespace fflow {
 
     for (unsigned mod_i=0; mod_i<max_primes+1; ++mod_i) {
 
-      Mod mod(BIG_UINT_PRIMES[mod_i % BIG_UINT_PRIMES_SIZE]);
+      Mod mod(BIG_UINT_PRIMES[(start_mod + mod_i) % BIG_UINT_PRIMES_SIZE]);
 
       if (mod_i) {
 
@@ -99,7 +99,7 @@ namespace fflow {
 
     for (unsigned mod_i=0; mod_i<max_primes+1; ++mod_i) {
 
-      Mod mod(BIG_UINT_PRIMES[mod_i % BIG_UINT_PRIMES_SIZE]);
+      Mod mod(BIG_UINT_PRIMES[(start_mod + mod_i) % BIG_UINT_PRIMES_SIZE]);
 
       if (mod_i) {
 

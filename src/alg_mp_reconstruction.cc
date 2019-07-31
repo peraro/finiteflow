@@ -592,7 +592,7 @@ namespace fflow {
                                        const RatFunVarDegrees degs[],
                                        const unsigned numdeg[],
                                        const unsigned dendeg[],
-                                       MPReconstructedRatFun & recf)
+                                       SparseRationalFunction & recf)
   {
     SparselySampledRatFun sampledfun;
     sampledfun.set_function_cache(&cache, nparsin, nparsout);
@@ -612,11 +612,29 @@ namespace fflow {
     else
       ret = rec.reconstruct(sampledfun, mod);
 
-    if (ret == SUCCESS) {
-      SparseRationalFunction tmp = std::move(rec.getFunction());
-      recf.copy_exactly(std::move(tmp));
-    }
+    if (ret == SUCCESS)
+      recf = std::move(rec.getFunction());
 
+    return ret;
+  }
+
+  Ret algorithm_sparse_reconstruct_mod(Mod mod,
+                                       const UIntCache & cache,
+                                       unsigned nparsin, unsigned nparsout,
+                                       unsigned idx,
+                                       const UInt shift[],
+                                       const ReconstructionOptions & opt,
+                                       const RatFunVarDegrees degs[],
+                                       const unsigned numdeg[],
+                                       const unsigned dendeg[],
+                                       MPReconstructedRatFun & recf)
+  {
+    SparseRationalFunction tmp;
+    Ret ret = algorithm_sparse_reconstruct_mod(mod, cache, nparsin, nparsout,
+                                               idx, shift, opt,
+                                               degs, numdeg, dendeg, tmp);
+    if (ret == SUCCESS)
+      recf.copy_exactly(std::move(tmp));
     return ret;
   }
 

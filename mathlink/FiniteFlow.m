@@ -37,6 +37,7 @@ FFAlgSparseSolver::usage = "FFAlgSparseSolver[graph,node,{input},params,eqs,vars
 FFAlgNodeDenseSolver::usage = "FFAlgNodeDenseSolver[graph,node,{input},neqs,vars] defines a dense linear solver returning the solution of the equations A[[i,1]] vars[[1]] + A[[i,2]] vars[[2]] + ... == b[[i]] in the variables vars, for i=1,...,neqs, where the entries returned by the input node are interpreted as the elements of the matrix (A b) in row-major order."
 FFAlgSubgraphFit::usage = "FFAlgSubgraphFit[graph,node,{input},subgraph,vars,coeffs] is a subgraph algorithm which returns the solution for the coefficients coeffs, as functions of the input parameters, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the list of variables vars concatenated with the input parameters represented by the input node.
 FFAlgSubgraphFit[graph,node,{},subgraph,vars,coeffs] is a subgraph algorithm which returns the numerical solution for the coefficients coeffs, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the variables vars."
+FFAlgSubgraphReconstruct::usage = "FFAlgSubgraphReconstruct[graph,node,{input},subgraph,vars] reconstructs the output of subgraph as a list of functions of the variables vars and returns the coefficients of their monomials as functions of the input parameters.  The input of subgraph is the list of variables vars concatenated with the input parameters represented by the input node."
 FFAlgSubgraphMultiFit::usage = "FFAlgSubgraphMultiFit[graph,node,inputs,subgraph,vars,take] is a subgraph node which performs several linear fits of the form c1 f1 + c2 f2 + ... == f0, where the elements {f1,f2,...,f0} are taken from the output of subgraph based on the pattern take."
 FFSerializeSparseEqs::usage="FFSerializeSparseEqs[filename, params, eqs, vars, pattern, position] serializes the equations eqs in \"MX\" format in the file filename, formatted for communication with the finiteflow library."
 FFAlgSerializedSparseSolver::usage="FFAlgSerializedSparseSolver[graph,node,{input},params,files,vars] defines a sparse solver using the equations serialized in files using FFSerializeSparseEqs, with respect to the variables vars, as a function of the free parameters params."
@@ -57,7 +58,10 @@ FFNonZeroesLearn::usage = "FFNonZeroesLearn[graph] executes the learning phase o
 FFNonZeroesGetInfo::usage = "FFNonZeroesGetInfo[graph,ndode] returns the info on a NonZero algorithm obtained during the learning step."
 FFMultiFitLearn::usage = "FFMultiFitLearn[graph,coefficients] executes the learning phase on a multi-fit subgraph algorithm, which must be the output node of graph."
 FFMultiFitGetInfo::usage = "FFMultiFitGetInfo[graph,node,coefficients] returns the info on a multi-fit subgraph algorithm obtained during the learning step."
-FFMultiFitSol::usage = "FFMultiFitSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a multi-fit algorithm, and learinfo is the information obtained during its learning phase, formats expr as list of lists of substitution rules representing the solutions of the fits."
+FFMultiFitSol::usage = "FFMultiFitSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a multi-fit algorithm, and learninfo is the information obtained during its learning phase, formats expr as a list of lists of substitution rules representing the solutions of the fits."
+FFSubgraphReconstructLearn::usage = "FFSubgraphReconstructLearn[graph,vars] executes the learning phase of a SubgraphReconstruct algorithm and returns, for each output element of the subgraph, a list of the form {{n1,n2,...},{d1,d2,...}} where {n1,n2,...} ({d1,d2,...}) is the list of non-vanishing monomials of its numerator (denominator) in the variables vars."
+FFSubgraphReconstructGetInfo::usage = "FFSubgraphReconstructGetInfo[graph,node,vars] returns the info on a SubgraphReconstruct algorithm obtained during the learning step."
+FFSubgraphReconstructSol::usage = "FFSubgraphReconstructSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a SubgraphReconstruct algorithm and learninfo is the information obtained during its learning phase, returns a list of analytic expressions for the output of the subgraph."
 FFAlgSimpleSubgraph::usage = "FFAlgSimpleSubgraph[graph,node,{input},subgraph] creates a simple subgraph node."
 FFAlgMemoizedSubgraph::usage = "FFAlgMemoizedSubgraph[graph,node,{input},subgraph] creates a subgraph node which remembers the input and output of its last evaluation, avoiding repeated evaluations with the same input."
 FFAlgSubgraphMap::usage = "FFAlgSubgraphMap[graph,node,inputs,subgraph] executes subgraph several times, using each list in inputs as input variables, and chains the outputs together."
@@ -914,6 +918,13 @@ FFMultiFitGetInfo[gid_,id_,vars_]:=Module[
 ];
 
 
+FFSubgraphReconstructGetInfo[gid_,id_,vars_]:=Module[
+  {info},
+  info = FFAlgorithmGetInfoImplem[GetGraphId[gid],GetAlgId[gid,id]];
+  (((Times@@(vars^#))&/@#)&/@#)&/@info
+];
+
+
 FFSolverNIndepEqs[gid_,id_]:=FFSolverNIndepEqsImplem[GetGraphId[gid],GetAlgId[gid,id]];
 
 
@@ -1387,6 +1398,25 @@ Options[FFAlgSubgraphMultiFit]={"NeededVars"->Automatic,"ExtraEquations"->2};
 FFAlgSubgraphMultiFit[gid_,id_,inputs_List,subgraphid_,samplevars_,take_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgSubgraphMultiFit,gid,id,inputs,{subgraphid,samplevars,take,OptionValue["NeededVars"],OptionValue["ExtraEquations"]}];
 
 
+RegisterAlgSubgraphRec[gid_,inputs_,{subgraphid_,samplevars_,shiftvars_}]:=Module[{neededvars},
+  Catch[
+    CheckVariables[samplevars];
+    FFSubgraphReconstructImplem[gid,inputs,GetGraphId[subgraphid],Length[samplevars],If[TrueQ[shiftvars],1,0]]
+  ]
+];
+Options[FFAlgSubgraphReconstruct]:={"ShiftVars"->True};
+FFAlgSubgraphReconstruct[gid_,id_,inputs_List,subgraphid_,samplevars_,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgSubgraphRec,gid,id,inputs,{subgraphid,samplevars,OptionValue["ShiftVars"]}];
+
+
+FFSubgraphReconstructLearn[gid_,vars_]:=(((Times@@(vars^#))&/@#)&/@#)&/@FFLearn[gid];
+
+
+FFSubgraphReconstructSol[expr_List,learn_]:=Module[{ppp},
+  ppp=PartitionsWithLen[expr,Length[#[[1]]]+Length[#[[2]]]&/@learn];
+  Table[((Plus@@#[[1]])/(Plus@@#[[2]]))&[(PartitionsWithLen[ppp[[ii]],{Length[#[[1]]],Length[#[[2]]]}&[learn[[ii]]]]learn[[ii]])],{ii,Length[learn]}]
+];
+
+
 Options[FFLinearFit] := Join[{"IndepVarsOnly"->False},
                                 AutoReconstructionOptions[],
                                 Options[FFAlgLinearFit]];
@@ -1456,6 +1486,7 @@ FFLoadLibObjects[] := Module[
     FFSubGraphMapImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_subgraph_map", LinkObject, LinkObject];
     FFSubgraphFitImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_subgraph_fit", LinkObject, LinkObject];
     FFSubgraphMultiFitImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_subgraph_multifit", LinkObject, LinkObject];
+    FFSubgraphReconstructImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_subgraph_rec", LinkObject, LinkObject];
 
     FFRegisterDenseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_dense_system", LinkObject, LinkObject];
     FFRegisterSparseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_sparse_system", LinkObject, LinkObject];

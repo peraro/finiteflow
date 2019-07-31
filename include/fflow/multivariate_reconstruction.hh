@@ -262,9 +262,13 @@ namespace fflow {
 
     void setShift(const UInt c[])
     {
-      shift_.resize(nvars_);
-      for (unsigned i=0; i<nvars_; ++i)
-        shift_[i] = c[i];
+      if (!c) {
+        shift_.clear();
+      } else {
+        shift_.resize(nvars_);
+        for (unsigned i=0; i<nvars_; ++i)
+          shift_[i] = c[i];
+      }
     }
 
     void setShift(const std::initializer_list<UInt> & c)

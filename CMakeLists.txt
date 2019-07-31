@@ -113,6 +113,7 @@ set(FFLOW_SOURCES
     src/subgraph_fit.cc
     src/numeric_fit.cc
     src/alg_laurent.cc
+    src/subgraph_reconstruct.cc
     )
 
 set(FFLOW_HEADERS
@@ -163,6 +164,7 @@ set(FFLOW_HEADERS
     include/fflow/subgraph_fit.hh
     include/fflow/numeric_fit.hh
     include/fflow/alg_laurent.hh
+    include/fflow/subgraph_reconstruct.hh
     )
 
 add_library(fflow ${FFLOW_SOURCES})

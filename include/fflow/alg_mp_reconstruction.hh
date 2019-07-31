@@ -40,7 +40,10 @@ namespace fflow {
                                  const UInt shift[],
                                  MPRatFunReconstruction & rec)
   {
-    rec.setShift(shift);
+    if (shift)
+      rec.setShift(shift);
+    else
+      rec.clearShift();
     rec.n_checks = opt.n_checks;
     rec.n_uchecks = opt.n_uchecks;
     rec.n_singular = opt.n_singular;
@@ -138,6 +141,17 @@ namespace fflow {
                                        const unsigned numdeg[],
                                        const unsigned dendeg[],
                                        MPReconstructedRatFun & recf);
+
+  Ret algorithm_sparse_reconstruct_mod(Mod mod,
+                                       const UIntCache & cache,
+                                       unsigned nparsin, unsigned nparsout,
+                                       unsigned idx,
+                                       const UInt shift[],
+                                       const ReconstructionOptions & opt,
+                                       const RatFunVarDegrees degs[],
+                                       const unsigned numdeg[],
+                                       const unsigned dendeg[],
+                                       SparseRationalFunction & recf);
 
   Ret algorithm_reconstruct_univariate(const Algorithm & alg,
                                        AlgorithmData * data,
