@@ -2334,8 +2334,8 @@ extern "C" {
 
     MLNewPacket(mlp);
 
-    session.parallel_sample(id, nthreads, opt,
-                            file.c_str(), samples_start, samples_size);
+    SamplePointsFromFile pts(file.c_str(), samples_start, samples_size);
+    session.parallel_sample(id, nthreads, opt, &pts);
 
     MLPutSymbol(mlp, "Null");
 
@@ -3981,6 +3981,97 @@ extern "C" {
 
     return LIBRARY_NO_ERROR;
   }
+
+
+
+
+
+  int fflowml_graph_evaluate_list(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    const UInt max_primes = BIG_UINT_PRIMES_SIZE;
+
+    int nargs, gid;
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &gid);
+
+    Graph * g = session.graph(gid);
+
+    if (!session.graph_can_be_evaluated(gid)) {
+      MLNewPacket(mlp);
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    unsigned nparsin = g->nparsin[0];
+    unsigned nparsout = g->nparsout;
+
+    // nthreads
+    int nthreads;
+    MLGetInteger32(mlp, &nthreads);
+    if (nthreads < 0)
+      nthreads = 0;
+
+    // default prime
+    int prime_no;
+    MLGetInteger32(mlp, &prime_no);
+
+    if (prime_no < 0)
+      prime_no = 0;
+    if (unsigned(prime_no) >= BIG_UINT_PRIMES_SIZE)  {
+      MLNewPacket(mlp);
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    mlint64 * xin;
+    int n_points=0, n_xin=0;
+    std::unique_ptr<UInt[]> x;
+    SamplePointsVector points;
+    MLTestHead( mlp, "List", &n_points);
+    points.reserve(n_points);
+    for (int j=0; j<n_points; ++j) {
+      MLGetInteger64List(mlp, &xin, &n_xin);
+      if ((unsigned(n_xin) != nparsin && unsigned(n_xin) != nparsin+1) ||
+          (unsigned(n_xin) == nparsin+1 && UInt(xin[nparsin]) >= max_primes)) {
+        MLNewPacket(mlp);
+        MLPutSymbol(mlp, "$Failed");
+        return LIBRARY_NO_ERROR;
+      }
+      x.reset(new UInt[nparsin+1]);
+      std::copy(xin, xin+n_xin, x.get());
+      if (unsigned(n_xin) == nparsin)
+        x[nparsin] = BIG_UINT_PRIMES[prime_no];
+      else
+        x[nparsin] = BIG_UINT_PRIMES[x[nparsin]];
+      points.push_back(std::move(x));
+      MLReleaseInteger64List(mlp, xin, n_xin);
+    }
+
+    MLNewPacket(mlp);
+
+    SamplePointsVector xout;
+    {
+      Ret ret = session.evaluate_list(gid, points, xout, nthreads);
+      if (ret != SUCCESS)  {
+        MLPutSymbol(mlp, "$Failed");
+        return LIBRARY_NO_ERROR;
+      }
+    }
+
+    MLPutFunction(mlp, "List", n_points);
+    for (int j=0; j<n_points; ++j) {
+      if (xout[j][0] == FAILED)
+        MLPutSymbol(mlp, "$Failed");
+      else
+        MLPutInteger64List(mlp, (mlint64*)(xout[j].get()), nparsout);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
 
 
   int fflowml_alg_sparse_mat_mul(WolframLibraryData libData, MLINK mlp)

@@ -335,14 +335,10 @@ namespace fflow {
                              const ReconstructionOptions & opt);
 
     void sample(unsigned graphid, const ReconstructionOptions & opt,
-                const char * file = nullptr,
-                std::size_t samples_start = 0,
-                std::size_t samples_size = 0);
+                SamplePointsGenerator * samplegen = nullptr);
     void parallel_sample(unsigned graphid, unsigned nthreads,
                          const ReconstructionOptions & opt,
-                         const char * file = nullptr,
-                         std::size_t samples_start = 0,
-                         std::size_t samples_size = 0);
+                         SamplePointsGenerator * samplegen = nullptr);
 
     Ret reconstruct(unsigned graphid, MPReconstructedRatFun res[],
                     const ReconstructionOptions & opt);
@@ -370,6 +366,10 @@ namespace fflow {
     Ret full_reconstruction_mod(unsigned graphid, MPReconstructedRatFun res[],
                                 unsigned nthreads,
                                 ReconstructionOptions opt);
+
+    Ret evaluate_list(unsigned graphid, const SamplePointsVector & input,
+                      SamplePointsVector & res,
+                      unsigned nthreads = 0);
 
     // Checks that the output of an algorithm is independent of the
     // variable "var".  Returns 1=True, 0=false, or FAILED

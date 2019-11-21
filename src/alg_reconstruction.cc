@@ -175,6 +175,23 @@ namespace fflow {
   }
 
 
+  Ret SamplePointsFromFile::load_samples(unsigned nparsin,
+                                         unsigned nparsout,
+                                         SamplePointsVector & samples)
+  {
+    return ::fflow::load_samples(file_,
+                                 nparsin + bit_array_u64size(nparsout),
+                                 samples, samples_start_, samples_size_);
+  }
+
+  Ret SamplePointsFromVector::load_samples(unsigned, unsigned,
+                                           SamplePointsVector & samples)
+  {
+    samples = std::move(vec_);
+    return SUCCESS;
+  }
+
+
   void sort_by_mod(std::unique_ptr<UInt[]> * start,
                    std::unique_ptr<UInt[]> * end,
                    unsigned nvars)

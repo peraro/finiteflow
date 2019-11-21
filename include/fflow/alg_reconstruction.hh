@@ -210,6 +210,49 @@ namespace fflow {
   };
 
 
+  class SamplePointsGenerator {
+  public:
+    virtual Ret load_samples(unsigned nparsin, unsigned nparsout,
+                             SamplePointsVector & samples) = 0;
+    virtual ~SamplePointsGenerator() {}
+  };
+
+
+  class SamplePointsFromFile : public SamplePointsGenerator {
+  public:
+
+    explicit SamplePointsFromFile(const char * file,
+                                  std::size_t samples_start = 0,
+                                  std::size_t samples_size = 0)
+      : file_(file),
+        samples_start_(samples_start),
+        samples_size_(samples_size) {}
+
+    virtual Ret load_samples(unsigned nparsin, unsigned nparsout,
+                             SamplePointsVector & samples);
+
+  private:
+    const char * file_ = nullptr;
+    std::size_t samples_start_ = 0;
+    std::size_t samples_size_ = 0;
+  };
+
+
+  class SamplePointsFromVector : public SamplePointsGenerator {
+  public:
+    void setVector(SamplePointsVector && samples)
+    {
+      vec_ = std::move(samples);
+    }
+
+    virtual Ret load_samples(unsigned nparsin, unsigned nparsout,
+                             SamplePointsVector & samples);
+
+  private:
+    SamplePointsVector vec_;
+  };
+
+
   void sort_by_mod(std::unique_ptr<UInt[]> * start,
                    std::unique_ptr<UInt[]> * end,
                    unsigned nvars);

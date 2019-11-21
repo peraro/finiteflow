@@ -1059,9 +1059,7 @@ namespace fflow {
   }
 
   void Session::sample(unsigned graphid, const ReconstructionOptions & opt,
-                       const char * file,
-                       std::size_t samples_start,
-                       std::size_t samples_size)
+                       SamplePointsGenerator * samplegen)
   {
     if (!graph_can_be_evaluated(graphid))
       return;
@@ -1078,12 +1076,10 @@ namespace fflow {
     }
 
     SamplePointsVector samples;
-    if (file == nullptr) {
+    if (samplegen == nullptr) {
       gen_sample_points_(graphid, samples, opt);
     } else {
-      Ret dret = load_samples(file,
-                              a.nparsin[0] + bit_array_u64size(a.nparsout),
-                              samples, samples_start, samples_size);
+      Ret dret = samplegen->load_samples(a.nparsin[0], a.nparsout, samples);
       if (dret != SUCCESS)
         return;
     }
@@ -1127,12 +1123,10 @@ namespace fflow {
 
   void Session::parallel_sample(unsigned graphid, unsigned nthreads,
                                 const ReconstructionOptions & opt,
-                                const char * file,
-                                std::size_t samples_start,
-                                std::size_t samples_size)
+                                SamplePointsGenerator * samplegen)
   {
     if (nthreads == 1) {
-      sample(graphid, opt, file, samples_start, samples_size);
+      sample(graphid, opt, samplegen);
       return;
     }
 
@@ -1156,12 +1150,10 @@ namespace fflow {
     Graph::AlgRecData & arec = a.rec_data();
 
     SamplePointsVector samples;
-    if (file == nullptr) {
+    if (samplegen == nullptr) {
       gen_sample_points_(graphid, samples, opt);
     } else {
-      Ret dret = load_samples(file,
-                              a.nparsin[0] + bit_array_u64size(a.nparsout),
-                              samples, samples_start, samples_size);
+      Ret dret = samplegen->load_samples(a.nparsin[0], a.nparsout, samples);
       if (dret != SUCCESS)
         return;
     }
@@ -1230,6 +1222,68 @@ namespace fflow {
                         a.nparsin[0] + bit_array_u64size(a.nparsout),
                         samples);
   }
+
+
+  Ret Session::evaluate_list(unsigned graphid,
+                             const SamplePointsVector & input,
+                             SamplePointsVector & res,
+                             unsigned nthreads)
+  {
+    if (!graph_can_be_evaluated(graphid))
+      return FAILED;
+    Graph & a = *graphs_[graphid];
+
+    if (!a.nparsin[0] || a.nparsout<1)
+      return FAILED;
+
+    if (!a.rec_data_.get())
+      make_reconstructible_(a.id_);
+
+    unsigned nparsin = a.nparsin[0];
+    unsigned nparsout = a.nparsout;
+    unsigned npoints = input.size();
+    unsigned flagsize = bit_array_u64size(nparsout);
+    unsigned xsize = nparsin + 1 + flagsize;
+    std::unique_ptr<UInt[]> x;
+
+    res.resize(0);
+    res.reserve(input.size());
+
+    SamplePointsVector points;
+
+    for (unsigned j=0; j<npoints; ++j) {
+      x.reset(new UInt[xsize]);
+      std::copy(input[j].get(), input[j].get()+nparsin+1, x.get());
+      std::fill(x.get()+nparsin+1, x.get()+xsize, ~UInt(0));
+      points.push_back(std::move(x));
+    }
+    sort_by_mod(points.data(), points.data()+points.size(), nparsin);
+
+    SamplePointsFromVector vec;
+    vec.setVector(std::move(points));
+
+    ReconstructionOptions opt;
+    parallel_sample(graphid, nthreads, opt, &vec);
+
+    Graph::AlgRecData & arec = a.rec_data();
+    UIntCache & cache = *arec.cache;
+
+    res.clear();
+    res.reserve(input.size());
+
+    for (unsigned j=0; j<npoints; ++j) {
+      x.reset(new UInt[nparsout]);
+      UInt * xout = nullptr;
+      if (cache.find(input[j].get(), &xout))
+        std::copy(xout+flagsize, xout+flagsize+nparsout, x.get());
+      else
+        x[0] = FAILED;
+      res.push_back(std::move(x));
+    }
+
+    return SUCCESS;
+  }
+
 
   Ret Session::dump_evaluations(unsigned graphid,
                                 const char * filename)

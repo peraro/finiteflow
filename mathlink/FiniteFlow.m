@@ -144,6 +144,7 @@ FFSampleFromPoints[graph,filename,start,npoints,nthreads] is equivalent to FFSam
 FFNSamplePoints::usage = "FFNSamplePoints[graph] returns a list of length two.  The first element is the total number of sample points needed for recostructing the full output of graph.  The second element is a list of integers representing the number of sample points needed for the reconstruction of each element of the output of graph."
 
 FFGraphEvaluate::usage="FFGraphEvaluate[graph,point] evaluates graph at point, where point is a list of integers.  The prime field may be changed passing the option \"PrimeNo\"."
+FFGraphEvaluateMany::usage="FFGraphEvaluateMany[graph,points] evaluates graph at the specified list of points.  The prime field may be changed globally using the option \"PrimeNo\", or individually for each point by appending an additional entry with the index of the prime to be used.  By default, evaluations are performed in parallel."
 FFPrimeNo::usage="FFPrimeNo[i] with i>=0 returns the i-th hardcoded prime used by finiteflow."
 FFMulInv::usage="FFMulInv[z,p] returns the multiplicative inverse of the integer z module a prime p."
 FFRatMod::usage="FFRatMod[z,p] returns z mod p, where z is a rational number and p is a prime."
@@ -1282,6 +1283,10 @@ Options[FFGraphEvaluate]={"PrimeNo"->0};
 FFGraphEvaluate[g_,x_,OptionsPattern[]]:=FFGraphEvaluateImplem[GetGraphId[g],CheckedInt64List[x],CheckedInt32[OptionValue["PrimeNo"]]];
 
 
+Options[FFGraphEvaluateMany]={"PrimeNo"->0,"NThreads"->FFNThreads};
+FFGraphEvaluateMany[g_,x_List,OptionsPattern[]]:=FFGraphEvaluateListImplem[GetGraphId[g],If[TrueQ[#==Automatic],FFAutomaticNThreads[],CheckedInt32[#]]&@OptionValue["NThreads"],CheckedInt32[OptionValue["PrimeNo"]],CheckedInt64List/@x];
+
+
 FFPrimeNo[i_]:=FFPrimeNoImplem[CheckedInt32[i]];
 
 
@@ -1542,6 +1547,7 @@ FFLoadLibObjects[] := Module[
     FFSamplesFileSizeImplem=LibraryFunctionLoad[fflowlib, "fflowml_samples_file_size", LinkObject, LinkObject];
     FFNParsFromDegreesFileImpl=LibraryFunctionLoad[fflowlib, "fflowml_npars_from_degree_info", LinkObject, LinkObject];
     FFGraphEvaluateImplem=LibraryFunctionLoad[fflowlib, "fflowml_graph_evaluate", LinkObject, LinkObject];
+    FFGraphEvaluateListImplem=LibraryFunctionLoad[fflowlib, "fflowml_graph_evaluate_list", LinkObject, LinkObject];
     FFPrimeNoImplem=LibraryFunctionLoad[fflowlib, "fflowml_prime_no", LinkObject, LinkObject];
     FFNSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_count_sample_points", LinkObject, LinkObject];
     FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
