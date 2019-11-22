@@ -1186,7 +1186,7 @@ FFDenseSolve[eqs_, vars_, OptionsPattern[]] := Module[
 ];
 
 
-Options[FFSparseSolve] := Join[{"Parameters"->Automatic, "IndepVarsOnly"->False, "MarkAndSweep"->True},
+Options[FFSparseSolve] := Join[{"Parameters"->Automatic, "IndepVarsOnly"->False, "MarkAndSweep"->True, "SparseOutput"->False},
                                    AutoReconstructionOptions[],
                                    Options[FFAlgSparseSolver]];
 FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
@@ -1204,6 +1204,9 @@ FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
       res = FFAlgSparseSolver[graph,sys,{in},params,eqs,vars,
                                 Sequence@@FilterRules[{opt}, Options[FFAlgSparseSolver]]];
       If[res==$Failed,Throw[$Failed]];
+      If[(!TrueQ[OptionValue["IndepVarsOnly"]]) && TrueQ[OptionValue["SparseOutput"]],
+        FFSolverSparseOutput[graph,sys];
+      ];
       
       FFGraphOutput[graph,sys];
       learn = FFSparseSolverLearn[graph,vars];
