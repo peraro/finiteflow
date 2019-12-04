@@ -398,13 +398,8 @@ namespace fflow {
     for (const auto xi : cache) {
       for (unsigned i=0; i<npars_in+1; ++i)
         dump(xi.first[i]);
-      if (xi.second[0] == FAILED) {
-        for (unsigned i=0; i<npars_out; ++i)
-          dump(FAILED);
-      } else {
-        for (unsigned i=0; i<npars_out; ++i)
-          dump(xi.second[i]);
-      }
+      for (unsigned i=0; i<npars_out; ++i)
+        dump(xi.second[i]);
     }
 
     return SUCCESS;
