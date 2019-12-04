@@ -4229,4 +4229,67 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
+
+  int fflowml_alg_ratexpr_eval(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int n_args, nfunctions;
+    int nparsin=0;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &n_args);
+
+    int graphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+
+    typedef AnalyticExpressionData Data;
+    std::unique_ptr<AnalyticExpression> algptr(new AnalyticExpression());
+    std::unique_ptr<Data> data(new Data());
+    AnalyticExpression & alg = *algptr;
+
+    MLGetInteger32(mlp, &nparsin);
+
+    MLTestHead(mlp, "List", &nfunctions);
+    std::vector<std::vector<Instruction>> bytecode(nfunctions);
+
+    for (int i=0; i<nfunctions; ++i) {
+      short * datap;
+      int countp;
+      MLGetInteger16List(mlp, &datap, &countp);
+      bytecode[i].resize(countp);
+      std::copy(datap, datap+countp, bytecode[i].data());
+      MLReleaseInteger16List(mlp, datap, countp);
+    }
+
+    int nnumbers;
+    MLTestHead( mlp, "List", &nnumbers);
+    std::vector<MPRational> numbers(nnumbers);
+    for (int i=0; i<nnumbers; ++i)
+      get_rational(mlp, numbers[i]);
+
+    MLNewPacket(mlp);
+
+    if (!session.graph_exists(graphid) || inputnodes.size() != 1) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+
+    alg.init(nparsin, std::move(bytecode), std::move(numbers), *data);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
 } // extern "C"

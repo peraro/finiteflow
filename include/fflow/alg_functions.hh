@@ -145,6 +145,63 @@ namespace fflow {
     std::unique_ptr<CoeffHornerRatFunMap[]> fmap;
   };
 
+
+  class AnalyticExpression;
+  typedef unsigned char Instruction;
+
+  struct AnalyticExpressionData : public AlgorithmData {
+
+  private:
+    friend class AnalyticExpression;
+
+  private:
+    std::unique_ptr<UInt[]> bignumbers_ = nullptr;
+    std::unique_ptr<UInt[]> stack_ = nullptr;
+    UInt this_mod_ = 0;
+  };
+
+  class AnalyticExpression : public Algorithm {
+  public:
+
+    // bytecode instructions
+    enum InstrType {
+          ADD,
+          MUL,
+          NEG,
+          POW,
+          VAR,
+          NEGPOW,
+          SMALLNUM,
+          MEDNUM,
+          BIGNUM,
+          END
+    };
+
+  public:
+
+    void init(unsigned npars,
+              std::vector<std::vector<Instruction>> && bytecode,
+              std::vector<MPRational> && bignums,
+              AnalyticExpressionData & data);
+
+    virtual Ret evaluate(Context * ctxt,
+                         AlgInput xin[], Mod mod, AlgorithmData * data,
+                         UInt xout[]) const override;
+
+    virtual AlgorithmData::Ptr
+    clone_data(const AlgorithmData * data) const override;
+
+  private:
+
+    void reset_mod_(Mod mod, AnalyticExpressionData & data) const;
+    unsigned compute_max_stack_size_() const;
+
+  private:
+    std::vector<std::vector<Instruction>> bytecode_;
+    std::vector<MPRational> bignumbers_;
+    unsigned max_stack_size_ = 0;
+  };
+
 } // namespace fflow
 
 

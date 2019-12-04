@@ -19,6 +19,7 @@ FFDenseSolve::usage = "FFDenseSolve[eqs,vars] reconstructs and returns the solut
 FFSparseSolve::usage = "FFSparseSolve[eqs,vars] reconstructs and returns the solutions of the linear system eqs in the variables vars using a sparse linear solver."
 FFLinearFit::usage = "FFLinearFit[params, ansatz, rhs, vars, coeffs] reconstructs the coefficients coeffs, as functions of the free parameters params, which solve the linear fit equation ansatz == rhs.  The ansatz must be a linear expression of the form c1 f1 + c2 f2 + ... + f0, where {c1,c2,...} is the input list coeffs and {f1,f2,...} are rational functions of params and vars.  The ansatz can also be specified as a list {f1,f2,f3,...,f0} where f0 can be omitted if vanishing.  The input rhs is also a rational function of params and vars or a list of rational functions to be summed.  Both the functions f1,f2,... and rhs may also depend on additional auxiliary variables, which are rational functions of params and vars, to be defined via the option \"Substitutions\"."
 FFInverse::usage = "FFInverse[mat] reconstructs the inverse of the square matrix mat via Gauss-Jordan elimination.  By default it uses a dense solver for the inversion.  The option \"Sparse\"->True can be passed to use a sparse solver instead."
+FFTogether::usage "FFTogether[expr], where expr is a rational expression, reconstructs a collected and GCD-simplified form of expr."
 
 FFFunDeg::usage = "FFFunDeg[numdeg,dendeg] represents a generic rational functions with the total degree numdeg and dendeg for numerator and denominator respectively."
 
@@ -71,6 +72,7 @@ FFSparseSolverMarkAndSweepEqs::usage = "FFSparseSolverMarkAndSweepEqs[graph,node
 FFSparseSolverDeleteUnneededEqs::usage = "FFSparseSolverDeleteUnneededEqs[graph,node] frees some memory by deleting the unneeded equations in a linear solver."
 FFIndependentOf::usage = "FFIndependentOf[graph,varslist,var] returns True if the output of graph, as a function of the variables in varslist, is independent of the variable var, and False otherwise."
 FFAlgRatFunEval::usage = "FFAlgRatFunEval[graph,node,{input},vars,funs] evaluates and returns the list of rational functions funs in the variables vars."
+FFAlgRatExprEval::usage = "FFAlgRatExprEval[graph,node,{input},vars,expr] evaluates and returns the list of rational expressions expr in the variables vars.  The expressions do not need to be collected and will not be analytically expanded before numerical evaluation."
 FFAlgRatFunEvalFromCoeffs::usage = "FFAlgRatFunEvalFromCoeffs[graph,node,{coeffinput,varsinput},coeffs,vars,funs] evaluates and returns the list of rational functions funs in the variables vars, where the coefficients of the monomials in the numerator and the denominator of the function are listed in coeffs and taken from the first input node coeffinput."
 FFAlgRatNumEval::usage = "FFAlgRatFunEval[graph,node,ratnums] evaluates and returns the list of rational numbers ratnums."
 FFAlgChain::usage = "FFAlgChain[graph,node,inputs] chains together the lists returned by its inputs."
@@ -180,6 +182,8 @@ FF::noalg = "No algorithm with identifier `1`."
 FF::nograph = "No graph with identifier `1`."
 FF::badalgvars = "The algorithm `1` depends on `2` variables, but `3` are required."
 FF::badneededvars = "Needed variables should be a subset of the unknowns."
+
+FF::nonratsub = "Found invalid subexpression `1`"
 
 
 Begin["`Private`"]
@@ -1462,6 +1466,92 @@ FFRatRec[a_List,p_]:=Catch[ToExpression/@FFRatRecImplem[ToString[CheckedInt[#]]&
 FFRatRec[a_,p_]:=Catch[ToExpression[FFRatRecImplem[{ToString[CheckedInt[a]]},ToString[CheckedInt[p]]][[1]]]];
 
 
+Protect[FFExV];
+(* These instructions must be in sync with AnalyticExpression::InstrType in alg_functions.hh *)
+FFInstrADD = 0;
+FFInstrMUL = 1;
+FFInstrNEG = 2;
+FFInstrPOW = 3;
+FFInstrVAR = 4;
+FFInstrNEGPOW = 5;
+FFInstrSMALLNUM = 6;
+FFInstrMEDNUM = 7;
+FFInstrBIGNUM = 8;
+FFInstrEND = 9;
+
+
+RegisterAlgRatExprEval[gid_,inputs_,{params_,funcsin_}]:=Module[
+  {fun,FFCompile,numcounter,number,invnumber,error,
+   byteinstr,maxsmallint,maxmediumint,bytecodes,funcs},
+  
+  byteinstr = 2^8;
+  maxsmallint = byteinstr-1;
+  maxmediumint = 2^62;
+  
+  funcs = funcsin /. Dispatch[Inner[Rule,params,FFExV/@Range[0,Length[params]-1],List]];
+  
+  numcounter=0;
+  number[i_]:=number[i]=(invnumber[numcounter]=i; numcounter++);
+  
+  error[expr_]:=(Message[FF::nonratsub,expr/.Dispatch[Inner[Rule,FFExV/@Range[0,Length[params]-1],params,List]]]; Throw[$Failed]);
+
+  FFCompile[expr_]:=error[expr];
+  FFCompile[FFExV[j_]]:=(FFCompile[j]; Sow[FFInstrVAR];);
+  FFCompile[a_Integer]:=Which[
+    0<=a<=maxsmallint,
+    Sow[FFInstrSMALLNUM]; Sow[a];,
+    0<=-a<=maxsmallint,
+    Sow[FFInstrSMALLNUM]; Sow[-a]; Sow[FFInstrNEG];,
+    0<=a<=maxmediumint,
+    Sow[FFInstrMEDNUM]; (Sow[Length[#]]; Sow/@#;)&@IntegerDigits[a,byteinstr];,
+    0<=-a<=maxmediumint,
+    Sow[FFInstrMEDNUM]; (Sow[Length[#]]; Sow/@#;)&@IntegerDigits[-a,byteinstr]; Sow[FFInstrNEG];,
+    True,
+    (FFCompile[number[a]]; Sow[FFInstrBIGNUM];)
+  ];
+  FFCompile[a_?FFRationalQ]:= (FFCompile[number[a]]; Sow[FFInstrBIGNUM];);
+  FFCompile[a_Plus]:=(FFCompile/@(List@@a); FFCompile[Length[a]]; Sow[FFInstrADD]; );
+  FFCompile[a_Times]:=(FFCompile/@(List@@a); FFCompile[Length[a]]; Sow[FFInstrMUL];);
+  FFCompile[Power[a_,b_Integer]]:=Which[
+    TrueQ[b>0],
+    (FFCompile[b]; FFCompile[a]; Sow[FFInstrPOW];);,
+    TrueQ[b<0],
+    (FFCompile[-b]; FFCompile[a]; Sow[FFInstrNEGPOW];);,
+    True,
+    error[a^b];
+  ];
+    
+  Catch[
+    bytecodes = Table[ Reap[FFCompile[fun]; Sow[FFInstrEND];][[2,1]] ,{fun,funcs}];
+    FFAlgRatExprEvalImplem[gid,inputs,Length[params],bytecodes,ToString[#,InputForm]&/@(invnumber/@Range[0,numcounter-1])]
+  ]  
+];
+
+FFAlgRatExprEval[gid_,id_,inputs_List,params_,functions_List]:=FFRegisterAlgorithm[RegisterAlgRatExprEval,gid,id,inputs,{params,functions}];
+
+
+Options[FFTogether] := Join[{"Parameters"->Automatic},AutoReconstructionOptions[]];
+FFTogether[expr_,OptionsPattern[]]:=Module[
+  {opt,vars,g,res,in,ex},
+  opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFTogether];
+  vars = OptionValue["Parameters"];
+  If[TrueQ[vars==Automatic],
+    vars = Variables[expr];
+  ];
+  If[TrueQ[Length[vars]==0], Return[expr]];
+  res = Catch[
+    CheckVariables[vars];
+    FFNewGraph[g,in,vars];
+    If[!TrueQ[FFAlgRatExprEval[g,ex,{in},vars,{expr}]], Throw[$Failed]];
+    FFGraphOutput[g,ex];
+    If[TrueQ[#[[0]]==List],#[[1]],#]&@FFReconstructFunction[g,vars,Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
+  ];
+  If[FFGraphQ[g], FFDeleteGraph[g]];
+  res
+];
+FFTogether[expr_List,opt:OptionsPattern[]]:=(FFTogether[#,opt])&/@expr;
+
+
 fflowlib = $Failed;
 
 FFLoadLib[] := Module[
@@ -1554,6 +1644,7 @@ FFLoadLibObjects[] := Module[
     FFPrimeNoImplem=LibraryFunctionLoad[fflowlib, "fflowml_prime_no", LinkObject, LinkObject];
     FFNSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_count_sample_points", LinkObject, LinkObject];
     FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
+    FFAlgRatExprEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratexpr_eval", LinkObject, LinkObject];
 ];
 
 
