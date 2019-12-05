@@ -19,7 +19,7 @@ FFDenseSolve::usage = "FFDenseSolve[eqs,vars] reconstructs and returns the solut
 FFSparseSolve::usage = "FFSparseSolve[eqs,vars] reconstructs and returns the solutions of the linear system eqs in the variables vars using a sparse linear solver."
 FFLinearFit::usage = "FFLinearFit[params, ansatz, rhs, vars, coeffs] reconstructs the coefficients coeffs, as functions of the free parameters params, which solve the linear fit equation ansatz == rhs.  The ansatz must be a linear expression of the form c1 f1 + c2 f2 + ... + f0, where {c1,c2,...} is the input list coeffs and {f1,f2,...} are rational functions of params and vars.  The ansatz can also be specified as a list {f1,f2,f3,...,f0} where f0 can be omitted if vanishing.  The input rhs is also a rational function of params and vars or a list of rational functions to be summed.  Both the functions f1,f2,... and rhs may also depend on additional auxiliary variables, which are rational functions of params and vars, to be defined via the option \"Substitutions\"."
 FFInverse::usage = "FFInverse[mat] reconstructs the inverse of the square matrix mat via Gauss-Jordan elimination.  By default it uses a dense solver for the inversion.  The option \"Sparse\"->True can be passed to use a sparse solver instead."
-FFTogether::usage "FFTogether[expr], where expr is a rational expression, reconstructs a collected and GCD-simplified form of expr."
+FFTogether::usage = "FFTogether[expr], where expr is a rational expression, reconstructs a collected and GCD-simplified form of expr."
 
 FFFunDeg::usage = "FFFunDeg[numdeg,dendeg] represents a generic rational functions with the total degree numdeg and dendeg for numerator and denominator respectively."
 
