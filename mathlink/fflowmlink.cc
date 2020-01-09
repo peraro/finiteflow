@@ -2100,6 +2100,39 @@ extern "C" {
   }
 
 
+  int fflowml_alg_set_learning_options(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &nargs);
+
+    int id, nodeid, primeno, maxsingular;
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    MLGetInteger32(mlp, &primeno);
+    MLGetInteger32(mlp, &maxsingular);
+    MLNewPacket(mlp);
+
+    if (!session.node_exists(id, nodeid)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    LearningOptions & opt = session.node(id, nodeid)->learn_opt;
+    if (primeno >= 0)
+      opt.prime_no = primeno;
+    if (maxsingular >= 0)
+      opt.n_singular = maxsingular;
+
+    MLPutSymbol(mlp, "Null");
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_n_indep_eqs(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);

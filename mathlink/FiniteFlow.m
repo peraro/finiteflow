@@ -50,6 +50,7 @@ FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, nee
 FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
 FFSolverSparseOutput::usage = "FFSolverSparseOutput[graph, node] makes a sparse linear solver return a sparse representation of the solution matrix."
 FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
+FFSetLearningOptions::usage = "FFLearn[graph,node,options...] sets the learning options of the specified node in the graph."
 FFLaurentLearn::usage = "FFLaurentLearn[graph] executes the learning phase on a Laurent expansion node, which must be the output node of graph.  It returns a list of two lists.  The first contains the starting power of the Laurent expansion of each element.  The second contains the order of the expansion requested for each element."
 FFDenseSolverLearn::usage = "FFDenseSolverLearn[graph,vars] executes the learning phase on a dense solver or a linear fit, with unknowns vars, which must be the output node of graph."
 FFSparseSolverLearn::usage = "FFSparseSolverLearn[graph,vars] executes the learning phase on a sparse solver, with unknowns vars, which must be the output node of graph."
@@ -1466,6 +1467,14 @@ FFRatRec[a_List,p_]:=Catch[ToExpression/@FFRatRecImplem[ToString[CheckedInt[#]]&
 FFRatRec[a_,p_]:=Catch[ToExpression[FFRatRecImplem[{ToString[CheckedInt[a]]},ToString[CheckedInt[p]]][[1]]]];
 
 
+Options[FFSetLearningOptions]={"PrimeNo"->Automatic,"MaxSingularPoints"->Automatic};
+FFSetLearningOptions[graph_,node_,OptionsPattern[]]:=Catch[
+FFSetLearningOptionsImplem[
+GetGraphId[graph],GetAlgId[graph,node],
+Sequence@@(toFFInternalUnsignedFlag[#,OptionValue[#]]&/@Options[FFSetLearningOptions][[;;,1]])]
+];
+
+
 Protect[FFExV];
 (* These instructions must be in sync with AnalyticExpression::InstrType in alg_functions.hh *)
 FFInstrADD = 0;
@@ -1645,6 +1654,7 @@ FFLoadLibObjects[] := Module[
     FFNSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_count_sample_points", LinkObject, LinkObject];
     FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
     FFAlgRatExprEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratexpr_eval", LinkObject, LinkObject];
+    FFSetLearningOptionsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_set_learning_options", LinkObject, LinkObject];
 ];
 
 
