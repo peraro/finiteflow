@@ -591,9 +591,10 @@ FFAlgSubgraphMap[gid_,id_,inputs_List,subgraphid_]:=FFRegisterAlgorithm[Register
 FFAlgSubgraphMap[gid_,id_,inputs_List]:=FFAlgSubgraphMap[gid,id,inputs,id];
 
 
-RegisterAlgLaurent[gid_,inputs_,{subgraphid_,order_}]:=Catch[FFAlgLaurentImplem[gid,inputs,GetGraphId[subgraphid],CheckedInt32List[order]]];
-FFAlgLaurent[gid_,id_,inputs_List,subgraphid_,order_Integer]:=FFAlgLaurent[gid,id,inputs,subgraphid,{order}];
-FFAlgLaurent[gid_,id_,inputs_List,subgraphid_,order_List]:=FFRegisterAlgorithm[RegisterAlgLaurent,gid,id,inputs,{subgraphid,order}];
+RegisterAlgLaurent[gid_,inputs_,{subgraphid_,order_,maxdeg_}]:=Catch[FFAlgLaurentImplem[gid,inputs,GetGraphId[subgraphid],CheckedInt32List[order],toFFInternalUnsignedFlag["MaxDegree",maxdeg]]];
+Options[FFAlgLaurent]:={"MaxDegree"->Automatic};
+FFAlgLaurent[gid_,id_,inputs_List,subgraphid_,order_Integer,opt:OptionsPattern[]]:=FFAlgLaurent[gid,id,inputs,subgraphid,{order},opt];
+FFAlgLaurent[gid_,id_,inputs_List,subgraphid_,order_List,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgLaurent,gid,id,inputs,{subgraphid,order,OptionValue["MaxDegree"]}];
 
 PartitionsWithLen[l_, p_]:=PartitionsWithLenImpl[l,Accumulate[p]];
 PartitionsWithLenImpl[l_, p_]:=Inner[l[[#1;;#2]]&,Join[{0},Most[p]]+1,p,List];

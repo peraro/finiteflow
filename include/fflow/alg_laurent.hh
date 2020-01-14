@@ -137,6 +137,9 @@ namespace fflow {
     std::unique_ptr<ExpRatFunData[]> rfdata_;
     std::unique_ptr<unsigned[]> order_;
     unsigned xout_size_ = ~unsigned(0);
+
+  public:
+    unsigned max_degree = 100;
   };
 
 } // namespace fflow

@@ -3522,6 +3522,11 @@ extern "C" {
     }
     MLReleaseInteger32List(mlp, order, order_size);
 
+    int max_deg;
+    MLGetInteger32(mlp, &max_deg);
+    if (max_deg >= 0)
+      algptr->max_degree = max_deg;
+
     MLNewPacket(mlp);
 
     if (!session.graph_exists(graphid) || !okay) {

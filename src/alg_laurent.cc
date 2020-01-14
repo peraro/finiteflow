@@ -96,7 +96,7 @@ namespace fflow {
     ufun.set_context(ctxt);
     ufun.new_xpoint(xin[0]);
 
-    URatFunReconstruction thiele(0, 100);
+    URatFunReconstruction thiele(0, 2*max_degree+1);
     thiele.setX0(sample_uint(OFFSET_3, 0, mod));
 
     unsigned tot_xout = 0;
