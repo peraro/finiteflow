@@ -26,7 +26,7 @@ namespace fflow {
     for (try_no=0; try_no<max_tries; ++try_no) {
 
       for (unsigned i=0; i<npin; ++i)
-        x[i] = sample_uint(OFFSET_1, try_no + i, mod);
+        x[i] = sample_uint(OFFSET_5, try_no + i, mod);
 
       Ret ret = learn(ctxt, &x, mod, data);
       if (ret == SUCCESS) {
