@@ -41,6 +41,7 @@ namespace fflow {
   class EvalRationalNumbersData : public AlgorithmData {
   public:
     void resize(std::size_t size);
+    void invalidate();
   private:
     friend class EvalRationalNumbers;
     SmallVector<UInt,4> val_;
@@ -58,6 +59,11 @@ namespace fflow {
 
     virtual AlgorithmData::Ptr
     clone_data(const AlgorithmData * data) const override;
+
+    MPRational * numbers()
+    {
+      return val_.data();
+    }
 
   private:
 

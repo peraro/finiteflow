@@ -76,6 +76,7 @@ FFAlgRatFunEval::usage = "FFAlgRatFunEval[graph,node,{input},vars,funs] evaluate
 FFAlgRatExprEval::usage = "FFAlgRatExprEval[graph,node,{input},vars,expr] evaluates and returns the list of rational expressions expr in the variables vars.  The expressions do not need to be collected and will not be analytically expanded before numerical evaluation."
 FFAlgRatFunEvalFromCoeffs::usage = "FFAlgRatFunEvalFromCoeffs[graph,node,{coeffinput,varsinput},coeffs,vars,funs] evaluates and returns the list of rational functions funs in the variables vars, where the coefficients of the monomials in the numerator and the denominator of the function are listed in coeffs and taken from the first input node coeffinput."
 FFAlgRatNumEval::usage = "FFAlgRatFunEval[graph,node,ratnums] evaluates and returns the list of rational numbers ratnums."
+FFResetRatNumEval::usage = "FFResetRatNumEval[graph,node,ratnums] modifes a node created with FFAlgRatNumEval to return the new list of numbers ratnums.  The the new list must have the same length as the original one."
 FFAlgChain::usage = "FFAlgChain[graph,node,inputs] chains together the lists returned by its inputs."
 FFAlgTake::usage="FFAlgTake[graph,node,inputs,takepattern] takes and returns selected elements from its inputs, as specified in takepattern."
 FFAlgSlice::usage="FFAlgSlice[graph,node,{input},start,end], with integers start and end, returns the elements from position start to position end of its input.
@@ -963,6 +964,9 @@ RegisterAlgRatNumEval[gid_,{},{numbers_}]:=Catch[If[!AllTrue[numbers,FFRationalQ
 FFAlgRatNumEval[gid_,id_,numbers_List]:=FFRegisterAlgorithm[RegisterAlgRatNumEval,gid,id,{},{numbers}];
 
 
+FFResetRatNumEval[gid_,id_,numbers_List]:=Catch[If[!AllTrue[numbers,FFRationalQ],Throw[$Failed]]; FFResetRatNumEvalImplem[GetGraphId[gid],GetAlgId[gid,id],ToString[#,InputForm]&/@numbers]];
+
+
 RegisterAlgChain[gid_,inputs_,{}]:=Catch[FFAlgChainImplem[gid,inputs]];
 FFAlgChain[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgChain,gid,id,inputs,{}];
 
@@ -1625,6 +1629,7 @@ FFLoadLibObjects[] := Module[
     FFAlgRatFunEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratfun_eval", LinkObject, LinkObject];
     FFAlgRatFunEvalFromCoeffsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_coeff_ratfun_eval", LinkObject, LinkObject];
     FFAlgRatNumEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratnum_eval", LinkObject, LinkObject];
+    FFResetRatNumEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_reset_ratnum_eval", LinkObject, LinkObject];
     FFAlgChainImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_chain", LinkObject, LinkObject];
     FFAlgTakeImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_take", LinkObject, LinkObject];
     FFAlgSliceImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_slice", LinkObject, LinkObject];

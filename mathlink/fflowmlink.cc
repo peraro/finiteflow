@@ -2831,6 +2831,56 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
+  int fflowml_reset_ratnum_eval(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int n_args, nnumbers;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &n_args);
+
+    int graphid, nodeid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    MLGetInteger32(mlp, &nodeid);
+
+    bool okay = true;
+
+    Graph * graph  = session.graph(graphid);
+    Algorithm * alg = session.algorithm(graphid, nodeid);
+    if (!alg || !graph->is_mutable())
+      okay = false;
+
+    if (okay && dynamic_cast<EvalRationalNumbers *>(alg)) {
+
+      auto & aa = *static_cast<EvalRationalNumbers *>(alg);
+      MPRational * numbers = aa.numbers();
+
+      MLTestHead( mlp, "List", &nnumbers);
+      if (nnumbers != aa.nparsout) {
+        okay = false;
+      } else {
+        for (int i=0; i<nnumbers; ++i)
+          get_rational(mlp, numbers[i]);
+        graph->invalidate_reconstruction_cache();
+        static_cast<EvalRationalNumbersData*>(session.alg_data(graphid, nodeid))->invalidate();
+        session.invalidate_subctxt_alg_data(graphid, nodeid);
+      }
+    } else {
+      okay = false;
+    }
+
+    MLNewPacket(mlp);
+
+    if (!okay)
+      MLPutSymbol(mlp, "$Failed");
+    else
+      MLPutSymbol(mlp, "Null");
+
+    return LIBRARY_NO_ERROR;
+  }
+
 
   int fflowml_alg_chain(WolframLibraryData libData, MLINK mlp)
   {

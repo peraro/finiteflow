@@ -75,6 +75,11 @@ namespace fflow {
     val_.resize(size);
   }
 
+  void EvalRationalNumbersData::invalidate()
+  {
+    mod_ = 0;
+  }
+
   void EvalRationalNumbers::init(std::vector<MPRational> && vec,
                                  EvalRationalNumbersData & data)
   {
