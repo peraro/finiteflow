@@ -1686,6 +1686,76 @@ extern "C" {
   }
 
 
+  int fflowml_alg_node_sparse_system(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs, nvars;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+
+    int graphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+
+    get_input_nodes(mlp, inputnodes);
+
+    MLGetInteger32(mlp, &nvars);
+
+    typedef NodeSparseSolverData Data;
+    std::unique_ptr<NodeSparseSolver> algptr(new NodeSparseSolver());
+    std::unique_ptr<Data> data(new Data());
+    auto & alg = *algptr;
+    auto & sys = alg;
+
+    long n_rows;
+    int csize;
+    MLCheckFunction(mlp, "List", &n_rows);
+    sys.rinfo.resize(n_rows);
+    unsigned ncoeffs = 0;
+    for (int i=0; i<n_rows; ++i) {
+      {
+        int * crinfo;
+        MLGetInteger32List(mlp, &crinfo, &csize);
+        NodeSparseSolver::RowInfo & rinf = sys.rinfo[i];
+        rinf.start = ncoeffs;
+        rinf.size = csize;
+        rinf.cols.reset(new unsigned[csize]);
+        std::copy(crinfo, crinfo+csize, rinf.cols.get());
+        ncoeffs += csize;
+        MLReleaseInteger32List(mlp, crinfo, csize);
+      }
+    }
+
+    int * neededv;
+    int needed_size;
+    MLGetInteger32List(mlp, &neededv, &needed_size);
+    alg.init_node_solver(sys.rinfo.size(), nvars,
+                         (unsigned*)neededv, needed_size, *data);
+    MLReleaseInteger32List(mlp, neededv, needed_size);
+    MLNewPacket(mlp);
+
+    if (!session.graph_exists(graphid)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_num_sparse_system(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);

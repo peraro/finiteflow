@@ -33,6 +33,36 @@ namespace fflow {
     clone_data(const AlgorithmData * data) const override;
   };
 
+
+  struct NodeSparseSolverData : public SparseLinearSolverData {};
+
+  class NodeSparseSolver : public SparseLinearSolver {
+  public:
+
+    void init_node_solver(std::size_t neqs, std::size_t nvars,
+                          unsigned * needed_vars, unsigned needed_size,
+                          NodeSparseSolverData & data);
+
+    virtual Ret fill_matrix(Context * ctxt,
+                            std::size_t n_rows, const std::size_t rows[],
+                            AlgInput xi[], Mod mod,
+                            AlgorithmData * data,
+                            SparseMatrix & m) const override;
+
+    virtual AlgorithmData::Ptr
+    clone_data(const AlgorithmData * data) const override;
+
+  public:
+    struct RowInfo {
+      std::size_t start;
+      std::size_t size;
+      std::unique_ptr<unsigned[]> cols;
+    };
+
+    std::vector<RowInfo> rinfo;
+  };
+
+
 } // namespace fflow
 
 

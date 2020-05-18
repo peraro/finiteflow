@@ -36,6 +36,7 @@ FFGraphEdges::usage = "FFGraphEdges[graph] returns a list of edges for the graph
 FFAlgDenseSolver::usage = "FFAlgDenseSolver[graph,node,{input},params,eqs,vars] defines a dense linear solver returning the solution of the equations eqs in the variables vars as function of the free input parameters params.  Only the solution for the non-vanishing variables is returned."
 FFAlgSparseSolver::usage = "FFAlgSparseSolver[graph,node,{input},params,eqs,vars] defines a sparse linear solver returning the solution of the equations eqs in the variables vars as function of the free input parameters params."
 FFAlgNodeDenseSolver::usage = "FFAlgNodeDenseSolver[graph,node,{input},neqs,vars] defines a dense linear solver returning the solution of the equations A[[i,1]] vars[[1]] + A[[i,2]] vars[[2]] + ... == b[[i]] in the variables vars, for i=1,...,neqs, where the entries returned by the input node are interpreted as the elements of the matrix (A b) in row-major order."
+FFAlgNodeSparseSolver::usage = "FFAlgNodeSparseSolver[graph,node,{input},columns,vars] defines a sparse linear solver returning the solution of the equations A[[i,1]] vars[[1]] + A[[i,2]] vars[[2]] + ... == b[[i]] in the variables vars, for i=1,...,neqs=Length[columns].  The entries returned by the input node are interpreted as the non-vanishing elements of the matrix (A b) in row-major order and columns is a list of lists, namely columns[[i]] contains the indexes of the non-vanishing columns of the i-th row of such matrix."
 FFAlgSubgraphFit::usage = "FFAlgSubgraphFit[graph,node,{input},subgraph,vars,coeffs] is a subgraph algorithm which returns the solution for the coefficients coeffs, as functions of the input parameters, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the list of variables vars concatenated with the input parameters represented by the input node.
 FFAlgSubgraphFit[graph,node,{},subgraph,vars,coeffs] is a subgraph algorithm which returns the numerical solution for the coefficients coeffs, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the variables vars."
 FFAlgSubgraphReconstruct::usage = "FFAlgSubgraphReconstruct[graph,node,{input},subgraph,vars] reconstructs the output of subgraph as a list of functions of the variables vars and returns the coefficients of their monomials as functions of the input parameters.  The input of subgraph is the list of variables vars concatenated with the input parameters represented by the input node."
@@ -651,6 +652,25 @@ RegisterNodeDenseSolver[gid_,inputs_,{neqs_,vars_,neededvarsin_}]:=Module[
 Options[FFAlgNodeDenseSolver]:={"NeededVars"->Automatic};
 FFAlgNodeDenseSolver[gid_,id_,inputs_List,neqs_,vars_,OptionsPattern[]]:=Module[{},
   FFRegisterAlgorithm[RegisterNodeDenseSolver, gid, id, inputs, {neqs, vars, OptionValue["NeededVars"]}]
+];
+
+
+RegisterNodeSparseSolver[gid_,inputs_,{columns_,vars_,neededvarsin_}]:=Module[
+  {neededvars, lincoeffs, dummy, cols},
+  Catch[
+    neededvars = If[TrueQ[neededvarsin==Automatic], vars, neededvarsin];
+    CheckVariables[vars];
+    CheckVariables[neededvars];
+    If[!SubsetQ[vars,neededvars], Message[FF::badneededvars]; Throw[$Failed];];
+    cols = (CheckedUInt32List/@columns);
+    If[!TrueQ[Max[Union@@cols]<=Length[vars]+1],Throw[$Failed];];
+    FFRegisterNodeSparseSolverImplem[gid,inputs,Length[vars],cols-1,((Position[vars,#][[1,1]])&/@neededvars)-1]
+  ]
+];
+
+Options[FFAlgNodeSparseSolver]:={"NeededVars"->Automatic};
+FFAlgNodeSparseSolver[gid_,id_,inputs_List,columns_List,vars_,OptionsPattern[]]:=Module[{},
+  FFRegisterAlgorithm[RegisterNodeSparseSolver, gid, id, inputs, {columns, vars, OptionValue["NeededVars"]}]
 ];
 
 
@@ -1619,6 +1639,7 @@ FFLoadLibObjects[] := Module[
     FFRegisterDenseSolverImplemN = LibraryFunctionLoad[fflowlib, "fflowml_alg_num_dense_system", LinkObject, LinkObject];
     FFRegisterSparseSolverImplemN = LibraryFunctionLoad[fflowlib, "fflowml_alg_num_sparse_system", LinkObject, LinkObject];
     FFRegisterNodeDenseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_node_dense_system", LinkObject, LinkObject];
+    FFRegisterNodeSparseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_node_sparse_system", LinkObject, LinkObject];
     FFLearnImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_learn", LinkObject, LinkObject];
     FFSparseSolverMarkAndSweepEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_mark_and_sweep_eqs", LinkObject, LinkObject];
     FFSparseSolverDeleteUnneededEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_delete_unneeded_eqs", LinkObject, LinkObject];
