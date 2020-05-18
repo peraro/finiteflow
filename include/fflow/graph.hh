@@ -412,6 +412,19 @@ namespace fflow {
       return &ctxt_;
     }
 
+    Context * subcontext(unsigned i)
+    {
+      return &(sub_ctxt_[i]);
+    }
+
+    unsigned subcontext_size()
+    {
+      return sub_ctxt_.size();
+    }
+
+    AlgorithmData * subctxt_alg_data(unsigned subctxt,
+                                     unsigned graphid,unsigned nodeid);
+
     void make_reconstructible(unsigned graphid);
 
     ~Session();

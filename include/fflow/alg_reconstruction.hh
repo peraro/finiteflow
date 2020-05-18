@@ -10,7 +10,7 @@
 namespace fflow {
 
   // assumes xptr is either nullptr or an array with the rigth size = nv+1
-  void copy_input_params(const UInt x[], Mod mod, unsigned nv,
+  void copy_input_params(const UInt x[], unsigned nv, Mod mod,
                          std::unique_ptr<UInt[]> & xptr);
 
 

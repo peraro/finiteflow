@@ -67,6 +67,9 @@ FFSubgraphReconstructSol::usage = "FFSubgraphReconstructSol[expr,learninfo], whe
 FFAlgSimpleSubgraph::usage = "FFAlgSimpleSubgraph[graph,node,{input},subgraph] creates a simple subgraph node."
 FFAlgMemoizedSubgraph::usage = "FFAlgMemoizedSubgraph[graph,node,{input},subgraph] creates a subgraph node which remembers the input and output of its last evaluation, avoiding repeated evaluations with the same input."
 FFAlgSubgraphMap::usage = "FFAlgSubgraphMap[graph,node,inputs,subgraph] executes subgraph several times, using each list in inputs as input variables, and chains the outputs together."
+FFAlgCachedSubgraph::usage = "FFAlgCachedSubgraph[graph,node,{input},subgraph] creates a subgraph node which caches its past evaluations, avoiding repeated evaluations with the same input.  Note that, in multi-threaded evaluations, each thread has its own independent sub-cache (see also FFCachedSubgraphMergeCaches and FFCachedSubgraphSetDefaultSubcacheSize)."
+FFCachedSubgraphMergeCaches::usage = "FFCachedSubgraphMergeCaches[graph,node] merges the subcaches of a node created with FFAlgCachedSubgraph, making all previous evaluations available to all threads."
+FFCachedSubgraphSetDefaultSubcacheSize::usasge = "FFCachedSubgraphMergeCaches[graph,node,n] sets the default size of the subcaches  of a node created with FFAlgCachedSubgraph, preallocating memory for \"n\" evaluations per subcache by default."
 FFSolverNIndepEqs::usage = "FFSolverNIndepEqs[graph,node] returns the number of independent equations of a linear system."
 FFSolverIndepEqs::usage = "FFSolverIndepEqs[graph,node] returns a list of integers representing the indpendent equations of a linear system."
 FFSparseSolverMarkAndSweepEqs::usage = "FFSparseSolverMarkAndSweepEqs[graph,node] executes the mark-and-sweep algorithm on a sparse system filtering out a subset of equations sufficient for returning the solution for the needed variables.   It returns the number of needed equations after the filtering."
@@ -1435,6 +1438,17 @@ FFSubgraphReconstructSol[expr_List,learn_]:=Module[{ppp},
 ];
 
 
+RegisterCachedSubgraph[gid_,inputs_,{subgraphid_}]:=Catch[FFCachedSubgraphImplem[gid,inputs,GetGraphId[subgraphid]]];
+FFAlgCachedSubgraph[gid_,id_,inputs_List,subgraphid_]:=FFRegisterAlgorithm[RegisterCachedSubgraph,gid,id,inputs,{subgraphid}];
+FFAlgCachedSubgraph[gid_,id_,inputs_List]:=FFAlgCachedSubgraph[gid,id,inputs,id];
+
+
+FFCachedSubgraphMergeCaches[gid_,id_]:=Catch[FFCachedSubgraphMergeCachesImplem[GetGraphId[gid],GetAlgId[gid,id]]];
+
+
+FFCachedSubgraphSetDefaultSubcacheSize[gid_,id_,size_]:=Catch[FFCachedSubgraphSetDefaultSubcacheSizeImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[size]]];
+
+
 Options[FFLinearFit] := Join[{"IndepVarsOnly"->False},
                                 AutoReconstructionOptions[],
                                 Options[FFAlgLinearFit]];
@@ -1661,6 +1675,9 @@ FFLoadLibObjects[] := Module[
     FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
     FFAlgRatExprEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratexpr_eval", LinkObject, LinkObject];
     FFSetLearningOptionsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_set_learning_options", LinkObject, LinkObject];
+    FFCachedSubgraphImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph", LinkObject, LinkObject];
+    FFCachedSubgraphMergeCachesImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph_merge", LinkObject, LinkObject];
+    FFCachedSubgraphSetDefaultSubcacheSizeImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph_default_subcache_size", LinkObject, LinkObject];
 ];
 
 

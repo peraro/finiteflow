@@ -19,6 +19,7 @@
 #include <fflow/subgraph_fit.hh>
 #include <fflow/subgraph_reconstruct.hh>
 #include <fflow/node_solver.hh>
+#include <fflow/cached_subgraph.hh>
 #include <mathlink.h>
 #include <WolframLibrary.h>
 using namespace fflow;
@@ -4375,6 +4376,150 @@ extern "C" {
       MLPutSymbol(mlp, "$Failed");
     } else {
       MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
+  int fflowml_alg_cached_subgraph(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead(mlp, "List", &nargs);
+    int graphid, subgraphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+    MLGetInteger32(mlp, &subgraphid);
+
+    typedef CachedSubGraphData Data;
+    std::unique_ptr<CachedSubGraph> algptr(new CachedSubGraph());
+    std::unique_ptr<Data> data(new Data());
+
+    MLNewPacket(mlp);
+
+    if (!session.graph_exists(graphid)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    std::vector<unsigned> nparsin(inputnodes.size());
+    for (unsigned i=0; i<inputnodes.size(); ++i) {
+      Node * node = session.node(graphid, inputnodes[i]);
+      if (!node) {
+        MLPutSymbol(mlp, "$Failed");
+        return LIBRARY_NO_ERROR;
+      }
+      nparsin[i] = node->algorithm()->nparsout;
+    }
+
+    Ret ret = algptr->init(session, subgraphid, *data,
+                           nparsin.data(), nparsin.size());
+
+    if (ret != SUCCESS) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+  int fflowml_alg_cached_subgraph_merge(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int id, nodeid, nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    Algorithm * alg = session.algorithm(id, nodeid);
+    MLNewPacket(mlp);
+
+    if (!alg) {
+
+      MLPutSymbol(mlp, "$Failed");
+
+    } else if (dynamic_cast<CachedSubGraph *>(alg)) {
+
+      unsigned nsubctxt = session.subcontext_size();
+      std::vector<std::unique_ptr<UIntCache>> caches;
+      caches.reserve(nsubctxt + 1);
+
+      CachedSubGraph & subg = *static_cast<CachedSubGraph *>(alg);
+
+      {
+        auto * data = static_cast<CachedSubGraphData*>(session.alg_data(id,nodeid));
+        if (data && data->cache())
+          caches.push_back(std::move(data->move_cache()));
+      }
+
+      for (unsigned j=0; j<nsubctxt; ++j) {
+        auto * data = static_cast<CachedSubGraphData*>(session.subctxt_alg_data(j,id,nodeid));
+        if (data && data->cache())
+          caches.push_back(std::move(data->move_cache()));
+      }
+
+      subg.merge_caches(caches.data(), caches.size());
+
+      MLPutSymbol(mlp, "Null");
+
+    } else {
+
+      MLPutSymbol(mlp, "$Failed");
+
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+  int fflowml_alg_cached_subgraph_default_subcache_size(WolframLibraryData libData,
+                                                        MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int id, nodeid, nargs, cachesize;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    MLGetInteger32(mlp, &cachesize);
+    Algorithm * alg = session.algorithm(id, nodeid);
+    MLNewPacket(mlp);
+
+    if (!alg) {
+
+      MLPutSymbol(mlp, "$Failed");
+
+    } else if (dynamic_cast<CachedSubGraph *>(alg)) {
+
+      CachedSubGraph & subg = *static_cast<CachedSubGraph *>(alg);
+      subg.set_default_subcache_size(cachesize);
+      MLPutSymbol(mlp, "Null");
+
+    } else {
+
+      MLPutSymbol(mlp, "$Failed");
+
     }
 
     return LIBRARY_NO_ERROR;

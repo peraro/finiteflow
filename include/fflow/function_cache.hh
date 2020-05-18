@@ -250,6 +250,7 @@ namespace fflow {
       data_.clear();
       mask_ = 0;
       size_ = 0;
+      alloc_uint64_ = 0;
       log2cap_ = EMPTY_;
       alloc_.clear();
     }

@@ -529,6 +529,21 @@ namespace fflow {
     return ctxt_.graph_data(graphid)->algdata_[nodeid].get();
   }
 
+  AlgorithmData * Session::subctxt_alg_data(unsigned subctxt,
+                                            unsigned graphid, unsigned nodeid)
+  {
+    if (!node_exists(graphid, nodeid))
+      return nullptr;
+    if (subctxt >= sub_ctxt_.size())
+      return nullptr;
+    if (!sub_ctxt_[subctxt].has_graph_data(graphid))
+      return nullptr;
+    GraphData * gdata = sub_ctxt_[subctxt].graph_data_[graphid].get();
+    if (nodeid >= gdata->algdata_.size())
+      return nullptr;
+    return gdata->algdata_[nodeid].get();
+  }
+
   void Session::invalidate_subctxt_alg_data(unsigned graphid, unsigned nodeid)
   {
     for (auto & sctxt : sub_ctxt_)
