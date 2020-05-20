@@ -1150,7 +1150,7 @@ FFNonZeroesSol[sol_,learninfo_]:=Module[{tot,nonzero,ret},
   ret[[nonzero]] = sol;
   ret
 ];
-FFMultiFitSol[sol_,learn_]:=MapThread[FFDenseSolverSol,{PartitionsWithLen[sol,(Length["DepVars"/.#]*((Length["IndepVars"]/.#)+1))&/@learn],learn},1];
+FFMultiFitSol[sol_,learn_]:=MapThread[FFDenseSolverSol,{PartitionsWithLen[sol,(Length["DepVars"/.#]*((Length["IndepVars"/.#])+1))&/@learn],learn},1];
 
 
 AutoReconstructionOptions[]:=Options[FFReconstructFunction];
