@@ -97,4 +97,65 @@ namespace fflow {
     default_subcache_size_ = n;
   }
 
+
+
+  Ret CachedFromSubGraph::init(const Session * session,
+                               unsigned graphid, unsigned nodeid)
+  {
+    session_ = session;
+    graphid_ = graphid;
+    nodeid_ = nodeid;
+
+    const Algorithm * alg = session->algorithm(graphid, nodeid);
+    if (!alg)
+      return FAILED;
+
+    const CachedSubGraph * subg = dynamic_cast<const CachedSubGraph *>(alg);
+    if (!subg)
+      return FAILED;
+
+    nparsin.resize(1);
+    nparsin[0] = subg->nparsin[0];
+    nparsout = subg->nparsout;
+
+    return SUCCESS;
+  }
+
+  Ret CachedFromSubGraph::evaluate(Context *,
+                                   AlgInput xin[], Mod mod,
+                                   AlgorithmData * datain,
+                                   UInt xout[]) const
+  {
+    const Algorithm * alg = session_->algorithm(graphid_, nodeid_);
+    if (!alg)
+      return FAILED;
+
+    unsigned nin = nparsin[0];
+    const CachedSubGraph * subg = dynamic_cast<const CachedSubGraph *>(alg);
+    if (!subg || subg->nparsin[0] != nin || subg->nparsout != nparsout)
+      return FAILED;
+
+    auto & data = *static_cast<CachedFromSubGraphData*>(datain);
+    const UIntCache & cache = subg->main_cache();
+
+    copy_input_params(xin[0], nin, mod, data.xin_);
+
+    UInt * xo;
+    bool lookup = cache.find(data.xin_.get(), &xo);
+
+    if (!lookup)
+      return FAILED;
+
+    std::copy(xo, xo+nparsout, xout);
+
+    return SUCCESS;
+  }
+
+  AlgorithmData::Ptr
+  CachedFromSubGraph::clone_data(const AlgorithmData *) const
+  {
+    std::unique_ptr<CachedFromSubGraphData> ptr(new CachedFromSubGraphData());
+    return std::move(ptr);
+  }
+
 } // namespace fflow

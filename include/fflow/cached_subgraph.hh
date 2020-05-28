@@ -45,9 +45,43 @@ namespace fflow {
 
     void set_default_subcache_size(unsigned n);
 
+    const UIntCache & main_cache() const
+    {
+      return cache_;
+    }
+
   public:
     UIntCache cache_;
     unsigned default_subcache_size_ = 0;
+  };
+
+
+
+  class CachedFromSubGraph;
+  class CachedFromSubGraphData;
+
+  class CachedFromSubGraphData : public AlgorithmData {
+  private:
+    friend class CachedFromSubGraph;
+  private:
+    std::unique_ptr<UInt[]> xin_ = nullptr;
+  };
+
+  class CachedFromSubGraph : public Algorithm {
+  public:
+
+    Ret init(const Session * session, unsigned graphid, unsigned nodeid);
+
+    virtual AlgorithmData::Ptr
+    clone_data(const AlgorithmData * data) const override;
+
+    virtual Ret evaluate(Context * ctxt,
+                         AlgInput xin[], Mod mod, AlgorithmData * data,
+                         UInt xout[]) const override;
+
+  private:
+    const Session * session_;
+    unsigned graphid_, nodeid_;
   };
 
 } // namespace fflow

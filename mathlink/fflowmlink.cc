@@ -4509,6 +4509,53 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
+  int fflowml_alg_cached_from_subgraph(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead(mlp, "List", &nargs);
+    int graphid, subgraphid, subnodeid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+    MLGetInteger32(mlp, &subgraphid);
+    MLGetInteger32(mlp, &subnodeid);
+
+    typedef CachedFromSubGraphData Data;
+    std::unique_ptr<CachedFromSubGraph> algptr(new CachedFromSubGraph());
+    std::unique_ptr<Data> data(new Data());
+
+    MLNewPacket(mlp);
+
+    if (!session.graph_exists(graphid)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Ret ret = algptr->init(&session, subgraphid, subnodeid);
+
+    if (ret != SUCCESS) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
   int fflowml_alg_cached_subgraph_merge(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);
