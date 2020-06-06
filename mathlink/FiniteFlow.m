@@ -122,6 +122,7 @@ FFLaurentSol::usage = "FFLaurentSol[expr,x,learninfo] formats the output of a La
 
 FFReconstructFunction::usage = "FFReconstructFunction[graph,vars] analytically reconstructs the output of graph as a rational function in the variables vars, by performing several numerical evaluations and reconstructing analytic expressions from these.  Note that for univariate functions, multi-threading is not used during the evaluation of the graph (for that, FFParallelReconstructUnivariate can be used)."
 FFParallelReconstructUnivariate::usage = "FFParallelReconstructUnivariate[graph,{x}] reconstructs the output of graph as a univariate rational function in the variable x.  Numerical evaluations are performed in parallel, and additional sample points are added until the reconstruction is successful."
+FFParallelReconstructUnivariateMod::usage = "FFParallelReconstructUnivariateMod[graph,{x}] is the same as FFParallelReconstructUnivariate[graph,{x}] but reconstruction is performed modulo the prime specified in the options."
 FFReconstructFunctionMod::usage = "FFReconstructFunctionMod[graph,vars] is the same as FFReconstructFunction[graph,vars] but reconstruction is performed modulo the prime specified in the options."
 
 FFDenseSolverSol::usage = "FFDenseSolverSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a dense solver or a linear fit, and learinfo is the information obtained during its learning phase, formats expr as list of substitution rules representing the solution of the system."
@@ -1139,6 +1140,43 @@ FFParallelReconstructUnivariate[id_,vars_,OptionsPattern[]]:=Module[
     If[!TrueQ[tmp[[0]]==List],
       Switch[tmp,
              FFMissingPrimes, np=np+1;,
+             FFMissingPoints, sp=sp+1;,
+             $Failed, If[deg<maxdeg, deg = deg+degstep; If[deg>maxdeg,deg=maxdeg];, deg = deg+degstep;];,
+             _, Throw[tmp];
+      ];,
+      Throw[tmp];
+   ]
+  ]];
+  res
+];
+
+
+Options[FFParallelReconstructUnivariateMod]=Join[Options[FFReconstructFunction],{"MinDegree"->Automatic,"DegreeStep"->Automatic}];
+FFParallelReconstructUnivariateMod[id_,vars_,OptionsPattern[]]:=Module[
+  {opt,mindeg,maxdeg,degstep,deg,maxsp,maxnp,nthreads,sp,np,tmp,res,thisopt},
+  opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFParallelReconstructUnivariate];
+  maxsp = OptionValue["MaxSingularPoints"];
+  If[TrueQ[maxsp==Automatic], maxsp = 1];
+  maxnp = 1;
+  nthreads = OptionValue["NThreads"];
+  If[TrueQ[nthreads==Automatic], nthreads = FFAutomaticNThreads[]];
+  mindeg = OptionValue["MinDegree"];
+  If[TrueQ[mindeg == Automatic], mindeg = nthreads];
+  maxdeg = OptionValue["MaxDegree"];
+  If[TrueQ[maxdeg == Automatic], maxdeg = FFDefaultMaxDegImplem[]];
+  degstep = OptionValue["DegreeStep"];
+  If[TrueQ[degstep == Automatic], degstep = nthreads];
+  sp = 0;
+  np = 1;
+  deg = mindeg;
+  tmp = FFMissingPoints;
+  res = Catch[While[True,
+    If[TrueQ[sp>maxsp || np>maxnp || deg > maxdeg], Throw[tmp]];
+    thisopt = Join[{"MaxSingularPoints"->sp,"MaxPrimes"->np,"MaxDegree"->deg},FilterRules[opt,Select[Options[FFSample],FreeQ[#,"MaxSingularPoints"|"MaxPrimes"|"MaxDegree"]&]]];
+    FFSample[id,nthreads,Sequence@@thisopt];
+    tmp = FFReconstructFromCurrentEvaluationsMod[id,vars,nthreads,Sequence@@thisopt];
+    If[!TrueQ[tmp[[0]]==List],
+      Switch[tmp,
              FFMissingPoints, sp=sp+1;,
              $Failed, If[deg<maxdeg, deg = deg+degstep; If[deg>maxdeg,deg=maxdeg];, deg = deg+degstep;];,
              _, Throw[tmp];
