@@ -199,6 +199,7 @@ Begin["`Private`"]
 
 FFMulInv[a_,p_]:=Mod[ExtendedGCD[a,p][[2,1]],p];
 FFRatMod[a_,p_]:=Mod[Numerator[a]*FFMulInv[Denominator[a],p],p];
+FFRatMod[a_List,p_]:=FFRatMod[#,p]&/@a;
 
 
 (* Constants *)
