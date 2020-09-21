@@ -3,7 +3,7 @@
 # See the FindMathematica manual for usage hints.
 #
 #=============================================================================
-# Copyright 2010-2019 Sascha Kratky
+# Copyright 2010-2020 Sascha Kratky
 #
 # Permission is hereby granted, free of charge, to any person)
 # obtaining a copy of this software and associated documentation)
@@ -34,7 +34,7 @@ cmake_minimum_required(VERSION 2.8.12)
 cmake_policy(POP)
 
 set (Mathematica_CMAKE_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
-set (Mathematica_CMAKE_MODULE_VERSION "3.2.5")
+set (Mathematica_CMAKE_MODULE_VERSION "3.3.0")
 
 # activate select policies
 if (POLICY CMP0025)
@@ -242,10 +242,11 @@ endmacro()
 macro (_get_program_names _outProgramNames)
 	set (${_outProgramNames} "")
 	# Mathematica products in order of preference
-	set (_MathematicaApps "Mathematica" "gridMathematica Server")
+	set (_MathematicaApps "Mathematica" "Wolfram Desktop" "Wolfram Engine" "gridMathematica Server")
 	# Mathematica product versions in order of preference
 	set (_MathematicaVersions
-		"12.0" "11.3" "11.2" "11.1" "11.0"
+		"12.1" "12.0"
+		"11.3" "11.2" "11.1" "11.0"
 		"10.4" "10.3" "10.2" "10.1" "10.0"
 		"9.0" "8.0" "7.0" "6.0" "5.2")
 	# search for explicitly requested application version first
@@ -271,7 +272,9 @@ endmacro()
 
 # internal function to get Mathematica Windows installation directory for a registry entry
 function (_add_registry_search_path _registryKey _outSearchPaths)
-	set (_ProductNamePatterns "Wolfram Mathematica [0-9]+" "Wolfram Finance Platform")
+	set (_ProductNamePatterns
+		"Wolfram Mathematica [0-9.]+" "Wolfram Desktop [0-9.]+"
+		"Wolfram Engine [0-9.]+" "Wolfram Finance Platform")
 	get_filename_component (
 		_productName "[${_registryKey};ProductName]" NAME)
 	get_filename_component (
@@ -645,7 +648,17 @@ macro (_get_host_system_IDs _outSystemIDs)
 endmacro()
 
 macro (_get_supported_systemIDs _version _outSystemIDs)
-	if (NOT "${_version}" VERSION_LESS "10.0")
+	if (NOT "${_version}" VERSION_LESS "12.1")
+		set (${_outSystemIDs}
+			"Windows-x86-64"
+			"Linux-x86-64" "Linux-ARM"
+			"MacOSX-x86-64")
+	elseif (NOT "${_version}" VERSION_LESS "11.3")
+		set (${_outSystemIDs}
+			"Windows" "Windows-x86-64"
+			"Linux-x86-64" "Linux-ARM"
+			"MacOSX-x86-64")
+	elseif (NOT "${_version}" VERSION_LESS "10.0")
 		set (${_outSystemIDs}
 			"Windows" "Windows-x86-64"
 			"Linux" "Linux-x86-64" "Linux-ARM"
@@ -702,8 +715,16 @@ macro (_get_compatible_system_IDs _systemID _outSystemIDs)
 		else()
 			list (APPEND ${_outSystemIDs} "Windows-x86-64")
 		endif()
-		# Windows x64 can run x86 through WoW64
-		list (APPEND ${_outSystemIDs} "Windows")
+		if (Mathematica_VERSION)
+			# Mathematica 12.1 dropped support for x86
+			if ("${Mathematica_VERSION}" VERSION_LESS "12.1")
+				# Windows x64 can run x86 through WoW64
+				list (APPEND ${_outSystemIDs} "Windows")
+			endif()
+		else()
+			# Windows x64 can run x86 through WoW64
+			list (APPEND ${_outSystemIDs} "Windows")
+		endif()
 	elseif ("${_systemID}" MATCHES "MacOSX|Darwin")
 		if ("${_systemID}" MATCHES "MacOSX-x86")
 			if (Mathematica_VERSION)
@@ -1508,6 +1529,7 @@ macro (_find_mathematica)
 		HINTS
 			"${Mathematica_ROOT_DIR}/SystemFiles/IncludeFiles"
 			"${Mathematica_ROOT_DIR}/Contents/SystemFiles/IncludeFiles"
+			"${Mathematica_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/IncludeFiles"
 		PATH_SUFFIXES "C"
 		DOC "Mathematica C language definitions include directory."
 		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
@@ -1574,6 +1596,7 @@ macro (_find_wolframlibrary)
 		HINTS
 			"${Mathematica_ROOT_DIR}/SystemFiles/Libraries"
 			"${Mathematica_ROOT_DIR}/Contents/SystemFiles/Libraries"
+			"${Mathematica_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Libraries"
 		PATH_SUFFIXES ${_SystemIDs}
 		DOC "Mathematica Wolfram Runtime Library."
 		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
@@ -1583,6 +1606,7 @@ macro (_find_wolframlibrary)
 		HINTS
 			"${Mathematica_ROOT_DIR}/SystemFiles/IncludeFiles"
 			"${Mathematica_ROOT_DIR}/Contents/SystemFiles/IncludeFiles"
+			"${Mathematica_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/IncludeFiles"
 		PATH_SUFFIXES "C"
 		DOC "Mathematica WolframLibrary include directory."
 		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
@@ -1615,6 +1639,7 @@ macro (_find_mathlink)
 		HINTS
 			"${Mathematica_ROOT_DIR}/SystemFiles/Links/MathLink/DeveloperKit"
 			"${Mathematica_ROOT_DIR}/Contents/SystemFiles/Links/MathLink/DeveloperKit"
+			"${Mathematica_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Links/MathLink/DeveloperKit"
 			"${Mathematica_ROOT_DIR}/AddOns/MathLink/DeveloperKit"
 		PATH_SUFFIXES ${_SystemIDs}
 		DOC "MathLink target SDK root directory."
@@ -1632,6 +1657,7 @@ macro (_find_mathlink)
 		HINTS
 			"${Mathematica_HOST_ROOT_DIR}/SystemFiles/Links/MathLink/DeveloperKit"
 			"${Mathematica_HOST_ROOT_DIR}/Contents/SystemFiles/Links/MathLink/DeveloperKit"
+			"${Mathematica_HOST_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Links/MathLink/DeveloperKit"
 			"${Mathematica_HOST_ROOT_DIR}/AddOns/MathLink/DeveloperKit"
 		PATH_SUFFIXES ${_HostSystemIDs}
 		DOC "MathLink host SDK root directory."
@@ -1730,6 +1756,7 @@ macro (_find_WSTP)
 		HINTS
 			"${Mathematica_ROOT_DIR}/SystemFiles/Links/WSTP/DeveloperKit"
 			"${Mathematica_ROOT_DIR}/Contents/SystemFiles/Links/WSTP/DeveloperKit"
+			"${Mathematica_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Links/WSTP/DeveloperKit"
 		PATH_SUFFIXES ${_SystemIDs}
 		DOC "WSTP target SDK root directory."
 		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
@@ -1746,6 +1773,7 @@ macro (_find_WSTP)
 		HINTS
 			"${Mathematica_HOST_ROOT_DIR}/SystemFiles/Links/WSTP/DeveloperKit"
 			"${Mathematica_HOST_ROOT_DIR}/Contents/SystemFiles/Links/WSTP/DeveloperKit"
+			"${Mathematica_HOST_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Links/WSTP/DeveloperKit"
 		PATH_SUFFIXES ${_HostSystemIDs}
 		DOC "WSTP host SDK root directory."
 		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
@@ -1840,6 +1868,7 @@ macro (_find_jlink)
 		HINTS
 			"${Mathematica_ROOT_DIR}/SystemFiles/Links/JLink"
 			"${Mathematica_ROOT_DIR}/Contents/SystemFiles/Links/JLink"
+			"${Mathematica_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Links/JLink"
 			"${Mathematica_ROOT_DIR}/AddOns/JLink"
 		DOC "J/Link SDK root directory."
 		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
@@ -1871,6 +1900,8 @@ macro (_find_jlink)
 	if (CMAKE_HOST_APPLE)
 		if (EXISTS "${Mathematica_HOST_ROOT_DIR}/Contents/SystemFiles/Java")
 			set (_mmaJavaHome "${Mathematica_HOST_ROOT_DIR}/Contents/SystemFiles/Java")
+		elseif (EXISTS "${Mathematica_HOST_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Java")
+			set (_mmaJavaHome "${Mathematica_HOST_ROOT_DIR}/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Java")
 		else()
 			# OS X versions of Mathematica earlier than 10 did not have a JVM bundled
 			# but used the Java JVM pre-installed on system
@@ -1896,6 +1927,13 @@ macro (_find_jlink)
 		HINTS "${_mmaJavaHome}"
 		PATH_SUFFIXES ${_HostSystemIDs}
 		DOC "J/Link Java launcher."
+		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
+	)
+	find_path (Mathematica_JLink_JAVA_HOME
+		NAMES "bin/${_JLinkJavaNames}"
+		HINTS "${_mmaJavaHome}"
+		PATH_SUFFIXES ${_HostSystemIDs}
+		DOC "J/Link Java home directory."
 		NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
 	)
 endmacro()
@@ -2400,6 +2438,7 @@ macro (_log_found_variables)
 			message (STATUS "J/Link JAR file ${Mathematica_JLink_JAR_FILE}")
 			message (STATUS "J/Link native library ${Mathematica_JLink_RUNTIME_LIBRARY}")
 			message (STATUS "J/Link java launcher ${Mathematica_JLink_JAVA_EXECUTABLE}")
+			message (STATUS "J/Link java home directory ${Mathematica_JLink_JAVA_HOME}")
 		else()
 			message (STATUS "J/Link not found")
 		endif()
@@ -2503,7 +2542,8 @@ macro (_get_dependent_cache_variables _var _outDependentVars)
 			Mathematica_JLink_PACKAGE_DIR
 			Mathematica_MUnit_PACKAGE_FILE
 			Mathematica_LibraryLink_PACKAGE_FILE
-			Mathematica_JLink_JAVA_EXECUTABLE)
+			Mathematica_JLink_JAVA_EXECUTABLE
+			Mathematica_JLink_JAVA_HOME)
 		_get_dependent_cache_variables("Mathematica_MathLink_HOST_ROOT_DIR" ${_outDependentVars})
 		_get_dependent_cache_variables("Mathematica_WSTP_HOST_ROOT_DIR" ${_outDependentVars})
 		_get_dependent_cache_variables("Mathematica_JLink_PACKAGE_DIR" ${_outDependentVars})
@@ -2642,6 +2682,7 @@ macro (_update_cache)
 		Mathematica_LibraryLink_PACKAGE_FILE
 		Mathematica_JLink_RUNTIME_LIBRARY
 		Mathematica_JLink_JAVA_EXECUTABLE
+		Mathematica_JLink_JAVA_HOME
 	)
 	_get_cache_variables(_CacheVariables)
 	foreach (_CacheVariable IN LISTS _CacheVariables)
@@ -2660,7 +2701,7 @@ macro (_get_required_vars _component _outVars)
 	if ("${_component}" STREQUAL "Mathematica")
 		set (${_outVars}
 			Mathematica_ROOT_DIR
-			Mathematica_KERNEL_EXECUTABLE Mathematica_FRONTEND_EXECUTABLE)
+			Mathematica_KERNEL_EXECUTABLE)
 	elseif ("${_component}" STREQUAL "MathLink")
 		set (${_outVars}
 			Mathematica_MathLink_LIBRARY Mathematica_MathLink_INCLUDE_DIR)
@@ -2712,6 +2753,8 @@ macro (_setup_found_variables)
 	_get_components_to_find(_components)
 	foreach(_component IN LISTS _components)
 		_get_required_vars(${_component} _requiredComponentVars)
+		# suppress find_package_handle_standard_args warning on mismatching names
+		set (FPHSA_NAME_MISMATCHED On)
 		find_package_handle_standard_args(
 			Mathematica_${_component}
 			REQUIRED_VARS ${_requiredComponentVars}
@@ -3394,54 +3437,6 @@ function (Mathematica_ADD_TEST)
 	endif()
 	add_test (${_cmd})
 endfunction (Mathematica_ADD_TEST)
-
-# public function to add target that runs Mathematica Splice function on template file
-function (Mathematica_SPLICE_C_CODE _templateFile)
-	get_filename_component(_templateFileBaseName ${_templateFile} NAME_WE)
-	get_filename_component(_templateFileName ${_templateFile} NAME)
-	get_filename_component(_templateFileAbs ${_templateFile} ABSOLUTE)
-	get_filename_component(_templateFileExt ${_templateFileName} EXT)
-	set(_options "")
-	set(_oneValueArgs "OUTPUT")
-	set(_multiValueArgs "")
-	cmake_parse_arguments(_option "${_options}" "${_oneValueArgs}" "${_multiValueArgs}" ${ARGN})
-	if(_option_UNPARSED_ARGUMENTS)
-		message (FATAL_ERROR "Unknown keywords: ${_option_UNPARSED_ARGUMENTS}")
-	endif()
-	# Mathematica function Splice does not produce output in current working directory
-	# Use absolute paths to make it write to the current binary directory
-	if (_option_OUTPUT)
-		if (IS_ABSOLUTE ${_option_OUTPUT})
-			set (_outputFileAbs "${_option_OUTPUT}")
-		else()
-			set (_outputFileAbs "${CMAKE_CURRENT_BINARY_DIR}/${_option_OUTPUT}")
-		endif()
-	else()
-		set (_outputFileAbs "${CMAKE_CURRENT_BINARY_DIR}/${_templateFileBaseName}.c")
-	endif()
-	# Always set FormatType option to prevent Splice function from failing with a
-	# Splice::splict error if the template file path contains more than one dot character
-	string(TOLOWER ${_templateFileExt} _templateFileExt)
-	if ("${_templateFileExt}" STREQUAL ".mc")
-		set (_formatType "CForm")
-	elseif ("${_templateFileExt}" STREQUAL ".mf")
-		set (_formatType "FortranForm")
-	elseif ("${_templateFileExt}" STREQUAL ".mtex")
-		set (_formatType "TeXForm")
-	else()
-		set (_formatType "Automatic")
-	endif()
-	get_filename_component(_outputFileName ${_outputFileAbs} NAME)
-	Mathematica_TO_NATIVE_PATH("${_templateFileAbs}" _templateFileMma)
-	Mathematica_TO_NATIVE_PATH("${_outputFileAbs}" _outputFileMma)
-	set (_msg "Splicing Mathematica code in ${_templateFileName} to ${_outputFileName}")
-	Mathematica_ADD_CUSTOM_COMMAND(
-		CODE "Splice[${_templateFileMma}, ${_outputFileMma}, FormatType->${_formatType}]"
-		OUTPUT "${_outputFileAbs}"
-		DEPENDS "${_templateFileAbs}"
-		COMMENT ${_msg})
-	set_source_files_properties(${_outputFileAbs} PROPERTIES GENERATED TRUE LABELS "Mathematica")
-endfunction(Mathematica_SPLICE_C_CODE)
 
 # public function to add target that runs Mathematica Encode function on input files
 function (Mathematica_ENCODE)
@@ -4460,7 +4455,7 @@ endfunction (Mathematica_ADD_DOCUMENTATION)
 
 endif (Mathematica_KERNEL_EXECUTABLE AND Mathematica_JLink_FOUND)
 
-if (Mathematica_KERNEL_EXECUTABLE AND Mathematica_JLink_FOUND AND JAVA_FOUND)
+if (Mathematica_KERNEL_EXECUTABLE AND Mathematica_JLink_FOUND)
 
 # public function to simplify testing J/Link programs
 function (Mathematica_JLink_ADD_TEST)
@@ -4531,4 +4526,4 @@ function (Mathematica_JLink_ADD_TEST)
 	add_test (${_cmd})
 endfunction(Mathematica_JLink_ADD_TEST)
 
-endif(Mathematica_KERNEL_EXECUTABLE AND Mathematica_JLink_FOUND AND JAVA_FOUND)
+endif(Mathematica_KERNEL_EXECUTABLE AND Mathematica_JLink_FOUND)
