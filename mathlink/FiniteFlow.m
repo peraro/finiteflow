@@ -1126,7 +1126,7 @@ FFParallelReconstructUnivariate[id_,vars_,OptionsPattern[]]:=Module[
   mindeg = OptionValue["MinDegree"];
   If[TrueQ[mindeg == Automatic], mindeg = nthreads];
   maxdeg = OptionValue["MaxDegree"];
-  If[TrueQ[maxdeg == Automatic], maxdeg = FFDefaultMaxDegImplem[]];
+  If[TrueQ[maxdeg == Automatic], maxdeg = Max[FFDefaultMaxDegImplem[],mindeg]];
   degstep = OptionValue["DegreeStep"];
   If[TrueQ[degstep == Automatic], degstep = nthreads];
   sp = 0;
@@ -1164,7 +1164,7 @@ FFParallelReconstructUnivariateMod[id_,vars_,OptionsPattern[]]:=Module[
   mindeg = OptionValue["MinDegree"];
   If[TrueQ[mindeg == Automatic], mindeg = nthreads];
   maxdeg = OptionValue["MaxDegree"];
-  If[TrueQ[maxdeg == Automatic], maxdeg = FFDefaultMaxDegImplem[]];
+  If[TrueQ[maxdeg == Automatic], maxdeg = Max[FFDefaultMaxDegImplem[],mindeg]];
   degstep = OptionValue["DegreeStep"];
   If[TrueQ[degstep == Automatic], degstep = nthreads];
   sp = 0;
