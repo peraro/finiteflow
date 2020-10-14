@@ -1243,6 +1243,7 @@ FFDenseSolve[eqs_, vars_, OptionsPattern[]] := Module[
       If[res==$Failed,Throw[$Failed]];
       
       FFGraphOutput[graph,sys];
+      If[TrueQ[OptionValue["IndepVarsOnly"]], FFSetLearningOptions[graph,sys,"PrimeNo"->OptionValue["StartingPrimeNo"]];];
       learn = FFDenseSolverLearn[graph,vars];
       If[!TrueQ[learn[[0]]==List],Throw[learn]];
       If[TrueQ[OptionValue["IndepVarsOnly"]], Throw["IndepVars"/.learn]];
@@ -1282,6 +1283,7 @@ FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
       ];
       
       FFGraphOutput[graph,sys];
+      If[TrueQ[OptionValue["IndepVarsOnly"]], FFSetLearningOptions[graph,sys,"PrimeNo"->OptionValue["StartingPrimeNo"]];];
       learn = FFSparseSolverLearn[graph,vars];
       If[!TrueQ[learn[[0]]==List],Throw[learn]];
       If[TrueQ[OptionValue["IndepVarsOnly"]], Throw["IndepVars"/.learn]];
