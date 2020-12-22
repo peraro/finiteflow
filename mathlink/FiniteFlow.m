@@ -1054,7 +1054,7 @@ FFNonZeroesLearn[gid_]:=If[Length[#]==0,#,{"All"->#[[1]],"NonZero"->(#[[2]]+1)}]
 FFIndependentOf[id_, vars_List, var_]:=FFIndependentOfImplem[GetGraphId[id],Position[vars,var][[1,1]]-1];
 
 
-Options[FFReconstructFunction]:=Join[Options[FFAlgorithmSetReconstructionOptions],{"NThreads"->FFNThreads,"MinPrimes"->1}];
+Options[FFReconstructFunction]:=Join[Options[FFAlgorithmSetReconstructionOptions],{"NThreads"->FFNThreads,"MinPrimes"->1,"Degrees"->Automatic}];
 FFReconstructFunction[id_,vars_,OptionsPattern[]] := Module[
   {np,maxnp,opt,res,nthreads,tmp,thisopt},
   opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFReconstructFunction];
@@ -1066,7 +1066,10 @@ FFReconstructFunction[id_,vars_,OptionsPattern[]] := Module[
     thisopt = Join[{"MaxPrimes"->maxnp},FilterRules[opt,Select[Options[FFReconstructUnivariate],FreeQ[#,"MaxPrimes"]&]]];
     Return[FFReconstructUnivariate[id,vars,Sequence@@thisopt]]
   ];
-  res = FFAllDegrees[id, nthreads, Sequence@@FilterRules[opt,Options[FFAllDegrees]]];
+  If[StringQ[OptionValue["Degrees"]],
+    res = FFLoadDegrees[id,OptionValue["Degrees"]];,
+    res = FFAllDegrees[id, nthreads, Sequence@@FilterRules[opt,Options[FFAllDegrees]]];
+  ];
   If[TrueQ[res == $Failed], Return[$Failed]];
   np = OptionValue["MinPrimes"];
   tmp = FFMissingPoints;
@@ -1087,7 +1090,7 @@ FFReconstructFunction[id_,vars_,OptionsPattern[]] := Module[
 ];
 
 
-Options[FFReconstructFunctionMod]:=Join[Options[FFAlgorithmSetReconstructionOptions],{"NThreads"->FFNThreads}];
+Options[FFReconstructFunctionMod]:=Join[Options[FFAlgorithmSetReconstructionOptions],{"NThreads"->FFNThreads,"Degrees"->Automatic}];
 FFReconstructFunctionMod[id_,vars_,OptionsPattern[]] := Module[
   {np,maxnp,opt,res,nthreads,tmp,thisopt},
   opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFReconstructFunctionMod];
@@ -1099,7 +1102,10 @@ FFReconstructFunctionMod[id_,vars_,OptionsPattern[]] := Module[
     thisopt = Join[{"MaxPrimes"->maxnp},FilterRules[opt,Select[Options[FFReconstructUnivariate],FreeQ[#,"MaxPrimes"]&]]];
     Return[FFReconstructUnivariateMod[id,vars,Sequence@@thisopt]]
   ];
-  res = FFAllDegrees[id, nthreads, Sequence@@FilterRules[opt,Options[FFAllDegrees]]];
+  If[StringQ[OptionValue["Degrees"]],
+    res = FFLoadDegrees[id,OptionValue["Degrees"]];,
+    res = FFAllDegrees[id, nthreads, Sequence@@FilterRules[opt,Options[FFAllDegrees]]];
+  ];
   If[TrueQ[res == $Failed], Return[$Failed]];
   np = 1;
   tmp = FFMissingPoints;
