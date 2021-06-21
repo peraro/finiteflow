@@ -421,7 +421,7 @@ FFRegisterAlgorithm[algregfun_, gid_, id_, inputs_, args_List]:=Module[
      True
 ];
 
-FFGraphOutput[graphid_,nodeid_]:=FFGraphSetOutputImplem[GetGraphId[graphid],GetAlgId[graphid,nodeid]];
+FFGraphOutput[graphid_,nodeid_]:=Catch[FFGraphSetOutputImplem[GetGraphId[graphid],GetAlgId[graphid,nodeid]]];
 
 
 FFNParsOut[gid_]:=Catch[FFGraphNParsOutImplem[GetGraphId[gid]]];
