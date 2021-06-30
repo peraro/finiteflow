@@ -659,15 +659,17 @@ FFAlgNodeDenseSolver[gid_,id_,inputs_List,neqs_,vars_,OptionsPattern[]]:=Module[
 
 
 RegisterNodeSparseSolver[gid_,inputs_,{columns_,vars_,neededvarsin_}]:=Module[
-  {neededvars, lincoeffs, dummy, cols},
+  {neededvars, lincoeffs, dummy, cols, position},
   Catch[
+    position = Association[{}];
+    Table[position[vars[[ii]]]=ii-1;,{ii,Length[vars]}];
     neededvars = If[TrueQ[neededvarsin==Automatic], vars, neededvarsin];
     CheckVariables[vars];
     CheckVariables[neededvars];
     If[!SubsetQ[vars,neededvars], Message[FF::badneededvars]; Throw[$Failed];];
     cols = (CheckedUInt32List/@columns);
     If[!TrueQ[Max[Union@@cols]<=Length[vars]+1],Throw[$Failed];];
-    FFRegisterNodeSparseSolverImplem[gid,inputs,Length[vars],cols-1,((Position[vars,#][[1,1]])&/@neededvars)-1]
+    FFRegisterNodeSparseSolverImplem[gid,inputs,Length[vars],cols-1,position/@neededvars]
   ]
 ];
 
