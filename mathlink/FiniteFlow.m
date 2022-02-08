@@ -92,6 +92,7 @@ FFAlgMatMul::usage = "FFAlgMatMul[graph,node,{input1,input2},r1,c1,c2], with int
 FFAlgSparseMatMul::usage = "FFAlgSparseMatMul[graph,node,{input1,input2},r1,c1,c2,nonzerocols1,nonzerocols2] is analogous to FFAlgMatMul[graph,node,{input1,input2},r1,c1,c2] except that input1 and input2 only return the potentially non-vanishing matrix elements of the inputs.  The arguments nonzerocols1 and nonzerocols2 are lists of lists with the potentially non-vanishing columns in each row for the two input matrices respectively."
 FFAlgNonZeroes::usage = "FFAlgNonZeroes[graph,node,{input}] returns the non-vanishing elements of its input."
 FFAlgTakeAndAdd::usage="FFAlgTakeAndAdd[graph,node,inputs,takeelements] is a TakeAndAdd algorithm which takes lists of selected elements from its inputs, according to the takeelements pattern, and adds all elements in each list."
+FFAlgTakeAndAddBL::usage="FFAlgTakeAndAddBL[graph,node,inputs,takeelements] is similar to FFAlgTakeAndAdd but is bilinear."
 FFTotalDegrees::usage="FFTotalDegrees[graph] computes and returns the total degrees of each entry of the output of a graph."
 FFVarsDegrees::usage="FFVarsDegrees[graph] computes and internally stores the degrees with respect to each variable, for all the outputs of a graph."
 FFAllDegrees::usage="FFAllDegrees[graph] computes the total degrees, as well as the partial degrees with respect to each variable, for all the outputs of a graph.  The total degrees are also returned."
@@ -999,16 +1000,20 @@ RegisterAlgChain[gid_,inputs_,{}]:=Catch[FFAlgChainImplem[gid,inputs]];
 FFAlgChain[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgChain,gid,id,inputs,{}];
 
 
-ValidateTakeElemsList[a_List]:=If[AllTrue[a,#[[0]]==List && Length[#]==2&],a,Throw[$Failed]];
-TakeElemsToInternal[a_List]:=ValidateTakeElemsList[a]-1;
-TakeElemsToInternal[full_List->subset_List]:=Module[{position,i,j,sublist,res},
+ValidateTakeElemsList[a_List,False]:=If[AllTrue[a,#[[0]]==List && Length[#]==2&],a,Throw[$Failed]];
+ValidateTakeElemsList[a_List,True]:=If[AllTrue[a,#[[0]]==List && Length[#]==4&],a,Throw[$Failed]];
+TakeElemsToInternal[a_List,bl_:False]:=ValidateTakeElemsList[a,bl]-1;
+TakeElemsToInternal[full_List->subset_List,bl_:False]:=Module[{position,i,j,sublist,res},
   If[!AllTrue[full,#[[0]]==List&],Throw[$Failed]];
   position=Association[{}];
   Do[
     sublist = full[[i]];
     Do[position[sublist[[j]]] = {i,j};,{j,Length[sublist]}];
   ,{i,Length[full]}];
-  res=position/@subset;
+  If[!TrueQ[bl],
+    res=position/@subset;,
+    res=Join[position[#[[1]]],position[#[[2]]]]&/@subset;
+  ];
   If[!FreeQ[res,Missing],Throw[$Failed]];
   res-1
 ];
@@ -1020,6 +1025,12 @@ MultiTakeElemsToInternal[a_List]:=Flatten[TakeElemsToInternal[#]]&/@a;
 MultiTakeElemsToInternal[full_List->subsets_List]:=Flatten[TakeElemsToInternal[full->#]]&/@subsets;
 RegisterAlgTakeAndAdd[gid_,inputs_,{elems_}]:=Catch[FFAlgTakeAndAddImplem[gid,inputs,MultiTakeElemsToInternal[elems]]];
 FFAlgTakeAndAdd[gid_,id_,inputs_List,elems_]:=FFRegisterAlgorithm[RegisterAlgTakeAndAdd,gid,id,inputs,{elems}];
+
+
+MultiTakeElemsToInternalBL[a_List]:=Flatten[TakeElemsToInternal[#,True]]&/@a;
+MultiTakeElemsToInternalBL[full_List->subsets_List]:=Flatten[TakeElemsToInternal[full->#,True]]&/@subsets;
+RegisterAlgTakeAndAddBL[gid_,inputs_,{elems_}]:=Catch[FFAlgTakeAndAddBLImplem[gid,inputs,MultiTakeElemsToInternalBL[elems]]];
+FFAlgTakeAndAddBL[gid_,id_,inputs_List,elems_]:=FFRegisterAlgorithm[RegisterAlgTakeAndAddBL,gid,id,inputs,{elems}];
 
 
 RegisterAlgSlice[gid_,inputs_,{start_,end_}]:=Catch[FFAlgSliceImplem[gid,inputs,start-1,end]];
@@ -1199,7 +1210,7 @@ FFParallelReconstructUnivariateMod[id_,vars_,OptionsPattern[]]:=Module[
 
 SparseSolWSparseOut[sol_,depv_,indepv_]:=Module[{psol,rhs},
   psol=PartitionsWithLen[sol,Length/@indepv];
-  rhs=Table[psol[[ii]].indepv[[ii]],{ii,Length[psol]}];
+  rhs=Table[psol[[ii]] . indepv[[ii]],{ii,Length[psol]}];
   Inner[Rule,depv,rhs,List]
 ];
 
@@ -1207,7 +1218,7 @@ SparseSolWSparseOut[sol_,depv_,indepv_]:=Module[{psol,rhs},
 FFDenseSolverSol[sol_,learninfo_]:=Module[{depv,indepv,zero},
   {depv,indepv,zero}={"DepVars","IndepVars","ZeroVars"}/.learninfo;
   If[!TrueQ[Length[depv]==0],
-    Join[Inner[Rule,depv,((#).Join[indepv,{1}])&/@ArrayReshape[sol,{Length[depv],Length[indepv]+1}],List],(#->0)&/@zero],
+    Join[Inner[Rule,depv,((#) . Join[indepv,{1}])&/@ArrayReshape[sol,{Length[depv],Length[indepv]+1}],List],(#->0)&/@zero],
     (#->0)&/@zero
   ]
 ];
@@ -1215,7 +1226,7 @@ FFSparseSolverSol[sol_,learninfo_]:=Module[{depv,indepv,sparseout},
   {depv,indepv,sparseout}={"DepVars","IndepVars","SparseOutput"}/.learninfo;
   If[TrueQ[sparseout],Return[SparseSolWSparseOut[sol,depv,indepv]]];
   If[!TrueQ[Length[depv]==0],
-    Inner[Rule,depv,((#).Join[indepv,{1}])&/@ArrayReshape[sol,{Length[depv],Length[indepv]+1}],List],
+    Inner[Rule,depv,((#) . Join[indepv,{1}])&/@ArrayReshape[sol,{Length[depv],Length[indepv]+1}],List],
     {}
   ]
 ];
@@ -1323,7 +1334,7 @@ FFInverse[mat_List, OptionsPattern[]]:=Module[
     varsx = varx/@Range[len];
     varsy = vary/@Range[len];
     
-    eqs = Table[mat[[ii]].varsx-vary[ii]==0,{ii,len}];
+    eqs = Table[mat[[ii]] . varsx-vary[ii]==0,{ii,len}];
     
     sparse=OptionValue["Sparse"];
     
@@ -1728,6 +1739,7 @@ FFLoadLibObjects[] := Module[
     FFAlgSparseMatMulImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_sparse_mat_mul", LinkObject, LinkObject];
     FFAlgNonZeroesImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_nonzero", LinkObject, LinkObject];
     FFAlgTakeAndAddImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_take_and_add", LinkObject, LinkObject];
+    FFAlgTakeAndAddBLImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_take_and_add_bl", LinkObject, LinkObject];
     FFSolverNIndepEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_n_indep_eqs", LinkObject, LinkObject];
     FFSolverIndepEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_indep_eqs", LinkObject, LinkObject];
     FFAlgJSONSparseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_json_sparse_system", LinkObject, LinkObject];

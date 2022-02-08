@@ -252,6 +252,45 @@ namespace fflow {
   }
 
 
+  Ret TakeAndAddBL::init(const unsigned npars[], unsigned npars_size,
+                         std::vector<std::vector<InputEl>> && elems)
+  {
+    nparsin.resize(npars_size);
+    for (unsigned i=0; i<npars_size; ++i) {
+      nparsin[i] = npars[i];
+    }
+    nparsout = elems.size();
+
+    for (const auto & ellist : elems)
+      for (const auto & el : ellist) {
+        if (!(el.list1 < nparsin.size() && el.el1 < nparsin[el.list1] &&
+              el.list2 < nparsin.size() && el.el2 < nparsin[el.list2]))
+          return FAILED;
+      }
+
+    elems_ = std::move(elems);
+    return SUCCESS;
+  }
+
+  Ret TakeAndAddBL::evaluate(Context *,
+                             AlgInput xin[], Mod mod,
+                             AlgorithmData *,
+                             UInt xout[]) const
+  {
+    unsigned idx=0;
+    for (const auto & ellist : elems_) {
+      xout[idx] = 0;
+      for (const auto & el : ellist)
+        xout[idx] = apbc_mod(xout[idx],
+                             xin[el.list1][el.el1], xin[el.list2][el.el2],
+                             mod);
+      ++idx;
+    }
+
+    return SUCCESS;
+  }
+
+
   Ret SparseMatrixMul::init(unsigned nrows1, unsigned ncols1, unsigned ncols2)
   {
     nr1_ = nrows1;

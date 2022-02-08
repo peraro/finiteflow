@@ -133,6 +133,28 @@ namespace fflow {
   };
 
 
+  class TakeAndAddBL : public Algorithm {
+  public:
+
+    struct InputEl {
+      unsigned list1;
+      unsigned el1;
+      unsigned list2;
+      unsigned el2;
+    };
+
+    Ret init(const unsigned npars[], unsigned npars_size,
+             std::vector<std::vector<InputEl>> && elems);
+
+    virtual Ret evaluate(Context * ctxt,
+                         AlgInput xin[], Mod mod, AlgorithmData * data,
+                         UInt xout[]) const override;
+
+  private:
+    std::vector<std::vector<InputEl>> elems_;
+  };
+
+
   class SparseMatrixMul : public Algorithm {
   public:
 

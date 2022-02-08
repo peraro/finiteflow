@@ -3314,6 +3314,76 @@ extern "C" {
   }
 
 
+    int fflowml_alg_take_and_add_bl(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int n_args;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &n_args);
+
+    int graphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+
+    std::unique_ptr<TakeAndAddBL> algptr(new TakeAndAddBL());
+    TakeAndAddBL & alg = *algptr;
+    std::vector<unsigned> nparsin(inputnodes.size());
+    for (unsigned i=0; i<inputnodes.size(); ++i) {
+      Node * node = session.node(graphid, inputnodes[i]);
+      if (!node) {
+        MLNewPacket(mlp);
+        MLPutSymbol(mlp, "$Failed");
+        return LIBRARY_NO_ERROR;
+      }
+      nparsin[i] = node->algorithm()->nparsout;
+    }
+
+    std::vector<std::vector<TakeAndAddBL::InputEl>> elems;
+    int n_lists, n_elems=0;
+    MLTestHead(mlp, "List", &n_lists);
+    elems.resize(n_lists);
+    for (int k=0; k<n_lists; ++k) {
+      MLTestHead(mlp, "List", &n_elems);
+      elems[k].resize(n_elems/4);
+      for (int j=0; j<n_elems/4; ++j) {
+        int tmp;
+        MLGetInteger32(mlp, &tmp);
+        elems[k][j].list1 = tmp;
+        MLGetInteger32(mlp, &tmp);
+        elems[k][j].el1 = tmp;
+        MLGetInteger32(mlp, &tmp);
+        elems[k][j].list2 = tmp;
+        MLGetInteger32(mlp, &tmp);
+        elems[k][j].el2 = tmp;
+      }
+    }
+
+    Ret ret = alg.init(nparsin.data(), nparsin.size(), std::move(elems));
+
+    MLNewPacket(mlp);
+
+    if (!session.graph_exists(graphid) || ret != SUCCESS) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+    unsigned id = graph->new_node(std::move(algptr), nullptr,
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_linear_fit(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);
