@@ -399,6 +399,10 @@ namespace fflow {
 
     unsigned idx = 0;
     for (const auto & node : nodes_) {
+      if (!node.get()) {
+        ++idx;
+        continue;
+      }
       Algorithm & alg = *node->algorithm();
       if (all_nodes || mark_nodes_[idx])
         if (adataout.algdata_[idx].get() == nullptr) {
