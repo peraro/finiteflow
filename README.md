@@ -74,6 +74,8 @@ FiniteFlow in a default installation path, you can use the command
 cmake . && make install
 ```
 
+On Apple Silicon Macs (with M1 processor or newer) add the option `-DCMAKE_OSX_ARCHITECTURES=arm64` to the `cmake` command.
+
 In order to install FiniteFlow in a custom path, or specify a
 different path for its dependencies use
 ```
