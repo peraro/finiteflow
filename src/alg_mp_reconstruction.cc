@@ -12,7 +12,7 @@ namespace fflow {
                              unsigned & numdeg, unsigned & dendeg)
     {
       unsigned nparsin = fun.get_alg()->nparsin[0];
-      RatFunReconstruction funrec(nparsin);
+      RatFunReconstruction funrec(nparsin, MPolyRecMethod::DEFAULT);
       set_rec_options(opt, shift, funrec);
 
       Mod mod(BIG_UINT_PRIMES[opt.start_mod]);
@@ -55,7 +55,8 @@ namespace fflow {
       MPRatFunReconstruction funrec(nparsin);
       set_mp_rec_options(opt, shift, funrec);
 
-      RatFunReconstruction rec(nparsin, RatFunReconstruction::DEFAULT_MAX_DEG);
+      RatFunReconstruction rec(nparsin, opt.polymethod,
+                               RatFunReconstruction::DEFAULT_MAX_DEG);
       funrec.setup_rat_rec(rec);
 
       Ret ret = rec.reconstruct(fun, mod);
@@ -330,7 +331,7 @@ namespace fflow {
                                  std::size_t & den_maxdeg)
     {
       unsigned nparsin = fun.get_alg()->nparsin[0];
-      RatFunReconstruction funrec(nparsin);
+      RatFunReconstruction funrec(nparsin, MPolyRecMethod::DEFAULT);
       set_rec_options(opt, shift, funrec);
 
       Mod mod(BIG_UINT_PRIMES[opt.start_mod]);
@@ -601,7 +602,8 @@ namespace fflow {
     MPRatFunReconstruction funrec(nparsin);
     set_mp_rec_options(opt, shift, funrec);
 
-    RatFunReconstruction rec(nparsin, RatFunReconstruction::DEFAULT_MAX_DEG);
+    RatFunReconstruction rec(nparsin, opt.polymethod,
+                             RatFunReconstruction::DEFAULT_MAX_DEG);
     funrec.setup_rat_rec(rec);
 
     Ret ret = 0;

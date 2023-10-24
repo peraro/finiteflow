@@ -326,6 +326,83 @@ namespace fflow {
     }
   }
 
+  void SparseMatrix::toRowEcholonWithMaxRow(Mod mod, unsigned maxrow,
+                                            EqDeps * eqdeps)
+  {
+    std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
+    UInt elif;
+    for (unsigned i=0; i<n_; ++i) {
+      elif = rows_[i].get_first();
+      if (!elif)
+        continue;
+
+      {
+        unsigned eq = NO_EQ_;
+        while ((eq = rows_[i].eq_to_substitute(var_eq_.get(), maxrow)) != NO_EQ_) {
+          UInt first_col = rows_[eq].first_nonzero_column();
+          working_row().gauss_elimination(rows_[i],rows_[eq],first_col,mod);
+          if (eqdeps)
+            eqdeps[i].push_back(eq);
+        }
+      }
+
+      elif = rows_[i].get_first();
+      if (!elif)
+        continue;
+
+      // In this version, two (or more) equations may end up having "solutions"
+      // for the same unknown.  In this case, we keep the simplest equation and
+      // throw away the other(s).
+      if (var_eq_[rows_[i].first_nonzero_column()] == NO_EQ_)
+        var_eq_[rows_[i].first_nonzero_column()] = i;
+      else
+        rows_[i].clear();
+
+      if (elif != 1) {
+        UInt ielif = mul_inv(elif, mod);
+        rows_[i].mul(ielif, mod);
+      }
+    }
+  }
+
+  void SparseMatrix::toReducedRowEcholonWithMaxRow(Mod mod,
+                                                   unsigned maxrow,
+                                                   bool reduced,
+                                                   flag_t * flags,
+                                                   EqDeps * eqdeps)
+  {
+    toRowEcholonWithMaxRow(mod, maxrow, eqdeps);
+
+    std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
+
+    unsigned nindep = std::remove_if(rows_.get(), rows_.get()+n_,
+                                     [](const SparseMatrixRow & r)
+                                     {
+                                       return r.is_zero();
+                                     }) - rows_.get();
+
+    for (unsigned i=0; i<nindep; ++i)
+      var_eq_[rows_[i].first_nonzero_column()] = i;
+
+    if (!reduced || nindep < 2)
+      return;
+
+    for (unsigned i=0; i<nindep-1; ++i) {
+      if (flags) {
+        unsigned this_var = rows_[i].first_nonzero_column();
+        if (!(flags[this_var] & LSVar::IS_NEEDED))
+          continue;
+      }
+      unsigned eq = NO_EQ_;
+      while ((eq = rows_[i].eq_to_back_substitute(var_eq_.get(),maxrow)) != NO_EQ_) {
+        UInt first_col = rows_[eq].first_nonzero_column();
+        working_row().gauss_elimination(rows_[i],rows_[eq],first_col,mod);
+        if (eqdeps)
+          eqdeps[i].push_back(eq);
+      }
+    }
+  }
+
 
   void SparseMatrix::dependent_vars(std::vector<std::size_t> & vars) const
   {

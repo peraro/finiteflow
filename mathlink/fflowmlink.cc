@@ -849,6 +849,8 @@ namespace  {
       opt.max_deg = opt_data[5];
     if (opt_data[6] >= 0)
       opt.dbginfo = opt_data[6];
+    if (opt_data[7] >= 0)
+      opt.polymethod = opt_data[7];
 
     MLReleaseInteger32List(mlp, opt_data, opt_size);
 
@@ -2028,6 +2030,51 @@ extern "C" {
         SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
         ls.sparse_output();
         session.invalidate_subctxt_alg_data(id, nodeid);
+      } else {
+        okay = false;
+      }
+    }
+    MLNewPacket(mlp);
+
+    if (okay)
+      MLPutSymbol(mlp, "Null");
+    else
+      MLPutSymbol(mlp, "$Failed");
+
+    return LIBRARY_NO_ERROR;
+  }
+
+  int fflowml_alg_system_sparse_output_with_maxrow(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int id, nodeid, nargs, maxrow, back_subst_flag;
+    bool back_subst = true;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    MLGetInteger32(mlp, &maxrow);
+    MLGetInteger32(mlp, &back_subst_flag);
+    bool okay = true;
+
+    if(back_subst_flag == -1)
+      back_subst = false;
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+    if (!alg || !alg->is_mutable())
+      okay = false;
+
+    if (okay) {
+      if (dynamic_cast<SparseLinearSolver *>(alg)) {
+        SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+        Ret ret = ls.sparse_output_with_maxrow(maxrow, back_subst);
+        if (ret == SUCCESS)
+          session.invalidate_subctxt_alg_data(id, nodeid);
+        else
+          okay = false;
       } else {
         okay = false;
       }

@@ -532,6 +532,9 @@ namespace fflow {
     // exponents, which is the inverse of PolyTerms::pos)
     void fromDegree(std::size_t deg);
 
+    void fromMonomials(const Monomial * mons, unsigned nmons,
+                       unsigned first_var=0);
+
     // multiply by constant
     void mul(UInt c, Mod mod);
 
@@ -769,6 +772,30 @@ namespace fflow {
     }
     for (auto & m : monomials_)
       op_.mul(m, moth, mod, m);
+  }
+
+  inline void SparsePoly::fromMonomials(const Monomial * mons,
+                                        unsigned nmons,
+                                        unsigned first_var)
+  {
+    monomials_.resize(nmons);
+
+    if (first_var == 0) {
+      for (unsigned i=0; i<nmons; ++i)
+        monomials_[i] = op_.copy(mons[i]);
+    } else {
+      for (unsigned i=0; i<nmons; ++i) {
+        Monomial & m = monomials_[i] = Monomial(nvars());
+        const Monomial & n = mons[i];
+        m.coeff() = n.coeff();
+        m.degree() = n.degree();
+        std::copy(n.exponents(), n.exponents()+nvars()-first_var,
+                  m.exponents()+first_var);
+      }
+    }
+
+    remove_zeroes_();
+    sort_();
   }
 
 

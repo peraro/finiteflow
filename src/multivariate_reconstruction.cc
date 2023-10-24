@@ -251,9 +251,179 @@ namespace fflow {
   }
 
 
+  //////////////////////////////
+  // Multivariate Vandermonde //
+  //////////////////////////////
 
-  // Rational functions
 
+  // Generate a list of monomials and count its length
+  unsigned VPolyReconstruction::gen_mons_(unsigned curr_deg,
+                                          unsigned var, UInt * toadd)
+  {
+    unsigned maxdeg = std::min(maxdeg_-curr_deg, maxdeg_var_(var));
+    unsigned mindeg = (curr_deg >= mindeg_ || var != nvars_-1) ? 0
+      : mindeg_ - curr_deg;
+    unsigned nmons = 0;
+
+    if (var == nvars_-1) {
+
+      if (toadd)
+        for (unsigned j=mindeg; j<=maxdeg; ++j) {
+          toadd[var] = j;
+          auto mon = Monomial(nvars_);
+          mon.degree() = curr_deg + j;
+          for (unsigned k=0; k<nvars_; ++k)
+            mon.exponent(k) = toadd[k];
+          mon.coeff() = 1;
+          mons_.emplace_back(std::move(mon));
+        }
+
+      return maxdeg >= mindeg ? maxdeg - mindeg + 1 : 0;
+
+    } else {
+
+      for (unsigned j=mindeg; j<=maxdeg; ++j) {
+        if (toadd)
+          toadd[var] = j;
+        nmons += gen_mons_(curr_deg+j, var+1, toadd);
+      }
+
+    }
+
+    return nmons;
+  }
+
+
+  void VPolyReconstruction::sample(RatFun & f, Mod mod)
+  {
+    unsigned npoints = gen_mons_();
+    if (npoints == 0)
+      return;
+
+    f.evaluate(x0_.get(), mod);
+    if (npoints == 1)
+      return;
+
+    std::unique_ptr<UInt[]> x(new UInt[nvars_]);
+    std::copy(x0_.get(), x0_.get()+nvars_, x.get());
+
+    for (unsigned j=1; j<npoints; ++j) {
+      for (unsigned k=0; k<nvars_; ++k)
+        x[k] = mul_mod(x0_[k], x[k], mod);
+      f.evaluate(x.get(), mod);
+    }
+  }
+
+  Ret VPolyReconstruction::reconstruct(RatFun & f, Mod mod)
+  {
+    mons_.clear();
+
+    std::unique_ptr<UInt[]> x(new UInt[nvars_]);
+    const unsigned npoints = gen_mons_(0,0,x.get());
+
+    if (npoints == 0)
+      return SUCCESS;
+
+    std::unique_ptr<UInt[]> v(new UInt[npoints]);
+    std::unique_ptr<UInt[]> y(new UInt[npoints]);
+
+    // evaluate monomials at x0
+    const auto op = MonomialOp{nvars_};
+    for (unsigned j=0; j<npoints; ++j)
+      v[j] = op.eval(mons_[j], x0_.get(), mod);
+
+    y[0] = f.evaluate(x0_.get(), mod);
+
+    if (npoints == 1) {
+      if (v[0] == 0)
+        return FAILED;
+      mons_[0].coeff() = div_mod(y[0],v[0],mod);
+    }
+
+    // get all other evaluation points
+    std::copy(x0_.get(), x0_.get()+nvars_, x.get());
+    for (unsigned j=1; j<npoints; ++j) {
+      for (unsigned k=0; k<nvars_; ++k)
+        x[k] = mul_mod(x0_[k], x[k], mod);
+      y[j] = f.evaluate(x.get(), mod);
+      if (y[j] == FAILED)
+        return FAILED;
+    }
+
+    // p(z) = (z-v[0])*(z-v[1])*...
+    std::unique_ptr<UInt[]> p(new UInt[npoints+1]);
+    std::fill(p.get(), p.get()+npoints,0);
+    p[npoints]=1;
+    p[npoints-1] = neg_mod(v[0], mod);
+    for (unsigned j=1; j<npoints; ++j)
+      for (unsigned k=npoints-j-1; k<npoints; ++k)
+        p[k] = sub_mod(p[k], mul_mod(p[k+1], v[j], mod), mod);
+
+    // Build the matrix M such that M.y = c
+    // It can be computed using:
+    //
+    //   p_j(z) = \sum_k M_jk * z^k
+    //
+    // where
+    //
+    //   p_j(z) = 1/norm*z*p(z)/(z-v[j])
+    //
+    // with norm = v[j] * \prod_k (v[j]-v[k]) for k != j
+    std::unique_ptr<UInt[]> pj(new UInt[npoints]);
+    for (unsigned j=0; j<npoints; ++j) {
+
+      // q(z) = p_j(z)*z
+      UInt * q = pj.get();
+
+      const UInt vj = v[j];
+      const UInt vjp = precomp_mul_shoup(vj, mod);
+
+      // quotient
+      q[npoints-1] = 1;
+      for (int k=npoints-2; k>=0; --k)
+        q[k] = add_mod(p[k+1], mul_mod_shoup(q[k+1],vj,vjp,mod), mod);
+
+      UInt norm=1;
+      for (unsigned k=0; k<npoints; ++k)
+        if (k!=j)
+          norm = mul_mod(norm, sub_mod(vj, v[k], mod), mod);
+      norm = mul_mod(norm, vj, mod);
+      if (!norm)
+        return FAILED;
+
+      const UInt inorm = mul_inv(norm, mod);
+      const UInt inormp = precomp_mul_shoup(inorm, mod);
+      for (unsigned k=0; k<npoints; ++k)
+        q[k] = mul_mod_shoup(q[k], inorm, inormp, mod);
+
+      UInt tmp = 0;
+      for (unsigned k=0; k<npoints; ++k)
+        tmp = add_mod(tmp, mul_mod(q[k],y[k],mod), mod);
+      mons_[j].coeff() = tmp;
+
+    }
+
+    return SUCCESS;
+  }
+
+  void VPolyReconstruction::writeResultVar(std::size_t first_var, Mod,
+                                           SparsePoly & p)
+  {
+    p = SparsePoly(nvars_ + first_var);
+    if (mons_.size())
+      p.fromMonomials(mons_.data(), mons_.size(), first_var);
+  }
+
+  void VPolyReconstruction::writeResult(Mod mod, SparsePoly & p)
+  {
+    writeResultVar(0, mod, p);
+  }
+
+
+
+  ////////////////////////
+  // Rational functions //
+  ////////////////////////
 
   namespace  {
 
@@ -869,10 +1039,10 @@ namespace fflow {
     hf.n_ndchecks = n_undchecks; \
     hf.n_singular = n_singular; \
     hf.n_learning = std::max({n_uchecks,n_checks,std::size_t(3)}); \
-    npolyrec_.n_checks = n_checks; \
-    npolyrec_.n_uchecks = n_uchecks;   \
-    npolyrec_.n_singular = n_singular; \
-    npolyrec_.check_over_maxdeg = false; \
+    npolyrec_->n_checks = n_checks; \
+    npolyrec_->n_uchecks = n_uchecks;   \
+    npolyrec_->n_singular = n_singular; \
+    npolyrec_->check_over_maxdeg = false; \
                                        \
     hf.rat_.setX0(t0_); \
     hf.rat_.setMaxTerms(2*maxdeg_ + 2); \
@@ -965,17 +1135,21 @@ namespace fflow {
       // numerator
       if (i < hf.numterms()) {
         hf.type_ = HomogenizeMRatFun::NUMERATOR;
-        npolyrec_.reset();
-        npolyrec_.setMaxDegree(i);
-        if (xdegs_)
-          npolyrec_.xdegs = xdegs_.num_maxdegs(nvars_)+1;
+        npolyrec_->reset();
+        npolyrec_->setMinDegree(0);
+        npolyrec_->setMaxDegree(i);
+        if (xdegs_) {
+          npolyrec_->xdegs = xdegs_.num_maxdegs(nvars_)+1;
+          if (xdegs_.num_maxdegs(nvars_)[0]<i)
+            npolyrec_->setMinDegree(i-xdegs_.num_maxdegs(nvars_)[0]);
+        }
         tmp_.clear();
 
         hf.i_ = i;
-        if (npolyrec_.reconstruct(hf,mod) != SUCCESS)
+        if (npolyrec_->reconstruct(hf,mod) != SUCCESS)
           return FAILED;
 
-        npolyrec_.writeResultVar(1,mod,tmp_);
+        npolyrec_->writeResultVar(1,mod,tmp_);
         if (i == 0) {
           n0_ = tmp_.constTerm();
           hf.n0_ = n0_;
@@ -992,17 +1166,21 @@ namespace fflow {
       // denominator
       if (i < hf.denterms()) {
         hf.type_ = HomogenizeMRatFun::DENOMINATOR;
-        npolyrec_.reset();
-        npolyrec_.setMaxDegree(i);
-        if (xdegs_)
-          npolyrec_.xdegs = xdegs_.den_maxdegs(nvars_)+1;
+        npolyrec_->reset();
+        npolyrec_->setMinDegree(0);
+        npolyrec_->setMaxDegree(i);
+        if (xdegs_) {
+          npolyrec_->xdegs = xdegs_.den_maxdegs(nvars_)+1;
+          if (xdegs_.den_maxdegs(nvars_)[0]<i)
+            npolyrec_->setMinDegree(i-xdegs_.den_maxdegs(nvars_)[0]);
+        }
         tmp_.clear();
 
         hf.i_ = i;
-        if (npolyrec_.reconstruct(hf,mod) != SUCCESS)
+        if (npolyrec_->reconstruct(hf,mod) != SUCCESS)
           return FAILED;
 
-        npolyrec_.writeResultVar(1,mod,tmp_);
+        npolyrec_->writeResultVar(1,mod,tmp_);
         hf.hornerden_[i] = hornerptr_from_sparse_poly(tmp_.data(), tmp_.size(),
                                                       nvars_, 1);
         hf.ww_.ensure_size(horner_required_workspace(hf.hornerden_[i].get()));
@@ -1110,10 +1288,10 @@ namespace fflow {
 #define FFLOW_SETUP_HF_SAMPLE(hf)   \
     hf.n_ndchecks = n_undchecks; \
     hf.n_singular = n_singular; \
-    npolyrec_.n_checks = n_checks; \
-    npolyrec_.n_uchecks = n_uchecks;   \
-    npolyrec_.n_singular = n_singular; \
-    npolyrec_.check_over_maxdeg = false; \
+    npolyrec_->n_checks = n_checks; \
+    npolyrec_->n_uchecks = n_uchecks;   \
+    npolyrec_->n_singular = n_singular; \
+    npolyrec_->check_over_maxdeg = false; \
                                        \
     hf.ndrat_.setX0(t0_); \
     \
@@ -1141,25 +1319,33 @@ namespace fflow {
       // numerator
       if (i < hf.numterms()) {
         hf.type_ = HomogenizeMRatFun::NUMERATOR;
-        npolyrec_.reset();
-        npolyrec_.setMaxDegree(i);
-        if (xdegs_)
-          npolyrec_.xdegs = xdegs_.num_maxdegs(nvars_)+1;
+        npolyrec_->reset();
+        npolyrec_->setMinDegree(0);
+        npolyrec_->setMaxDegree(i);
+        if (xdegs_) {
+          npolyrec_->xdegs = xdegs_.num_maxdegs(nvars_)+1;
+          if (xdegs_.num_maxdegs(nvars_)[0]<i)
+            npolyrec_->setMinDegree(i-xdegs_.num_maxdegs(nvars_)[0]);
+        }
 
         hf.i_ = i;
-        npolyrec_.sample(hf,mod);
+        npolyrec_->sample(hf,mod);
       }
 
       // denominator
       if (i < hf.denterms()) {
         hf.type_ = HomogenizeMRatFun::DENOMINATOR;
-        npolyrec_.reset();
-        npolyrec_.setMaxDegree(i);
-        if (xdegs_)
-          npolyrec_.xdegs = xdegs_.den_maxdegs(nvars_)+1;
+        npolyrec_->reset();
+        npolyrec_->setMinDegree(0);
+        npolyrec_->setMaxDegree(i);
+        if (xdegs_) {
+          npolyrec_->xdegs = xdegs_.den_maxdegs(nvars_)+1;
+          if (xdegs_.den_maxdegs(nvars_)[0]<i)
+            npolyrec_->setMinDegree(i-xdegs_.den_maxdegs(nvars_)[0]);
+        }
 
         hf.i_ = i;
-        npolyrec_.sample(hf,mod);
+        npolyrec_->sample(hf,mod);
       }
 
     }

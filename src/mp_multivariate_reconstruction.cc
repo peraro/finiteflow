@@ -8,7 +8,7 @@ namespace fflow {
   Ret MPRatFunReconstruction::degree(RatFun & f, Mod mod,
                                      unsigned & numdeg, unsigned & dendeg)
   {
-    RatFunReconstruction rec(nvars_, maxdeg_);
+    RatFunReconstruction rec(nvars_, MPolyRecMethod::DEFAULT, maxdeg_);
     setup_rat_rec(rec);
     return rec.degree(f, mod, numdeg, dendeg);
   }
@@ -67,7 +67,7 @@ namespace fflow {
       else
         chinese_remainder_coeffs(totmod, mod.n(), c1, c2, totmod);
 
-      RatFunReconstruction rec(nvars_, maxdeg_);
+      RatFunReconstruction rec(nvars_, polymethod, maxdeg_);
       setup_rat_rec(rec);
 
       Ret ret = 0;
@@ -116,7 +116,7 @@ namespace fflow {
       if (mod_i >= max_primes)
         return;
 
-      RatFunReconstruction rec(nvars_, maxdeg_);
+      RatFunReconstruction rec(nvars_, polymethod, maxdeg_);
       setup_rat_rec(rec);
 
       rec.sample(f, mod, numdeg, dendeg, degs);

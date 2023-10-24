@@ -21,6 +21,7 @@ namespace fflow {
     unsigned max_primes = 1;
     unsigned max_deg = RatFunReconstruction::DEFAULT_MAX_DEG;
     unsigned dbginfo = 0;
+    unsigned polymethod = MPolyRecMethod::DEFAULT;
   };
 
 
@@ -50,6 +51,7 @@ namespace fflow {
     rec.start_mod = opt.start_mod;
     rec.max_primes = opt.max_primes;
     rec.setMaxDegree(opt.max_deg);
+    rec.polymethod = opt.polymethod;
   }
 
 

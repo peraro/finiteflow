@@ -121,7 +121,7 @@ namespace fflow {
 
   public:
     std::size_t n_checks, n_uchecks, n_singular;
-    unsigned start_mod, max_primes;
+    unsigned start_mod, max_primes, polymethod;
   };
 
 } // namespace fflow

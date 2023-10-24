@@ -500,6 +500,36 @@ namespace fflow {
       return eq;
     }
 
+    unsigned eq_to_substitute(const unsigned * eqs, unsigned maxrow) const
+    {
+      const unsigned NO_EQ = ~unsigned(0);
+      unsigned eq = NO_EQ;
+      for (unsigned idx=0; el(idx).col < maxrow; ++idx)
+        if (eqs[el(idx).col] < eq)
+          eq = eqs[el(idx).col];
+      return eq;
+    }
+
+    unsigned eq_to_back_substitute(const unsigned * eqs, unsigned maxrow) const
+    {
+      const unsigned NO_EQ = ~unsigned(0);
+      unsigned eq = NO_EQ;
+      for (unsigned idx=1; el(idx).col < maxrow; ++idx)
+        if (eqs[el(idx).col] < eq)
+          eq = eqs[el(idx).col];
+      return eq;
+    }
+
+    unsigned any_eq_to_substitute(const unsigned * eqs, unsigned maxrow) const
+    {
+      const unsigned NO_EQ = ~unsigned(0);
+      unsigned eq = NO_EQ;
+      for (unsigned idx=0; el(idx).col < maxrow; ++idx)
+        if (eqs[el(idx).col] != NO_EQ)
+          return eqs[el(idx).col];
+      return eq;
+    }
+
     // r1 = r1-r1(pivot)*r2
     void gauss_elimination(SparseMatrixRow & r1,
                            const SparseMatrixRow & r2,
@@ -594,6 +624,18 @@ namespace fflow {
     void toReducedRowEcholon(Mod mod, EqDeps * eqdeps)
     {
       toReducedRowEcholon(mod, nullptr, eqdeps);
+    }
+
+    void toRowEcholonWithMaxRow(Mod mod, unsigned maxrow,
+                                EqDeps * eqdeps = nullptr);
+    void toReducedRowEcholonWithMaxRow(Mod mod,
+                                       unsigned maxrow, bool reduced,
+                                       flag_t * flags = nullptr,
+                                       EqDeps * eqdeps = nullptr);
+    void toReducedRowEcholonWithMaxRow(Mod mod, unsigned maxrow, bool reduced,
+                                       EqDeps * eqdeps)
+    {
+      toReducedRowEcholonWithMaxRow(mod, maxrow, reduced, nullptr, eqdeps);
     }
 
     UInt el(unsigned i, unsigned j) const

@@ -317,7 +317,7 @@ namespace fflow {
     }
 
     Ret sparse_output(bool flag = true);
-    //Ret sparse_output(unsigned maxrow);
+    Ret sparse_output_with_maxrow(unsigned maxrow, bool back_subst = true);
 
     // the returned pointer may be null
     const std::vector<std::vector<unsigned>> * sparse_output_data() const
@@ -353,6 +353,11 @@ namespace fflow {
     bool is_learning_impossible_(const AlgorithmData * data) const
     {
       return adata_(data).depv_.empty() && indepv_.empty();
+    }
+
+    bool has_max_row_() const
+    {
+      return output_is_sparse() && (maxrow_ < SparseMatrixRow::END);
     }
 
     void learn_needed_(AlgorithmData * data);
@@ -395,8 +400,9 @@ namespace fflow {
     std::size_t nndeps_ = 0, nnindeps_ = 0, nnindepeqs_ = 0;
     std::vector<SparseMatrix::EqDeps> eqdeps_;
     std::unique_ptr<std::vector<std::vector<unsigned>>> sparseout_data_;
+    UInt maxrow_ =  SparseMatrixRow::END;
     flag_t stage_ = FIRST_;
-    bool homog_ = false, marked_and_sweeped_ = false;
+    bool backsubst_ = true, homog_ = false, marked_and_sweeped_ = false;
   };
 
 } // namespace ampf

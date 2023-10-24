@@ -50,6 +50,7 @@ FFAlgQ::usage = "FFAlgQ[graphname, nodename] returns True if the specified algor
 FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, neededvars] redefines the set of needed variables of a dense or sparse linear system."
 FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
 FFSolverSparseOutput::usage = "FFSolverSparseOutput[graph, node] makes a sparse linear solver return a sparse representation of the solution matrix."
+FFSolverSparseOutputWithMaxRow::usage = ""
 FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
 FFSetLearningOptions::usage = "FFLearn[graph,node,options...] sets the learning options of the specified node in the graph."
 FFLaurentLearn::usage = "FFLaurentLearn[graph] executes the learning phase on a Laurent expansion node, which must be the output node of graph.  It returns a list of two lists.  The first contains the starting power of the Laurent expansion of each element.  The second contains the order of the expansion requested for each element."
@@ -125,6 +126,9 @@ FFReconstructFunction::usage = "FFReconstructFunction[graph,vars] analytically r
 FFParallelReconstructUnivariate::usage = "FFParallelReconstructUnivariate[graph,{x}] reconstructs the output of graph as a univariate rational function in the variable x.  Numerical evaluations are performed in parallel, and additional sample points are added until the reconstruction is successful."
 FFParallelReconstructUnivariateMod::usage = "FFParallelReconstructUnivariateMod[graph,{x}] is the same as FFParallelReconstructUnivariate[graph,{x}] but reconstruction is performed modulo the prime specified in the options."
 FFReconstructFunctionMod::usage = "FFReconstructFunctionMod[graph,vars] is the same as FFReconstructFunction[graph,vars] but reconstruction is performed modulo the prime specified in the options."
+
+FFPolyNewton::usage = "The option \"PolyRecMethod\"->FFPolyNewton, for multivatiate reconstruction procedures, specifies to use the Newton method for polynomial reconstructions."
+FFPolyVandermonde::usage = "The option \"PolyRecMethod\"->FFPolyVandermonde, for multivatiate reconstruction procedures, specifies to a Vandermonde system for polynomial reconstructions."
 
 FFDenseSolverSol::usage = "FFDenseSolverSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a dense solver or a linear fit, and learinfo is the information obtained during its learning phase, formats expr as list of substitution rules representing the solution of the system."
 FFSparseSolverSol::usage = "FFSparseSolverSol[expr,learninfo], where expr represents the (reconstructed or symbolic) output of a sparse solver, and learinfo is the information obtained during its learning phase, formats expr as list of substitution rules representing the solution of the system."
@@ -438,7 +442,7 @@ FFGraphEdges[graph_,OptionsPattern[]]:=Module[{ret,map},
     ret = FFGraphEdgesImplem[GetGraphId[graph],toFFInternalBooleanFlag["Pruned",OptionValue["Pruned"]]];
     If[TrueQ[ret == $Failed],Throw[$Failed]];
     If[TrueQ[ret == {}],Throw[{}]];
-    
+
     map = Association[{}];
     (map[FFAlgId[#]]=#[[2]];)&/@Select[FFAllAlgs[],First[#]==graph&];
     ret = map/@ret;
@@ -462,7 +466,7 @@ FFGraphNodes[graph_,OptionsPattern[]]:=Module[{ret,map},
     ret = FFGraphNodesImplem[GetGraphId[graph],toFFInternalBooleanFlag["Pruned",OptionValue["Pruned"]]];
     If[TrueQ[ret == $Failed],Throw[$Failed]];
     If[TrueQ[ret == {}],Throw[{}]];
-    
+
     map = Association[{}];
     (map[FFAlgId[#]]=#[[2]];)&/@Select[FFAllAlgs[],First[#]==graph&];
     map/@ret
@@ -485,7 +489,11 @@ FFGraphPrune[gid_]:=Module[
 ];
 
 
-FFReconstructOptions = {"Checks", "UChecks", "MaxSingularPoints", "StartingPrimeNo", "MaxPrimes", "MaxDegree", "PrintDebugInfo"};
+FFPolyNewton=0;
+FFPolyVandermonde=1;
+
+
+FFReconstructOptions = {"Checks", "UChecks", "MaxSingularPoints", "StartingPrimeNo", "MaxPrimes", "MaxDegree", "PrintDebugInfo", "PolyRecMethod"};
 Options[FFAlgorithmSetReconstructionOptions]=Options[FFAlgorithmSetDefaultReconstructionOptions]=(#->Automatic)&/@FFReconstructOptions;
 FFAlgorithmSetReconstructionOptions[OptionsPattern[]]:=toFFInternalUnsignedFlag[#,OptionValue[#]]&/@FFReconstructOptions;
 
@@ -873,6 +881,8 @@ FFSolverOnlyHomogeneous[gid_,id_]:=Catch[FFSolverOnlyHomogeneousImplem[GetGraphI
 
 
 FFSolverSparseOutput[gid_,id_]:=Catch[FFSolverSparseOutputImplem[GetGraphId[gid],GetAlgId[gid,id]]];
+FFSolverSparseOutputWithMaxRow[gid_,id_,maxrow_]:=Catch[FFSolverSparseOutputWithMaxrowImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[maxrow],toFFInternalBooleanFlag[0,Automatic]]];
+FFSolverSparseOutputWithMaxRow[gid_,id_,maxrow_,"BackSubstitution"->flag_]:=Catch[FFSolverSparseOutputWithMaxrowImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[maxrow],toFFInternalBooleanFlag["BackSubstitution",flag]]];
 
 
 FFLearn[gid_]:=Catch[FFLearnImplem[GetGraphId[gid]]];
@@ -1310,7 +1320,7 @@ FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
         FFSparseSolverMarkAndSweepEqs[graph,sys];
         FFSparseSolverDeleteUnneededEqs[graph,sys];
       ];
-      
+
       res = If[TrueQ[params == {}],
                FFReconstructNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                FFReconstructFunction[graph,params, Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
@@ -1346,7 +1356,7 @@ FFInverse[mat_List, OptionsPattern[]]:=Module[
                   params];
       If[!TrueQ[params == {}], CheckVariables[params]];
       FFGraphInputVars[graph,in,params];
-     
+
       res = If[sparse,
                FFAlgSparseSolver[graph,sys,{in},params,eqs,Join[varsx,varsy],
                                     "VarsPattern"->(DeleteDuplicates[Cases[{#},(_varx|_vary),Infinity]]&),
@@ -1355,7 +1365,7 @@ FFInverse[mat_List, OptionsPattern[]]:=Module[
                                    Sequence@@FilterRules[{opt}, Options[FFAlgDenseSolver]]]];
       If[res==$Failed,Throw[$Failed]];
       FFSolverOnlyHomogeneous[graph,sys];
-      
+
       FFGraphOutput[graph,sys];
       learn = If[sparse,
                  FFSparseSolverLearn[graph,Join[varsx,varsy]],
@@ -1363,7 +1373,7 @@ FFInverse[mat_List, OptionsPattern[]]:=Module[
       If[TrueQ[learn==FFImpossible],Throw[FFSingularMatrix]];
       If[!TrueQ[learn[[0]]==List],Throw[learn]];
       If[!TrueQ[("DepVars"/.learn) == varsx && ("IndepVars"/.learn) == varsy],Throw[FFSingularMatrix]];
-      
+
       res = If[TrueQ[params == {}],
                FFReconstructNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                FFReconstructFunction[graph,params, Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
@@ -1438,7 +1448,7 @@ RegisterAlgLinearFit[gid_,inputs_,{params_,
         deltalv = Table[CheckedInt64List[NoEmptyList[Select[Range[Length[loopvars]], !FreeQ[term,loopvars[[#]]]&]]],{term,lincoeffs}];
         integrlv = Table[CheckedInt64List[NoEmptyList[Select[Range[Length[loopvars]], !FreeQ[integr,loopvars[[#]]]&]]],{integr,integrand}];
 		If[!TrueQ[params=={}],
-		  
+
 		  lininternal = Map[toFFInternalPolyRatFun[#[[1]],loopvars[[#[[2]]]],params]&, Table[{lincoeffs[[i]],deltalv[[i]]},{i,Length[lincoeffs]}]];
           integrinternal = Map[toFFInternalPolyRatFun[#[[1]],loopvars[[#[[2]]]],params]&, Table[{integrand[[i]],integrlv[[i]]},{i,Length[integrand]}]];,
 
@@ -1544,17 +1554,17 @@ FFLinearFit[params_,delta_,integrandin_, tauvarsin_,varsin_,opt:OptionsPattern[]
       If[!TrueQ[params == {}], CheckVariables[params];];
       FFGraphInputVars[graph,in,params];
       pars = params;
-      
+
       res = FFAlgLinearFit[graph,sys,{in},pars,delta,integrandin,tauvarsin,varsin,
                               Sequence@@FilterRules[{opt}, Options[FFAlgLinearFit]]];
       If[res==$Failed,Throw[$Failed]];
-      
+
       FFGraphOutput[graph,sys];
       FFAlgorithmSetReconstructionOptions[graph,Sequence@@FilterRules[{opt}, Options[FFAlgorithmSetReconstructionOptions]]];
       learn = FFDenseSolverLearn[graph,varsin];
       If[!TrueQ[learn[[0]]==List],Throw[learn]];
       If[TrueQ[OptionValue["IndepVarsOnly"]], Throw["IndepVars"/.learn]];
-      
+
       res = If[TrueQ[params == {}],
                FFReconstructNumeric[graph,Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                FFReconstructFunction[graph,params,Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
@@ -1725,6 +1735,7 @@ FFLoadLibObjects[] := Module[
     FFSolverResetNeededVarsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_reset_neeed", LinkObject, LinkObject];
     FFSolverOnlyHomogeneousImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_only_homogeneous", LinkObject, LinkObject];
     FFSolverSparseOutputImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output", LinkObject, LinkObject];
+    FFSolverSparseOutputWithMaxrowImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output_with_maxrow", LinkObject, LinkObject];
     FFIndependentOfImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_independent_of_var", LinkObject, LinkObject];
     FFAlgRatFunEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratfun_eval", LinkObject, LinkObject];
     FFAlgRatFunEvalFromCoeffsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_coeff_ratfun_eval", LinkObject, LinkObject];

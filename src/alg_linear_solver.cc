@@ -542,26 +542,33 @@ namespace fflow {
     for (auto dep : adata_(data).depv_) {
       if (xinfo_[dep] & LSVar::IS_NEEDED) {
 
-        for (unsigned j=dep+1; j<nvars(); ++j)
-          if (adata_(data).mat_(eq,j))
-            xinfo_[j] |= LSVar::IS_NEEDED;
+        if (!output_is_sparse()) {
+          for (unsigned j=dep+1; j<nvars(); ++j)
+            if (adata_(data).mat_(eq,j))
+              xinfo_[j] |= LSVar::IS_NEEDED;
+        }
         ++nndeps_;
 
       }
       ++eq;
     }
 
-    nnindeps_ = 0;
-    for (unsigned j=0; j<nvars(); ++j)
-      if ((xinfo_[j] & LSVar::IS_NEEDED) && !(xinfo_[j] & LSVar::IS_DEP))
-        ++nnindeps_;
+    if (!output_is_sparse()) {
+      nnindeps_ = 0;
+      for (unsigned j=0; j<nvars(); ++j)
+        if ((xinfo_[j] & LSVar::IS_NEEDED) && !(xinfo_[j] & LSVar::IS_DEP))
+          ++nnindeps_;
+    }
 
     needed_dep_.reset(new std::size_t[nndeps_]);
-    needed_indep_.reset(new std::size_t[nnindeps_]);
+    if (!output_is_sparse())
+      needed_indep_.reset(new std::size_t[nnindeps_]);
     unsigned ndc=0, nic=0;
-    for (unsigned j=0; j<nvars(); ++j)
-      if (xinfo_[j] & LSVar::IS_NEEDED && !(xinfo_[j] & LSVar::IS_DEP))
-        needed_indep_[nic++] = j;
+    if (!output_is_sparse()) {
+      for (unsigned j=0; j<nvars(); ++j)
+        if (xinfo_[j] & LSVar::IS_NEEDED && !(xinfo_[j] & LSVar::IS_DEP))
+          needed_indep_[nic++] = j;
+    }
     for (auto dep : adata_(data).depv_)
       if (xinfo_[dep] & LSVar::IS_NEEDED)
         needed_dep_[ndc++] = dep;
@@ -579,7 +586,12 @@ namespace fflow {
 
     number_eqs_(data);
     mat_(data).sortRows();
-    mat_(data).toReducedRowEcholon(mod);
+
+    if (!has_max_row_())
+      mat_(data).toReducedRowEcholon(mod);
+    else
+      mat_(data).toReducedRowEcholonWithMaxRow(mod, maxrow_, backsubst_);
+
     if (mat_(data).isImpossibleSystem()) {
       stage_ = SECOND_;
       return SUCCESS;
@@ -604,7 +616,11 @@ namespace fflow {
       return FAILED;
 
     eqdeps_.resize(nnindepeqs_);
-    mat_(data).toReducedRowEcholon(mod, xinfo_.get(), eqdeps_.data());
+    if (!has_max_row_())
+      mat_(data).toReducedRowEcholon(mod, xinfo_.get(), eqdeps_.data());
+    else
+      mat_(data).toReducedRowEcholonWithMaxRow(mod, maxrow_, backsubst_,
+                                               xinfo_.get(), eqdeps_.data());
 
     if (mat_(data).isImpossibleSystem()) {
       if (is_learning_impossible_(data))
@@ -648,7 +664,10 @@ namespace fflow {
 
     SparseMatrix & mat = mat_(data);
 
-    mat.toReducedRowEcholon(mod, xinfo_.get());
+    if (!has_max_row_())
+      mat.toReducedRowEcholon(mod, xinfo_.get());
+    else
+      mat.toReducedRowEcholonWithMaxRow(mod, maxrow_, backsubst_, xinfo_.get());
 
     if (mat.isImpossibleSystem())
       return FAILED;
@@ -768,6 +787,17 @@ namespace fflow {
       sparseout_data_.reset(new std::vector<std::vector<unsigned>>());
 
     return SUCCESS;
+  }
+
+  Ret SparseLinearSolver::sparse_output_with_maxrow(unsigned maxrow,
+                                                    bool backsubst)
+  {
+    Ret ret = sparse_output();
+    if (ret != SUCCESS)
+      return ret;
+    maxrow_ = maxrow;
+    backsubst_ = backsubst;
+    return ret;
   }
 
   void SparseLinearSolver::set_sparseout_data_(const AlgorithmData * data)

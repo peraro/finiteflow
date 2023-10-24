@@ -60,20 +60,28 @@ namespace fflow {
   }
 
 
-  // Reconstruct multivariate polynomials using Newton interpolation
-  // method recursively
-  class NPolyReconstruction {
+  struct MPolyRecMethod {
+    enum {
+          NEWTON = 0,
+          VANDERMONDE = 1
+    };
+    enum {
+          DEFAULT = MPolyRecMethod::NEWTON
+    };
+  };
+
+  // Multivariate poly reconstruction, base class
+  class MPolyReconstruction {
   public:
     enum {DEFAULT_N_UCHECKS = 2};
     enum {DEFAULT_N_CHECKS = 2};
     enum {DEFAULT_N_SINGULAR = 10};
     enum {DEFAULT_MAX_DEG = 100};
 
-    explicit NPolyReconstruction(unsigned nvars,
+    explicit MPolyReconstruction(unsigned nvars,
                                  unsigned maxdegree = DEFAULT_MAX_DEG)
-      : poly_(NewtonPoly::create(nvars)),
-        x0_(new UInt[nvars]()),
-        nvars_(nvars), maxdeg_(maxdegree),
+      : x0_(new UInt[nvars]()),
+        nvars_(nvars), maxdeg_(maxdegree), mindeg_(0),
         n_checks(DEFAULT_N_CHECKS), n_uchecks(DEFAULT_N_UCHECKS),
         n_singular(DEFAULT_N_SINGULAR), xdegs(nullptr),
         check_over_maxdeg(true)
@@ -83,16 +91,16 @@ namespace fflow {
         x0_[j] = sample_uint(OFFSET_1,j+1234567,mod);
     }
 
-    void reset()
-    {
-      poly_ = NewtonPoly::create(nvars_);
-    }
+    virtual ~MPolyReconstruction() {}
+
+    virtual void reset() = 0;
 
     void reset(unsigned nvars,
                unsigned maxdegree = DEFAULT_MAX_DEG)
     {
       nvars_ = nvars;
       maxdeg_ = maxdegree;
+      mindeg_ = 0;
       x0_.reset(new UInt[nvars_]());
       for (unsigned j=0; j<nvars; ++j)
         x0_[j] = SAMPLING_STRIDE+(j+1)*64;
@@ -109,15 +117,15 @@ namespace fflow {
       maxdeg_ = deg;
     }
 
-    void writeResult(Mod mod, SparsePoly & p)
+    void setMinDegree(unsigned deg)
     {
-      (*poly_).toSparsePoly(mod,p);
+      mindeg_ = deg;
     }
 
-    void writeResultVar(std::size_t first_var, Mod mod, SparsePoly & p)
-    {
-      (*poly_).toSparsePolyVar(first_var,mod,p);
-    }
+    virtual void writeResult(Mod mod, SparsePoly & p) = 0;
+
+    virtual
+    void writeResultVar(std::size_t first_var, Mod mod, SparsePoly & p) = 0;
 
     UInt getX0(std::size_t var = 0) const
     {
@@ -148,17 +156,10 @@ namespace fflow {
         x0_[i++] = t;
     }
 
-    Ret reconstruct(RatFun & f, Mod mod);
-    void sample(RatFun & f, Mod mod);
+    virtual Ret reconstruct(RatFun & f, Mod mod) = 0;
+    virtual void sample(RatFun & f, Mod mod) = 0;
 
-    unsigned getTrueDegree();
-
-    const NewtonMPoly & getNewtonMPoly() const
-    {
-      return static_cast<const NewtonMPoly &>(*poly_);
-    }
-
-  private:
+  protected:
 
     std::size_t maxdeg_var_(std::size_t i)
     {
@@ -166,6 +167,57 @@ namespace fflow {
         return xdegs[i];
       return maxdeg_;
     }
+
+  protected:
+    std::unique_ptr<UInt[]> x0_;
+    std::size_t nvars_, maxdeg_, mindeg_;
+
+  public:
+    std::size_t n_checks, n_uchecks, n_singular;
+    const std::size_t * xdegs;
+    bool check_over_maxdeg;
+  };
+
+
+  // Reconstruct multivariate polynomials using Newton interpolation
+  // method recursively
+  class NPolyReconstruction : public MPolyReconstruction {
+  public:
+    enum {DEFAULT_N_UCHECKS = MPolyReconstruction::DEFAULT_N_UCHECKS};
+    enum {DEFAULT_N_CHECKS = MPolyReconstruction::DEFAULT_N_CHECKS};
+    enum {DEFAULT_N_SINGULAR = MPolyReconstruction::DEFAULT_N_SINGULAR};
+    enum {DEFAULT_MAX_DEG = MPolyReconstruction::DEFAULT_MAX_DEG};
+
+    explicit NPolyReconstruction(unsigned nvars,
+                                 unsigned maxdegree = DEFAULT_MAX_DEG)
+      : MPolyReconstruction(nvars, maxdegree),
+        poly_(NewtonPoly::create(nvars)) {}
+
+    virtual void reset() override
+    {
+      poly_ = NewtonPoly::create(nvars_);
+    }
+
+    virtual void writeResult(Mod mod, SparsePoly & p) override
+    {
+      (*poly_).toSparsePoly(mod,p);
+    }
+
+    virtual void
+    writeResultVar(std::size_t first_var, Mod mod, SparsePoly & p) override
+    {
+      (*poly_).toSparsePolyVar(first_var,mod,p);
+    }
+
+    const NewtonMPoly & getNewtonMPoly() const
+    {
+      return static_cast<const NewtonMPoly &>(*poly_);
+    }
+
+    virtual Ret reconstruct(RatFun & f, Mod mod) override;
+    virtual void sample(RatFun & f, Mod mod) override;
+
+  private:
 
     NewtonPoly::Ptr reconstruct_(detail::URatFunFreezed & f,
                                  unsigned nvars,
@@ -181,15 +233,56 @@ namespace fflow {
 
   private:
     NewtonPoly::Ptr poly_;
-    std::unique_ptr<UInt[]> x0_;
-    std::size_t nvars_, maxdeg_;
-
-  public:
-    std::size_t n_checks, n_uchecks, n_singular;
-    const std::size_t * xdegs;
-    bool check_over_maxdeg;
   };
 
+
+  // Reconstruct multivariate polynomials from an ansatz using a
+  // Vandermonde system of equations
+  class VPolyReconstruction : public MPolyReconstruction {
+  public:
+    enum {DEFAULT_N_UCHECKS = MPolyReconstruction::DEFAULT_N_UCHECKS};
+    enum {DEFAULT_N_CHECKS = MPolyReconstruction::DEFAULT_N_CHECKS};
+    enum {DEFAULT_N_SINGULAR = MPolyReconstruction::DEFAULT_N_SINGULAR};
+    enum {DEFAULT_MAX_DEG = MPolyReconstruction::DEFAULT_MAX_DEG};
+
+    explicit VPolyReconstruction(unsigned nvars,
+                                 unsigned maxdegree = DEFAULT_MAX_DEG)
+      : MPolyReconstruction(nvars, maxdegree), mons_() {}
+
+    virtual void reset() override
+    {
+      mons_.clear();
+    }
+
+    virtual void writeResult(Mod mod, SparsePoly & p) override;
+
+    virtual void
+    writeResultVar(std::size_t first_var, Mod mod, SparsePoly & p) override;
+
+    virtual Ret reconstruct(RatFun & f, Mod mod) override;
+    virtual void sample(RatFun & f, Mod mod) override;
+
+  private:
+    unsigned gen_mons_(unsigned curr_deg=0, unsigned var=0,
+                       UInt * toadd=nullptr);
+
+  private:
+    std::vector<Monomial> mons_;
+  };
+
+
+  inline std::unique_ptr<MPolyReconstruction>
+  m_poly_reconstruction(unsigned nvars, unsigned polymethod,
+                        unsigned maxdeg)
+  {
+    unsigned effnvars = nvars > 1 ? nvars-1 : 1;
+    switch (polymethod) {
+    case MPolyRecMethod::VANDERMONDE:
+      return std::unique_ptr<MPolyReconstruction>(new VPolyReconstruction(effnvars,maxdeg));
+    default: // NEWTON
+      return std::unique_ptr<MPolyReconstruction>(new NPolyReconstruction(effnvars,maxdeg));
+    }
+  }
 
   class RatFunReconstruction {
   public:
@@ -201,9 +294,10 @@ namespace fflow {
 
     static bool VERBOSE;
 
-    explicit RatFunReconstruction(unsigned nvars,
+    explicit RatFunReconstruction(unsigned nvars, unsigned polymethod,
                                   unsigned maxdegree = DEFAULT_MAX_DEG)
-      : fun_(nvars,true), npolyrec_(nvars > 1 ? nvars-1 : 1, maxdegree),
+      : fun_(nvars,true),
+        npolyrec_(m_poly_reconstruction(nvars,polymethod,maxdegree)),
         tmp_(nvars), shift_(), xdegs_(), n0_(FAILED), t0_(OFFSET_0_HASH),
         nvars_(nvars), maxdeg_(maxdegree), num_pref_(), den_pref_(),
         n_checks(DEFAULT_N_CHECKS), n_uchecks(DEFAULT_N_UCHECKS),
@@ -222,27 +316,27 @@ namespace fflow {
 
     UInt getX0(std::size_t var = 0) const
     {
-      return npolyrec_.getX0(var);
+      return npolyrec_->getX0(var);
     }
 
     UInt getXi(std::size_t i, std::size_t var = 0) const
     {
-      return npolyrec_.getXi(i,var);
+      return npolyrec_->getXi(i,var);
     }
 
     void setX0(UInt x0)
     {
-      npolyrec_.setX0(x0);
+      npolyrec_->setX0(x0);
     }
 
     void setX0(const UInt x0[])
     {
-      npolyrec_.setX0(x0);
+      npolyrec_->setX0(x0);
     }
 
     void setX0(const std::initializer_list<UInt> & x0)
     {
-      npolyrec_.setX0(x0);
+      npolyrec_->setX0(x0);
     }
 
     UInt getT0() const
@@ -411,7 +505,7 @@ namespace fflow {
 
   private:
     SparseRationalFunction fun_;
-    NPolyReconstruction npolyrec_;
+    std::unique_ptr<MPolyReconstruction> npolyrec_;
     SparsePoly tmp_;
     std::vector<UInt> shift_;
     RatFunVarDegrees xdegs_;
