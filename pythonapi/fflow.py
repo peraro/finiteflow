@@ -242,7 +242,9 @@ def LSolveDepVars(graph, node):
     retc = _lib.ffLSolveDepVars(graph, node)
     if retc == _ffi.NULL:
         raise ERROR
-    return _ffi.unpack(retc, _lib.ffLSolveNDepVars(graph, node))
+    ret = _ffi.unpack(retc, _lib.ffLSolveNDepVars(graph, node))
+    _lib.ffFreeMemoryU32(retc)
+    return ret
 
 
 def LSolveNIndepVars(graph, node, i=0):
@@ -253,7 +255,9 @@ def LSolveIndepVars(graph, node, i=0):
     retc = _lib.ffLSolveIndepVars(graph, node, i)
     if retc == _ffi.NULL:
         raise ERROR
-    return _ffi.unpack(retc, _lib.ffLSolveNIndepVars(graph, node, i))
+    ret = _ffi.unpack(retc, _lib.ffLSolveNIndepVars(graph, node, i))
+    _lib.ffFreeMemoryU32(retc)
+    return ret
 
 
 def RatFunToJSON(rf, json_file):
