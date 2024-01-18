@@ -41,5 +41,11 @@ testmp
 testalg
 testio
 testgraph
+testcapi
+testjson
 *.out*
 *.dat
+
+# these files are generated
+tests_json/tinvsys.json
+pythonapi/_cffi_fflow.c

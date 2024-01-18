@@ -87,6 +87,14 @@ namespace fflow {
       return monomials_.size();
     }
 
+    const Monomial * monomials() const
+    {
+      return monomials_.data();
+    }
+    std::vector<Monomial> & monomials_vec_()
+    {
+      return monomials_;
+    }
     const Monomial & monomial(std::size_t i) const
     {
       return monomials_[i];
@@ -94,6 +102,10 @@ namespace fflow {
     const MPRational & coeff(std::size_t i) const
     {
       return cq_[i];
+    }
+    std::vector<MPRational> & coeff_vec_()
+    {
+      return cq_;
     }
 
     void clear()

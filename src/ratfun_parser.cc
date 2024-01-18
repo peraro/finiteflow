@@ -193,6 +193,9 @@ namespace fflow {
       Ret parse_num_or_den(std::vector<Monomial> & num,
                            std::vector<MPRational> & cnum);
 
+      void set_denom_to_one(std::vector<Monomial> & den,
+                            std::vector<MPRational> & cden);
+
       Ret parse(const char * start, const char * end,
                 std::vector<Monomial> & num, std::vector<MPRational> & cnum,
                 std::vector<Monomial> & den, std::vector<MPRational> & cden);
@@ -235,6 +238,8 @@ namespace fflow {
         ret = parse_num_or_den(den, cden);
         if (ret == FAILED)
           return FAILED;
+      } else {
+        set_denom_to_one(den, cden);
       }
 
       if (curr_token.type == RatFunToken::END)
@@ -254,7 +259,7 @@ namespace fflow {
         else
           return FAILED;
       } else {
-        return parse_poly_term(num, cnum);
+        return parse_poly(num, cnum);
       }
       return SUCCESS;
     }
@@ -318,6 +323,15 @@ namespace fflow {
       m.degree() = tot_deg;
 
       return SUCCESS;
+    }
+
+    void RatFunParser::set_denom_to_one(std::vector<Monomial> & num,
+                                        std::vector<MPRational> & cnum)
+    {
+      num.push_back(Monomial(nvars));
+      Monomial & m = num.back();
+      m.coeff() = 1;
+      cnum.push_back(MPRational(1));
     }
 
   } // namespace

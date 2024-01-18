@@ -1,0 +1,192 @@
+/*
+ * C-API for interfacing FiniteFlow and other programs/languages.
+ *
+ * Eventually it will become a simple and stable API for using
+ * FiniteFlow from other programs and programming languages.
+ *
+ * WARNING: It is currently a work in progress and the API is not
+ * stable yet.
+ */
+
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+  // Used for FFStatus
+#define FF_SUCCESS (0)
+#define FF_ERROR (~(unsigned)(0))
+#define FF_MISSING_POINTS (FF_ERROR - 1)
+#define FF_MISSING_PRIMES (FF_ERROR - 2)
+
+  // Used for missing FFGraph, FFNode or things returning unsigned
+#define FF_NO_ALGORITHM (~(unsigned)(0))
+
+  // Used for errors in functions returning 64-bit unsigned ints
+#define FF_FAILED (~(FFUInt)(0))
+
+
+  /* API begin */
+
+  typedef uint64_t FFUInt;
+  typedef unsigned FFGraph;
+  typedef unsigned FFNode;
+  typedef unsigned FFStatus;
+  typedef const char * FFCStr;
+
+  typedef struct FFRatFunList FFRatFunList;
+
+  // Zero-initialize this to pick default options
+  typedef struct {
+    unsigned start_mod;
+    unsigned min_primes;
+    unsigned max_primes;
+    unsigned max_deg;
+    unsigned dbginfo;
+    unsigned polymethod;
+    unsigned n_threads;
+  } FFRecOptions;
+
+  void ffInit(void);
+  void ffDeinit(void);
+
+  // checks if a FFStatus, FFGraph or FFNode represents an error
+  bool ffIsError(unsigned val);
+
+  FFUInt ffMulInv(FFUInt z, unsigned prime_no);
+  FFUInt ffPrimeNo(unsigned i);
+
+  unsigned ffDefaultNThreads(void);
+
+  // Frees arrays of 32-bit integers returned by several routines
+  void ffFreeMemoryU32(unsigned * mem);
+  // Frees arrays of 64-bit integers returned by several routines
+  void ffFreeMemoryU64(uint64_t * mem);
+
+  FFGraph ffNewGraph(void);
+  FFGraph ffNewGraphWithInput(unsigned nvars, FFNode * node);
+  FFGraph ffNewGraphDummy(unsigned n_in, unsigned n_out);
+
+  FFStatus ffDeleteGraph(FFGraph graph);
+  FFStatus ffDeleteNode(FFGraph graph, FFNode node);
+
+  FFStatus ffSetOutputNode(FFGraph graph, FFNode node);
+
+  FFNode ffSetGraphInput(FFGraph graph, unsigned n_vars);
+
+  unsigned ffGraphNParsOut(FFGraph graph);
+  unsigned ffNodeNParsOut(FFGraph graph, FFNode node);
+  FFStatus ffMakeNodeMutable(FFGraph graph, FFNode node);
+
+  FFStatus ffPruneGraph(FFGraph graph);
+
+  FFStatus ffLearn(FFGraph graph);
+
+  // output can be freed with ffFreeMemoryU64
+  FFUInt * ffEvaluateGraph(FFGraph graph,
+                           const FFUInt * input, unsigned prime_no);
+
+
+  ////////////////
+  // Algorithms //
+  ////////////////
+
+  FFNode ffAlgSimpleSubgraph(FFGraph graph,
+                             const FFNode * in_nodes, unsigned n_in_nodes,
+                             FFGraph subgraph);
+  FFNode ffAlgMemoizedSubgraph(FFGraph graph,
+                               const FFNode * in_nodes, unsigned n_in_nodes,
+                               FFGraph subgraph);
+
+  FFNode ffAlgJSONSparseLSolve(FFGraph graph, FFNode in_node,
+                              FFCStr json_file);
+  FFNode ffAlgJSONRatFunEval(FFGraph graph, FFNode in_node,
+                             FFCStr json_file);
+  FFNode ffAlgRatFunEval(FFGraph graph, FFNode in_node,
+                         const FFRatFunList * rf);
+
+  // The array pointed by order must have length ==
+  // ffNodeNParsOut(subgraph).  max_deg is the maximum degree in the
+  // expansion variable of the functions to be expanded.  If max_deg <
+  // 0 a default value will be used.
+  FFNode ffAlgLaurent(FFGraph graph, FFNode in_node, FFGraph subgraph,
+                      const unsigned * order, int max_deg);
+
+  // Equivalent to
+  // ffAlgLaurent(graph,in_node,subgraph,{order,...,order},max_deg)
+  FFNode ffAlgLaurentConstOrder(FFGraph graph, FFNode in_node, FFGraph subgraph,
+                                unsigned order, int max_deg);
+
+  FFNode ffAlgMatMul(FFGraph graph, FFNode in_node_a, FFNode in_node_b,
+                     unsigned n_rows_a, unsigned n_cols_a, unsigned n_cols_b);
+
+
+  ////////////////////
+  // Sparse systems //
+  ////////////////////
+
+  FFStatus ffLSolveResetNeededVars(FFGraph graph, FFNode node,
+                                   const unsigned * vars, unsigned n_vars);
+  FFStatus ffLSolveOnlyHomogeneous(FFGraph graph, FFNode node);
+  FFStatus ffLSolveSparseOutput(FFGraph graph, FFNode node, bool sparse);
+  FFStatus ffLSolveMarkAndSweepEqs(FFGraph graph, FFNode node);
+  FFStatus ffLSolveDeleteUnneededEqs(FFGraph graph, FFNode node);
+
+  // no. of dependent unknowns
+  unsigned ffLSolveNDepVars(FFGraph graph, FFNode node);
+
+  // Lists the dependent unknowns.  The returned array has legth =
+  // ffSparseLSolveNDepVars(graph,node) and its memory can be freed
+  // using the ffFreeMemoryU32 function.
+  unsigned * ffLSolveDepVars(FFGraph graph, FFNode node);
+
+  // no. of dependent unknowns on the r.h.s. of i-th dep. variable (as
+  // returned by ffSparseLSolveDepVars).  If output is not sparse, i
+  // is ignored.  If output is sparse and non-homogeneous part is
+  // requested, it is added to the number of independent variables.
+  unsigned ffLSolveNIndepVars(FFGraph graph, FFNode node, unsigned i);
+
+  // List of dependent unknowns on the r.h.s. of i-th dep. variable
+  // (as returned by ffSparseLSolveDepVars).  If output is not sparse,
+  // i is ignored.  The array can be freed by ffFreeMemoryU32.
+  unsigned * ffLSolveIndepVars(FFGraph graph, FFNode node, unsigned i);
+
+
+  ////////////////////////////////
+  // Rational functions, etc... //
+  ////////////////////////////////
+
+  unsigned ffRatFunListSize(const FFRatFunList * rf);
+  unsigned ffRatFunListNVars(const FFRatFunList * rf);
+  void ffFreeRatFun(FFRatFunList * rf);
+  FFStatus ffRatFunToJSON(const FFRatFunList * rf, FFCStr file);
+
+  FFRatFunList * ffParseRatFun(FFCStr * vars, unsigned n_vars,
+                               FFCStr * inputs, unsigned n_functions);
+
+  FFRatFunList * ffParseRatFunEx(FFCStr * vars, unsigned n_vars,
+                                 FFCStr * inputs, const unsigned * input_strlen,
+                                 unsigned n_functions);
+
+  // output must be freed using ffFreeMemoryU64
+  FFUInt * ffEvaluateRatFunList(const FFRatFunList * rf,
+                                const FFUInt * input, unsigned prime_no);
+
+
+  ////////////////////
+  // Reconstruction //
+  ////////////////////
+
+  // on success, results will point to a list of rational functions,
+  // which can be cleared with ffFreeRatFun
+  FFStatus ffReconstructFunction(FFGraph graph, FFRecOptions options,
+                                 FFRatFunList ** results);
+
+  /* API end */
+
+#ifdef __cplusplus
+}
+#endif

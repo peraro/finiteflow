@@ -66,7 +66,7 @@ namespace fflow {
     }
 
     Ret reset_needed(AlgorithmData * data,
-                     unsigned * needed_vars, unsigned needed_size);
+                     const unsigned * needed_vars, unsigned needed_size);
 
     void invalidate()
     {
@@ -250,7 +250,7 @@ namespace fflow {
     }
 
     Ret reset_needed(AlgorithmData * data,
-                     unsigned * needed_vars, unsigned needed_size);
+                     const unsigned * needed_vars, unsigned needed_size);
 
     void invalidate()
     {

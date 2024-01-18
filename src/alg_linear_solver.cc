@@ -32,11 +32,12 @@ namespace fflow {
   }
 
   Ret DenseLinearSolver::reset_needed(AlgorithmData * data,
-                                      unsigned * needed_vars,
+                                      const unsigned * needed_vars,
                                       unsigned needed_size)
   {
     for (unsigned i=0; i<needed_size; ++i)
-      if (!(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED)))
+      if (needed_vars[i] >= nvars() ||
+          !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED)))
         return FAILED;
 
     nneeded_ext_ = needed_size;
@@ -463,11 +464,12 @@ namespace fflow {
   }
 
   Ret SparseLinearSolver::reset_needed(AlgorithmData * data,
-                                       unsigned * needed_vars,
+                                       const unsigned * needed_vars,
                                        unsigned needed_size)
   {
     for (unsigned i=0; i<needed_size; ++i)
-      if (!(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED)))
+      if (needed_vars[i] >= nvars() ||
+          !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED)))
         return FAILED;
 
     eqdeps_.clear();

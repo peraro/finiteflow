@@ -12,6 +12,7 @@ endif()
 option(BUILD_SHARED_LIBS "build shared libraries" ON)
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
@@ -115,6 +116,7 @@ set(FFLOW_SOURCES
     src/alg_laurent.cc
     src/subgraph_reconstruct.cc
     src/cached_subgraph.cc
+    src/capi.cc
     )
 
 set(FFLOW_HEADERS
@@ -167,6 +169,7 @@ set(FFLOW_HEADERS
     include/fflow/alg_laurent.hh
     include/fflow/subgraph_reconstruct.hh
     include/fflow/cached_subgraph.hh
+    include/fflow/capi.h
     )
 
 add_library(fflow ${FFLOW_SOURCES})
@@ -182,15 +185,25 @@ set(TEST_TARGETS
     testjson
     )
 
+set(TEST_CTARGETS
+    testcapi
+    )
+
 foreach(target ${TEST_TARGETS})
     add_executable(${target} tests/${target}.cc)
     set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL TRUE)
     target_link_libraries(${target} fflow ${LIBS})
 endforeach(target)
 
+foreach(target ${TEST_CTARGETS})
+    add_executable(${target} tests/${target}.c)
+    set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    target_link_libraries(${target} fflow ${LIBS})
+endforeach(target)
+
 if(NOT TARGET tests)
   add_custom_target(tests)
-  add_dependencies(tests ${TEST_TARGETS})
+  add_dependencies(tests ${TEST_TARGETS} ${TEST_CTARGETS})
 endif()
 
 
