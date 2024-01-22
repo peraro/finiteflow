@@ -15,7 +15,7 @@ namespace fflow {
   // gcd
   inline UInt gcd(UInt a, UInt b)
   {
-    return n_gcd_full(a,b);
+    return n_gcd(a,b);
   }
 
   // multiplicative inverse a^(-1) mod n

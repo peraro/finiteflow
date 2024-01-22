@@ -6,6 +6,10 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <flint/flint.h>
+#if defined(__FLINT_VERSION) && (__FLINT_VERSION >= 3)
+# include <flint/nmod.h>
+#endif
 #include <flint/nmod_vec.h>
 #include <fflow/config.hh>
 #include <fflow/format.h>
