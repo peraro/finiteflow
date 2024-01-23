@@ -164,12 +164,52 @@ extern "C" {
   void ffFreeRatFun(FFRatFunList * rf);
   FFStatus ffRatFunToJSON(const FFRatFunList * rf, FFCStr file);
 
+
+  // This uses a simple and limited parser of rational functions:
+  // - functions must be collected under common denominator
+  // - numerators and denominators must be in expanded form
+  // - rational coefficients must be in front of their monomials
+  //   (e.g. "1/2 z" is ok but "z/2" is not)
+  //
+  // If these lmitations are too restrictive, consider using the
+  // parser of a proper CAS and then pass the functions to fflow using
+  // ffNewRatFunList instead.
   FFRatFunList * ffParseRatFun(FFCStr * vars, unsigned n_vars,
                                FFCStr * inputs, unsigned n_functions);
-
   FFRatFunList * ffParseRatFunEx(FFCStr * vars, unsigned n_vars,
                                  FFCStr * inputs, const unsigned * input_strlen,
                                  unsigned n_functions);
+
+
+  // API for creating a list of n_functions rational functions in
+  // n_vars variables.
+  //
+  // n_num_terms[i] and n_den_terms[i] must contain the no. of terms
+  // in the numerator and denominator of the i-th function.
+  //
+  // The total number of terms is therefore
+  //
+  //    tot_terms = \sum_i (n_num_terms[i] + n_den_terms[i])
+  //
+  // with i=0,...,n_functions-1.
+  //
+  // coefficients is an array of tot_terms strings to be parsed as
+  // rational numbers.  They are sorted by function index first.
+  // Coefficients belonging to the same function must be sorted with
+  // numerator coefficients before denominator coefficients.  The
+  // relative order of coefficients belonging to the same polynomial
+  // (numerator or denominator) is not important.
+  //
+  // exponents is an array of tot_terms*n_nvars integers representing
+  // exponents, namely it is a pointer to tot_terms arrays of n_nvars
+  // indexes, stored contigously in memory.  Each n_vars-dimensional
+  // array represents the exponents of a single term.  These must be
+  // sorted the same way as their respective coefficients.
+  FFRatFunList * ffNewRatFunList(unsigned n_vars, unsigned n_functions,
+                                 const unsigned * n_num_terms,
+                                 const unsigned * n_den_terms,
+                                 FFCStr * coefficients,
+                                 const uint16_t * exponents);
 
   // output must be freed using ffFreeMemoryU64
   FFUInt * ffEvaluateRatFunList(const FFRatFunList * rf,

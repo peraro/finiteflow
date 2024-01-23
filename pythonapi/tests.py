@@ -170,7 +170,37 @@ def testTutorial2AnalyticCheck():
     '''.split(",")
 
 
+
+def testBasicRatFunInterface():
+    print("Test rational function interfaces")
+
+    # From coefficiensts and exponents
+    ratfunlist1 = [
+        ([("1/2", [1,0,2]), ("2/3",[0,2,3])], # numerator
+         [("1", [0,0,0]), ("-5/7",[1,0,3])]   # denominator
+         ),
+        ([("-2", [0,0,0]), ("8",[21,22,23]), ("-729/92",[41,42,43])], # num.
+         [("1", [0,0,0])] # den.
+         )
+    ]
+    # from analytic expression
+    ratfunlist2 = [
+        "(1/2 x1 x3^2 + 2/3 x2^2 x3^3)/(1 - 5/7 x1 x3^3)",
+        "-2 + 8 x1^21 x2^22 x3^23 - 729/92 x1^41 x2^42 x3^43"
+    ]
+    params = ["x1", "x2", "x3"]
+
+    rfl1 = NewRatFunList(3, ratfunlist1)
+    rfl2 = ParseRatFun(params, ratfunlist2)
+    x = [3057312585776011302, 3795153781312484964, 3415194000889226426]
+    if EvaluateRatFunList(rfl1, x, 0) != EvaluateRatFunList(rfl2, x, 0):
+        print("- Test failed: functions are different")
+        exit(1)
+    print("- Test passed!")
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
     testTutorial2()
+    testBasicRatFunInterface()

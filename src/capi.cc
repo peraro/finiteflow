@@ -61,6 +61,39 @@ static ReconstructionOptions toRecOpt(FFRecOptions options)
 }
 
 
+static FFStatus getPoly(unsigned n_vars,
+                        unsigned n_terms,
+                        FFCStr * coefficients,
+                        const uint16_t * exponents,
+                        MPReconstructedPoly & num)
+{
+  auto & mons = num.monomials_vec_();
+  auto & coeffs = num.coeff_vec_();
+
+  mons.resize(n_terms);
+  coeffs.resize(n_terms);
+
+  for (unsigned k=0; k<n_terms; ++k, ++coefficients) {
+
+    if (!(coeffs[k].set(*coefficients) == 0))
+      return FF_ERROR;
+
+    auto & mon = mons[k];
+    mon = Monomial(n_vars);
+    mon.coeff() = 1;
+
+    unsigned deg = 0;
+    for (unsigned l=0; l<n_vars; ++l, ++exponents) {
+      unsigned exp = mon.exponent(l) = *exponents;
+      deg += exp;
+    }
+    mon.degree() = deg;
+  }
+
+  return FF_SUCCESS;
+}
+
+
 extern "C" {
 
   struct FFRatFunList {
@@ -718,6 +751,44 @@ extern "C" {
                               res[j].denominator().coeff_vec_());
       if (ret != SUCCESS)
         return 0;
+    }
+
+    FFRatFunList * ret = new FFRatFunList();
+    ret->n_functions = n_functions;
+    ret->n_vars = n_vars;
+    ret->rf = std::move(res);
+
+    return ret;
+  }
+
+
+  FFRatFunList * ffNewRatFunList(unsigned n_vars, unsigned n_functions,
+                                 const unsigned * n_num_terms,
+                                 const unsigned * n_den_terms,
+                                 FFCStr * coefficients,
+                                 const uint16_t * exponents)
+  {
+    typedef MPReconstructedRatFun ResT;
+    std::unique_ptr<ResT[]> res (new ResT[n_functions]);
+
+    for (unsigned j=0; j<n_functions; ++j) {
+      res[j] = MPReconstructedRatFun(n_vars);
+
+      // numerator
+      FFStatus retn = getPoly(n_vars, n_num_terms[j], coefficients, exponents,
+                              res[j].numerator());
+      if (retn != FF_SUCCESS)
+        return 0;
+      coefficients += n_num_terms[j];
+      exponents += n_num_terms[j]*n_vars;
+
+      // denominator
+      FFStatus retd = getPoly(n_vars, n_den_terms[j], coefficients, exponents,
+                              res[j].denominator());
+      if (retd != FF_SUCCESS)
+        return 0;
+      coefficients += n_den_terms[j];
+      exponents += n_den_terms[j]*n_vars;
     }
 
     FFRatFunList * ret = new FFRatFunList();

@@ -268,6 +268,16 @@ def RatFunToJSON(rf, json_file):
 
 
 def ParseRatFun(variables, functions):
+    '''This uses a simple and limited parser of rational functions:
+- functions must be collected under common denominator
+- numerators and denominators must be in expanded form
+- rational coefficients must be in front of their monomials
+  (e.g. "1/2 z" is ok but "z/2" is not)
+
+If these lmitations are too restrictive, consider using the parser of
+a proper CAS and then pass the functions to fflow using
+ffNewRatFunList instead.
+    '''
     rf = [_ffi.new("char[]", x.encode('utf8')) for x in functions]
     rfl = [len(x) for x in functions]
     z = [_ffi.new("char[]", x.encode('utf8')) for x in variables]
@@ -278,6 +288,33 @@ def ParseRatFun(variables, functions):
     ret = RatFunList()
     ret._ptr = retc
     return ret
+
+
+def NewRatFunList(nvars, allterms):
+    coeffs = []
+    exponents = []
+    n_num_terms = []
+    n_den_terms = []
+    for ratfun in allterms:
+        if len(ratfun) != 2:
+            raise TypeError("For each rational function, terms should be listed"
+                            + "for both the numerator and the denominator.")
+        n_num_terms.append(len(ratfun[0]))
+        n_den_terms.append(len(ratfun[1]))
+        for poly in ratfun:
+            for t in poly:
+                coeffs.append(_ffi.new("char[]", t[0].encode('utf8')))
+                if len(t[1]) != nvars:
+                    raise TypeError("The list of exponents the length is not "
+                                    + str(nvars))
+                exponents.extend(t[1])
+    resc = _lib.ffNewRatFunList(nvars, len(allterms), n_num_terms, n_den_terms,
+                                coeffs, exponents)
+    if resc == _ffi.NULL:
+        raise ERROR
+    res = RatFunList()
+    res._ptr = resc
+    return res
 
 
 def EvaluateRatFunList(rf, z, prime_no):
