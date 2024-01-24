@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstring>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <vector>
 #include <stdlib.h>
@@ -9,6 +10,7 @@
 #include <fflow/capi.h>
 #include <fflow/graph.hh>
 #include <fflow/subgraph.hh>
+#include <fflow/mp_common.hh>
 #include <fflow/alg_functions.hh>
 #include <fflow/analytic_solver.hh>
 #include <fflow/numeric_solver.hh>
@@ -384,6 +386,118 @@ extern "C" {
       return FF_ERROR;
 
     session.main_context()->ww.ensure_size(needed_workspace);
+    return id;
+  }
+
+  FFNode ffAlgAnalyticSparseLSolve(FFGraph graph, FFNode in_node,
+                                   unsigned n_eqs, unsigned n_vars,
+                                   const unsigned * n_non_zero,
+                                   const unsigned * non_zero_els,
+                                   const FFRatFunList * non_zero_coeffs,
+                                   const unsigned * needed_vars,
+                                   unsigned n_needed_vars)
+  {
+    typedef AnalyticSparseSolverData Data;
+    std::unique_ptr<AnalyticSparseSolver> algptr(new AnalyticSparseSolver());
+    std::unique_ptr<Data> dataptr(new Data());
+    auto & sys = *algptr;
+    auto & data = *dataptr;
+
+    const unsigned n_rows = n_eqs;
+    sys.rinfo.resize(n_rows);
+    data.c.resize(n_rows);
+    sys.cmap.resize(n_rows);
+
+    const unsigned n_functions = non_zero_coeffs->n_functions;
+    unsigned idx = 0;
+
+    for (int i=0; i<n_rows; ++i) {
+      const unsigned csize = n_non_zero[i];
+      AnalyticSparseSolver::RowInfo & rinf = sys.rinfo[i];
+      rinf.size = csize;
+      rinf.cols.reset(new unsigned[csize]);
+      data.c[i].reset(new HornerRatFunPtr[csize]);
+      sys.cmap[i].reset(new MPHornerRatFunMap[csize]);
+      std::copy(non_zero_els, non_zero_els+csize, rinf.cols.get());
+      non_zero_els += csize;
+      if (idx + csize > n_functions)
+        return FF_ERROR;
+      for (int j=0; j<csize; ++j, ++idx) {
+        get_horner_ratfun(non_zero_coeffs, idx, data.c[i][j], sys.cmap[i][j],
+                          session.main_context()->ww);
+      }
+    }
+
+    sys.nparsin.resize(1);
+    sys.nparsin[0] = non_zero_coeffs->n_vars;
+
+    if (needed_vars) {
+      sys.init(n_eqs, n_vars, needed_vars, n_needed_vars, data);
+    } else {
+      unsigned * needed = (unsigned*)malloc(n_vars*sizeof(n_vars));
+      std::iota(needed, needed+n_vars, 0);
+      sys.init(n_eqs, n_vars, needed, n_vars, data);
+      free(needed);
+    }
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), std::move(dataptr),
+                              &in_node);
+    return id;
+  }
+
+  FFNode ffAlgNumericSparseLSolve(FFGraph graph,
+                                  unsigned n_eqs, unsigned n_vars,
+                                  const unsigned * n_non_zero,
+                                  const unsigned * non_zero_els,
+                                  FFCStr * non_zero_coeffs,
+                                  const unsigned * needed_vars,
+                                  unsigned n_needed_vars)
+  {
+    typedef NumericSparseSolverData Data;
+    std::unique_ptr<NumericSparseSolver> algptr(new NumericSparseSolver());
+    std::unique_ptr<Data> dataptr(new Data());
+    auto & sys = *algptr;
+    auto & data = *dataptr;
+
+    const unsigned n_rows = n_eqs;
+    sys.rinfo.resize(n_rows);
+    sys.c.resize(n_rows);
+
+    unsigned idx = 0;
+
+    for (int i=0; i<n_rows; ++i) {
+      const unsigned csize = n_non_zero[i];
+      NumericSparseSolver::RowInfo & rinf = sys.rinfo[i];
+      rinf.size = csize;
+      rinf.cols.reset(new unsigned[csize]);
+      sys.c[i].reset(new MPRational[csize]);
+      std::copy(non_zero_els, non_zero_els+csize, rinf.cols.get());
+      non_zero_els += csize;
+      for (int j=0; j<csize; ++j, ++idx)
+        sys.c[i][j] = MPRational(non_zero_coeffs[idx]);
+    }
+
+    sys.nparsin.clear();
+
+    if (needed_vars) {
+      sys.init(n_eqs, n_vars, needed_vars, n_needed_vars, data);
+    } else {
+      unsigned * needed = (unsigned*)malloc(n_vars*sizeof(n_vars));
+      std::iota(needed, needed+n_vars, 0);
+      sys.init(n_eqs, n_vars, needed, n_vars, data);
+      free(needed);
+    }
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), std::move(dataptr),
+                              nullptr);
     return id;
   }
 

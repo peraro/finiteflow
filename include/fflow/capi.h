@@ -101,8 +101,47 @@ extern "C" {
                                const FFNode * in_nodes, unsigned n_in_nodes,
                                FFGraph subgraph);
 
+  /*
+   * Solves the system A.x = b with n_eqs equations and n_vars unknown
+   * varibles x.  The entries of the matrix a A and the vector b are
+   * rational functions of the free parameters returned by in_node.
+   *
+   * The input are the non vanishing entries of the n_eqs*vars+1
+   * dimensional matrix (A|b).  More precisely:
+   * - n_non_zero[i] is the number of non-zero entries of row i
+   * - n_zero_cols is a list of the columns of the non-zero entries
+   *   for each row, stores in a contigous array (one row after the
+   *   other)
+   * - non_zero_coeffs is a list of rational functions representing
+   *   the non-vanishing coefficients in the matrix.
+   *
+   * Finally needed_vars is a list of variables whose solution will be
+   * in the output, if found.  If NULL, then all unknown variables are
+   * needed (in which case n_needed_vars is ignored).
+   */
+  FFNode ffAlgAnalyticSparseLSolve(FFGraph graph, FFNode in_node,
+                                   unsigned n_eqs, unsigned n_vars,
+                                   const unsigned * n_non_zero,
+                                   const unsigned * non_zero_els,
+                                   const FFRatFunList * non_zero_coeffs,
+                                   const unsigned * needed_vars,
+                                   unsigned n_needed_vars);
+
+  /*
+   * Same as ffAlgAnalyticSparseLSolve but the entries (A|b) are
+   * rational numbers passed as strings in non_zero_coeffs.
+   */
+  FFNode ffAlgNumericSparseLSolve(FFGraph graph,
+                                  unsigned n_eqs, unsigned n_vars,
+                                  const unsigned * n_non_zero,
+                                  const unsigned * non_zero_els,
+                                  FFCStr * non_zero_coeffs,
+                                  const unsigned * needed_vars,
+                                  unsigned n_needed_vars);
+
   FFNode ffAlgJSONSparseLSolve(FFGraph graph, FFNode in_node,
-                              FFCStr json_file);
+                               FFCStr json_file);
+
   FFNode ffAlgJSONRatFunEval(FFGraph graph, FFNode in_node,
                              FFCStr json_file);
   FFNode ffAlgRatFunEval(FFGraph graph, FFNode in_node,

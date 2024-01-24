@@ -7,6 +7,7 @@ WARNING: This is a w.i.p. and the API is not stable yet.
 
 
 from _cffi_fflow import lib as _lib, ffi as _ffi
+from itertools import chain as _chain
 
 
 _FF_SUCCESS = 0
@@ -288,6 +289,66 @@ ffNewRatFunList instead.
     ret = RatFunList()
     ret._ptr = retc
     return ret
+
+
+def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
+                            non_zer_els, non_zero_coeffs,
+                            needed_vars = None):
+    needed = needed_vars
+    if needed is None:
+        needed = _ffi.NULL
+        neededlen = 0
+    else:
+        needelen = len(needed)
+    retc = _lib.ffAlgAnalyticSparseLSolve(graph, in_node,
+                                          len(non_zero_els), n_vars,
+                                          [len(x) for x in non_zer_els],
+                                          [_chain(*non_zer_els)],
+                                          non_zero_coeffs,
+                                          needed,
+                                          neededlen)
+    return _Check(retc)
+
+
+def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
+                            non_zero_els, non_zero_coeffs,
+                            needed_vars = None):
+    # TODO: add some more checks
+    needed = needed_vars
+    if needed is None:
+        needed = _ffi.NULL
+        neededlen = 0
+    else:
+        needelen = len(needed)
+    retc = _lib.ffAlgAnalyticSparseLSolve(graph, in_node,
+                                          len(non_zero_els), n_vars,
+                                          [len(x) for x in non_zero_els],
+                                          [x for x in _chain(*non_zero_els)],
+                                          non_zero_coeffs._ptr,
+                                          needed,
+                                          neededlen)
+    return _Check(retc)
+
+
+def AlgNumericSparseLSolve(graph, n_vars,
+                           non_zero_els, non_zero_coeffs,
+                           needed_vars = None):
+    # TODO: add some more checks
+    needed = needed_vars
+    if needed is None:
+        needed = _ffi.NULL
+        neededlen = 0
+    else:
+        needelen = len(needed)
+    coeffs = [_ffi.new("char[]", x.encode('utf8')) for x in non_zero_coeffs]
+    retc = _lib.ffAlgNumericSparseLSolve(graph,
+                                         len(non_zero_els), n_vars,
+                                         [len(x) for x in non_zero_els],
+                                         [x for x in _chain(*non_zero_els)],
+                                         coeffs,
+                                         needed,
+                                         neededlen)
+    return _Check(retc)
 
 
 def NewRatFunList(nvars, allterms):

@@ -199,8 +199,64 @@ def testBasicRatFunInterface():
     print("- Test passed!")
 
 
+def testLSolver(type):
+    print("Test {} linear solver".format(type))
+
+    # Solving:
+    # [ (a1 + a2) x + (a1 - a2) y == a1/a2,
+    #   1/a1 x + 1/a2 y == 0 ]
+    # in x,y
+    # (the numerical version is the same but sets a1=1, a2=2)
+    #
+    # This is done by passing this data
+    #
+    #    (a1 + a2) , (a1 - a2) , a1/a2
+    #      1/a1    ,    1/a2   ,  0
+    #
+    # as a sparse matrix.
+    if type == "analytic":
+        coeffs = [
+            "a1 + a2", "a1 - a2", "a1/a2",
+            "1/a1", "1/a2"
+        ]
+    else:
+        coeffs = [
+            "3", "-1", "1/2",
+            "1", "1/2"
+        ]
+    cols = [[0,1,2], [0,1]] # non-zero columns for each row
+    n_unknowns = 2
+
+    if type == "analytic":
+        mygraph, myinput = NewGraphWithInput(len(["a1", "a2"]))
+        ccs = ParseRatFun(["a1", "a2"], coeffs)
+        sys = AlgAnalyticSparseLSolve(mygraph, myinput, n_unknowns, cols, ccs)
+    else:
+        mygraph = NewGraph()
+        sys = AlgNumericSparseLSolve(mygraph, n_unknowns, cols, coeffs)
+    SetOutputNode(mygraph,sys)
+    Learn(mygraph)
+    if LSolveDepVars(mygraph,sys) != [0,1]:
+        print(- "Test failed: something wrong with the system")
+        exit(1)
+
+    if type == "analytic":
+        rec = ReconstructFunction(mygraph)
+        if EvaluateRatFunList(rec, [1,2], 0) != [2767011611056432735, 3689348814741910313]:
+            print(- "Test failed: something wrong with the reconstructed solution")
+            exit(1)
+    else:
+        if EvaluateGraph(mygraph, [], 0) != [2767011611056432735, 3689348814741910313]:
+            print(- "Test failed: something wrong with the reconstructed solution")
+            exit(1)
+
+    print("- Test passed!")
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
     testTutorial2()
     testBasicRatFunInterface()
+    testLSolver("analytic")
+    testLSolver("numeric")
