@@ -106,12 +106,12 @@ namespace fflow {
       return xout_size_;
     }
 
-    const unsigned * order() const
+    const int * order() const
     {
       return order_.get();
     }
 
-    unsigned * order()
+    int * order()
     {
       return order_.get();
     }
@@ -135,7 +135,7 @@ namespace fflow {
 
   private:
     std::unique_ptr<ExpRatFunData[]> rfdata_;
-    std::unique_ptr<unsigned[]> order_;
+    std::unique_ptr<int[]> order_;
     unsigned xout_size_ = ~unsigned(0);
 
   public:

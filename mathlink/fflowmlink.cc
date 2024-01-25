@@ -785,7 +785,7 @@ namespace  {
         std::vector<int> pref_exp(salg.subgraph()->nparsout);
         salg.prefactor_exponent(pref_exp.data());
         MLPutInteger32List(mlp, pref_exp.data(), pref_exp.size());
-        MLPutInteger32List(mlp, (int*)salg.order(), pref_exp.size());
+        MLPutInteger32List(mlp, salg.order(), pref_exp.size());
 
     } else if(dynamic_cast<SubgraphRec*>(alg)) {
       SubgraphRec & ls = *static_cast<SubgraphRec*>(alg);

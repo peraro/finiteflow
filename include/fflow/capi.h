@@ -63,6 +63,7 @@ extern "C" {
 
   // Frees arrays of 32-bit integers returned by several routines
   void ffFreeMemoryU32(unsigned * mem);
+  void ffFreeMemoryS32(int * mem);
   // Frees arrays of 64-bit integers returned by several routines
   void ffFreeMemoryU64(uint64_t * mem);
 
@@ -88,6 +89,10 @@ extern "C" {
   // output can be freed with ffFreeMemoryU64
   FFUInt * ffEvaluateGraph(FFGraph graph,
                            const FFUInt * input, unsigned prime_no);
+
+  // Get the output length of a graph from a subgraph node that uses
+  // it or FF_ERROR if this is not a subgraph node
+  unsigned ffSubgraphNParsout(FFGraph graph, FFNode node);
 
 
   ////////////////
@@ -152,15 +157,31 @@ extern "C" {
   // expansion variable of the functions to be expanded.  If max_deg <
   // 0 a default value will be used.
   FFNode ffAlgLaurent(FFGraph graph, FFNode in_node, FFGraph subgraph,
-                      const unsigned * order, int max_deg);
+                      const int * order, int max_deg);
 
   // Equivalent to
   // ffAlgLaurent(graph,in_node,subgraph,{order,...,order},max_deg)
   FFNode ffAlgLaurentConstOrder(FFGraph graph, FFNode in_node, FFGraph subgraph,
-                                unsigned order, int max_deg);
+                                int order, int max_deg);
 
   FFNode ffAlgMatMul(FFGraph graph, FFNode in_node_a, FFNode in_node_b,
                      unsigned n_rows_a, unsigned n_cols_a, unsigned n_cols_b);
+
+
+  /////////////////////////////
+  // Info about learned algs //
+  /////////////////////////////
+
+  // Orders beyond which expansions are truncated (including the last
+  // one which is kept in).
+  // The length of the returned list is ffSubgraphNParsout(graph,node).
+  // The returned list can be freed with ffFreeMemoryS32.
+  int * ffLaurentMaxOrders(FFGraph graph, FFNode node);
+
+  // Orders at which expansions start.
+  // The length of the returned list is ffSubgraphNParsout(graph,node).
+  // The returned list can be freed with ffFreeMemoryS32.
+  int * ffLaurentMinOrders(FFGraph graph, FFNode node);
 
 
   ////////////////////

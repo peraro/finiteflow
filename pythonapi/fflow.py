@@ -199,7 +199,7 @@ def AlgRatFunEval(graph, in_node, rf):
         raise TypeError("Third argument of AlgRatFunEval() must be a RatFunList")
     return _Check(_lib.ffAlgRatFunEval(graph, in_node, rf._ptr))
 
-def AlgLaurent(graph, in_node, subgraph, order, max_deg):
+def AlgLaurent(graph, in_node, subgraph, order, max_deg=-1):
     if type(order) is list:
         nout = _lib.ffGraphNParsOut(subgraph)
         if _lib.ffIsError(nout) or len(z) != nout:
@@ -213,6 +213,23 @@ def AlgLaurent(graph, in_node, subgraph, order, max_deg):
 def AlgMatMul(graph, in_node_a, in_node_b, n_rows_a, n_cols_a, n_cols_b):
     return _Check(_lib.ffAlgMatMul(graph, in_node_a, in_node_b,
                                    n_rows_a, n_cols_a, n_cols_b))
+
+
+def LaurentMaxOrders(graph, node):
+    retc = _lib.ffLaurentMaxOrders(graph, node)
+    if retc == _ffi.NULL:
+        raise ERROR
+    res =  _ffi.unpack(retc,_lib.ffSubgraphNParsout(graph, node))
+    _lib.ffFreeMemoryS32(retc)
+    return res
+
+def LaurentMinOrders(graph, node):
+    retc = _lib.ffLaurentMinOrders(graph, node)
+    if retc == _ffi.NULL:
+        raise ERROR
+    res =  _ffi.unpack(retc,_lib.ffSubgraphNParsout(graph, node))
+    _lib.ffFreeMemoryS32(retc)
+    return res
 
 
 def LSolveResetNeededVars(graph, node, needed_vars):

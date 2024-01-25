@@ -50,7 +50,7 @@ namespace fflow {
     const Algorithm & alg = *subgraph();
     const unsigned nparsout = alg.nparsout;
     rfdata_.reset(new ExpRatFunData[nparsout]);
-    order_.reset(new unsigned[nparsout]);
+    order_.reset(new int[nparsout]);
     data.init_data_(alg);
 
     return SUCCESS;

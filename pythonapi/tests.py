@@ -253,6 +253,39 @@ def testLSolver(type):
     print("- Test passed!")
 
 
+def testLaurent():
+    print("Test Laurent expansion")
+
+    funcs = '(1+x1 x2^2)/(x1+x1 x3^2), (1+x1^2)/(x1+x1^2 x3^2), (x1-x1^3)/(1-x1 x2^2), (1-x1^2)/(x1-x3^2)'.split(',')
+    funcs = ParseRatFun(['x1', 'x2', 'x3'], funcs)
+
+    g1,in1 = NewGraphWithInput(3)
+    f1 = AlgRatFunEval(g1, in1, funcs)
+    SetOutputNode(g1, f1)
+
+    g2,in2 = NewGraphWithInput(2)
+    laur = AlgLaurent(g2, in2, g1, 3)
+    if LaurentMaxOrders(g2,laur) != [3,3,3,3]:
+        print("- Wrong Laurent init")
+        exit(1)
+
+    SetOutputNode(g2, laur)
+    Learn(g2)
+    if LaurentMinOrders(g2,laur) != [-1, -1, 1, 0]:
+        print("- Wrong Laurent learn")
+        exit(1)
+
+    rec = ReconstructFunction(g2)
+    check = [1552403684386711932, 8740806668687644896, 0, 0, 0, 1,
+             9223372036854773266, 4100626, 9223372028551007641, 16815129491250,
+             1, 576, 331775, 7451573655454030803, 5319074933661716936,
+             4183888693711775523, 1696433721680833671]
+    if EvaluateRatFunList(rec, [24,45], 10) != check:
+        print("- Failed check")
+        exit(1)
+    print("- Test passed")
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -260,3 +293,4 @@ if __name__ == '__main__':
     testBasicRatFunInterface()
     testLSolver("analytic")
     testLSolver("numeric")
+    testLaurent()

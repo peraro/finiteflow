@@ -187,6 +187,11 @@ extern "C" {
     free(mem);
   }
 
+  void ffFreeMemoryS32(int * mem)
+  {
+    free(mem);
+  }
+
   void ffFreeMemoryU64(uint64_t * mem)
   {
     free(mem);
@@ -299,6 +304,48 @@ extern "C" {
 
     return output;
   }
+
+  unsigned ffSubgraphNParsout(FFGraph graph, FFNode node)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    if (!alg)
+      return FF_ERROR;
+
+    SubGraph * subalg = dynamic_cast<SubGraph*>(alg);
+    if (!subalg)
+      return FF_NO_ALGORITHM;
+
+    return subalg->subgraph()->nparsout;
+  }
+
+  int * ffLaurentMaxOrders(FFGraph graph, FFNode node)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    LaurentExpansion * lauralg = dynamic_cast<LaurentExpansion*>(alg);
+    if (!lauralg)
+      return 0;
+
+    const unsigned nout = lauralg->subgraph()->nparsout;
+    int * res = (int *)malloc(sizeof(int)*nout);
+    std::copy(lauralg->order(), lauralg->order() + nout, res);
+
+    return res;
+  }
+
+  int * ffLaurentMinOrders(FFGraph graph, FFNode node)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    LaurentExpansion * lauralg = dynamic_cast<LaurentExpansion*>(alg);
+    if (!lauralg || !lauralg->has_learned())
+      return 0;
+
+    const unsigned nout = lauralg->subgraph()->nparsout;
+    int * res = (int *)malloc(sizeof(int)*nout);
+    lauralg->prefactor_exponent(res);
+
+    return res;
+  }
+
 
 
   // Algorithms
@@ -526,7 +573,7 @@ extern "C" {
   }
 
   FFNode ffAlgLaurent(FFGraph graph, FFNode in_node, FFGraph subgraph,
-                      const unsigned * order, int max_deg)
+                      const int * order, int max_deg)
   {
     typedef LaurentExpansionData Data;
     std::unique_ptr<LaurentExpansion> algptr(new LaurentExpansion());
@@ -564,12 +611,12 @@ extern "C" {
   }
 
   FFNode ffAlgLaurentConstOrder(FFGraph graph, FFNode in_node, FFGraph subgraph,
-                                unsigned order, int max_deg)
+                                int order, int max_deg)
   {
     unsigned nout = ffGraphNParsOut(subgraph);
     if (ffIsError(nout))
       return FF_ERROR;
-    std::vector<unsigned> orders(nout);
+    std::vector<int> orders(nout);
     std::fill(orders.begin(), orders.end(), order);
     return ffAlgLaurent(graph, in_node, subgraph, orders.data(), max_deg);
   }
