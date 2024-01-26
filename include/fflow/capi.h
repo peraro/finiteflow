@@ -144,6 +144,17 @@ extern "C" {
                                   const unsigned * needed_vars,
                                   unsigned n_needed_vars);
 
+  /*
+   * Same as ffAlgAnalyticSparseLSolve but the non-vanishing entries
+   * of (A|b) are taken from the input node in_node.
+   */
+  FFNode ffAlgNodeSparseLSolve(FFGraph graph, FFNode in_node,
+                               unsigned n_eqs, unsigned n_vars,
+                               const unsigned * n_non_zero,
+                               const unsigned * non_zero_els,
+                               const unsigned * needed_vars,
+                               unsigned n_needed_vars);
+
   FFNode ffAlgJSONSparseLSolve(FFGraph graph, FFNode in_node,
                                FFCStr json_file);
 
@@ -193,6 +204,8 @@ extern "C" {
   FFStatus ffLSolveOnlyHomogeneous(FFGraph graph, FFNode node);
   FFStatus ffLSolveSparseOutput(FFGraph graph, FFNode node, bool sparse);
   FFStatus ffLSolveMarkAndSweepEqs(FFGraph graph, FFNode node);
+
+  // Only for Analytic and Numeric solvers (fails for Node solvers)
   FFStatus ffLSolveDeleteUnneededEqs(FFGraph graph, FFNode node);
 
   // no. of dependent unknowns

@@ -368,6 +368,24 @@ def AlgNumericSparseLSolve(graph, n_vars,
     return _Check(retc)
 
 
+def AlgNodeSparseLSolve(graph, in_node, n_vars,
+                        non_zero_els, needed_vars = None):
+    # TODO: add some more checks
+    needed = needed_vars
+    if needed is None:
+        needed = _ffi.NULL
+        neededlen = 0
+    else:
+        needelen = len(needed)
+    retc = _lib.ffAlgNodeSparseLSolve(graph, in_node,
+                                      len(non_zero_els), n_vars,
+                                      [len(x) for x in non_zero_els],
+                                      [x for x in _chain(*non_zero_els)],
+                                      needed,
+                                      neededlen)
+    return _Check(retc)
+
+
 def NewRatFunList(nvars, allterms):
     coeffs = []
     exponents = []

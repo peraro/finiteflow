@@ -14,6 +14,7 @@
 #include <fflow/alg_functions.hh>
 #include <fflow/analytic_solver.hh>
 #include <fflow/numeric_solver.hh>
+#include <fflow/node_solver.hh>
 #include <fflow/alg_laurent.hh>
 #include <fflow/alg_lists.hh>
 #include <fflow/alg_mp_reconstruction.hh>
@@ -545,6 +546,56 @@ extern "C" {
     Graph * g = session.graph(graph);
     unsigned id = g->new_node(std::move(algptr), std::move(dataptr),
                               nullptr);
+    return id;
+  }
+
+  FFNode ffAlgNodeSparseLSolve(FFGraph graph, FFNode in_node,
+                               unsigned n_eqs, unsigned n_vars,
+                               const unsigned * n_non_zero,
+                               const unsigned * non_zero_els,
+                               const unsigned * needed_vars,
+                               unsigned n_needed_vars)
+  {
+    typedef NodeSparseSolverData Data;
+    std::unique_ptr<NodeSparseSolver> algptr(new NodeSparseSolver());
+    std::unique_ptr<Data> dataptr(new Data());
+    auto & sys = *algptr;
+    auto & data = *dataptr;
+
+    const unsigned n_rows = n_eqs;
+    sys.rinfo.resize(n_rows);
+
+    unsigned idx = 0;
+
+    for (int i=0; i<n_rows; ++i) {
+      const unsigned csize = n_non_zero[i];
+      NodeSparseSolver::RowInfo & rinf = sys.rinfo[i];
+      rinf.start = idx;
+      rinf.size = csize;
+      rinf.cols.reset(new unsigned[csize]);
+      std::copy(non_zero_els, non_zero_els+csize, rinf.cols.get());
+      non_zero_els += csize;
+      idx += csize;
+    }
+
+    sys.nparsin.resize(1);
+    sys.nparsin[0] = idx;
+
+    if (needed_vars) {
+      sys.init(n_eqs, n_vars, needed_vars, n_needed_vars, data);
+    } else {
+      unsigned * needed = (unsigned*)malloc(n_vars*sizeof(n_vars));
+      std::iota(needed, needed+n_vars, 0);
+      sys.init(n_eqs, n_vars, needed, n_vars, data);
+      free(needed);
+    }
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), std::move(dataptr),
+                              &in_node);
     return id;
   }
 

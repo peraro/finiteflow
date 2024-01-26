@@ -214,7 +214,7 @@ def testLSolver(type):
     #      1/a1    ,    1/a2   ,  0
     #
     # as a sparse matrix.
-    if type == "analytic":
+    if type == "analytic" or type == "node":
         coeffs = [
             "a1 + a2", "a1 - a2", "a1/a2",
             "1/a1", "1/a2"
@@ -231,6 +231,11 @@ def testLSolver(type):
         mygraph, myinput = NewGraphWithInput(len(["a1", "a2"]))
         ccs = ParseRatFun(["a1", "a2"], coeffs)
         sys = AlgAnalyticSparseLSolve(mygraph, myinput, n_unknowns, cols, ccs)
+    elif type == "node":
+        mygraph, myinput = NewGraphWithInput(len(["a1", "a2"]))
+        ccs = ParseRatFun(["a1", "a2"], coeffs)
+        rf = AlgRatFunEval(mygraph, myinput, ccs)
+        sys = AlgNodeSparseLSolve(mygraph, rf, n_unknowns, cols)
     else:
         mygraph = NewGraph()
         sys = AlgNumericSparseLSolve(mygraph, n_unknowns, cols, coeffs)
@@ -240,7 +245,11 @@ def testLSolver(type):
         print(- "Test failed: something wrong with the system")
         exit(1)
 
-    if type == "analytic":
+    LSolveMarkAndSweepEqs(mygraph, sys)
+    if type == "analytic" or type == "numeric":
+        LSolveDeleteUnneededEqs(mygraph, sys)
+
+    if type == "analytic" or type == "node":
         rec = ReconstructFunction(mygraph)
         if EvaluateRatFunList(rec, [1,2], 0) != [2767011611056432735, 3689348814741910313]:
             print(- "Test failed: something wrong with the reconstructed solution")
@@ -292,5 +301,6 @@ if __name__ == '__main__':
     testTutorial2()
     testBasicRatFunInterface()
     testLSolver("analytic")
+    testLSolver("node")
     testLSolver("numeric")
     testLaurent()
