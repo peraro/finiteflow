@@ -5,7 +5,9 @@ def testRatFun():
     print("Testing rational functions...")
 
     import pathlib
-    input_file = str(pathlib.Path(__file__).parent.parent.resolve() / "tests_json" / "test_ratfuns.json")
+    thisfile = pathlib.Path(__file__).resolve()
+
+    input_file = str(thisfile.parent.parent.resolve() / "tests_json" / "test_ratfuns.json")
 
     # build graph
     nvars = 3
@@ -63,6 +65,7 @@ def testParsing():
 def testTutorial2():
     print("Test (variant of) second example of Mathematica tutorial...")
     import pathlib, json
+    thisfile = pathlib.Path(__file__).resolve()
 
     # Flattened mat1 and mat2 matrices
     mat1 = ["(1 + x2^2)/(1 + x3^2)",
@@ -76,8 +79,8 @@ def testTutorial2():
     params = ["x1", "x2", "x3"]
 
     # The system for the inverse of mat2 is encoded in JSON format
-    json_file = str(pathlib.Path(__file__).parent.parent.resolve() / "tests_json" / "tinvsys.json")
-    json_eqsfile = str(pathlib.Path(__file__).parent.parent.resolve() / "tests_json" / "tinveqs.json")
+    json_file = str(thisfile.parent.parent.resolve() / "tests_json" / "tinvsys.json")
+    json_eqsfile = str(thisfile.parent.parent.resolve() / "tests_json" / "tinveqs.json")
     with open(json_file, 'w') as f:
         eqs_json = [2,4,3,4,[0,1,2,3],1,[json_eqsfile]]
         json.dump(eqs_json, f)
