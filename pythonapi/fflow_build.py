@@ -2,21 +2,30 @@
 
 import pathlib
 from cffi import FFI
-from ctypes.util import find_library
 
-fflowpath = find_library("fflow")
-if fflowpath is None:
+thisfile = pathlib.Path(__file__).resolve()
+
+def getFFlowPath():
+    try:
+        with open(str(thisfile.parent.parent / 'install_manifest.txt')) as f:
+            for l in f:
+                path = pathlib.Path(l)
+                if "libfflow" in path.name:
+                    return path.resolve()
+    except:
+        pass
     raise RuntimeError("FiniteFlow library not found")
 
 ffibuilder = FFI()
 
-header = open(str((pathlib.Path(__file__).parent.parent / 'include' / 'fflow' / 'capi.h').resolve())).read()
+fflowpath = getFFlowPath()
+header = open(str((thisfile.parent.parent / 'include' / 'fflow' / 'capi.h').resolve())).read()
 header = header.split("/* API begin */")[1].split("/* API end */")[0]
 
 ffibuilder.cdef(header)
 
-fflowlibdir = str(pathlib.Path(fflowpath).parent.resolve())
-includedir = str(pathlib.Path(__file__).parent.parent / 'include')
+fflowlibdir = str(fflowpath.parent.resolve())
+includedir = str(thisfile.parent.parent / 'include')
 
 ffibuilder.set_source("_cffi_fflow",
                       r'''
