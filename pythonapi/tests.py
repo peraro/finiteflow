@@ -298,6 +298,50 @@ def testLaurent():
     print("- Test passed")
 
 
+def testLists():
+    print("Test lists")
+
+    list_a = [str(x) for x in range(4)]
+    list_b = [str(x) for x in range(5)]
+    list_c = [str(x) for x in range(2)]
+    list_d = [str(x) for x in range(7)]
+
+    g = NewGraph()
+    node_a = AlgRatNumEval(g, list_a)
+    node_b = AlgRatNumEval(g, list_b)
+    node_c = AlgRatNumEval(g, list_c)
+    node_d = AlgRatNumEval(g, list_d)
+
+    node_ab = AlgChain(g, [node_a, node_b])
+    node_cd = AlgTake(g, [node_c, node_d],
+                      [(0,0), (0,1),
+                       (1,0), (1,1), (1,2), (1,3), (1,4), (1,5), (1,6)])
+
+    node_add = AlgAdd(g, [node_ab, node_cd])
+    node_mul = AlgMul(g, [node_ab, node_cd])
+
+    node_amat = AlgSlice(g, node_add, 1, 6)
+    node_bmat = AlgSlice(g, node_mul, 6)
+
+    mat_mul = AlgSparseMatMul(g, node_amat, node_bmat,
+                              2,3,1,
+                              [[1,2],[0,1,2]],
+                              [[0],[0],[0]])
+
+    tadd = AlgTakeAndAdd(g, [node_amat, node_bmat, mat_mul],
+                         [
+                             [(0,0),(0,4),(1,2)],
+                             [(0,1),(0,2),(2,1)],
+                             [(0,3),(2,0)]
+                         ])
+    SetOutputNode(g, tadd)
+    if EvaluateGraph(g, [], 0) != [30, 164, 80]:
+        print("- Check failed!")
+        exit(1)
+    print("- Test passed!")
+
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -307,3 +351,4 @@ if __name__ == '__main__':
     testLSolver("node")
     testLSolver("numeric")
     testLaurent()
+    testLists()

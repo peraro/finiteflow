@@ -199,6 +199,10 @@ def AlgRatFunEval(graph, in_node, rf):
         raise TypeError("Third argument of AlgRatFunEval() must be a RatFunList")
     return _Check(_lib.ffAlgRatFunEval(graph, in_node, rf._ptr))
 
+def AlgRatNumEval(graph, nums):
+    cnums = [_ffi.new("char[]", x.encode('utf8')) for x in nums]
+    return _Check(_lib.ffAlgRatNumEval(graph, cnums, len(nums)))
+
 def AlgLaurent(graph, in_node, subgraph, order, max_deg=-1):
     if type(order) is list:
         nout = _lib.ffGraphNParsOut(subgraph)
@@ -213,6 +217,47 @@ def AlgLaurent(graph, in_node, subgraph, order, max_deg=-1):
 def AlgMatMul(graph, in_node_a, in_node_b, n_rows_a, n_cols_a, n_cols_b):
     return _Check(_lib.ffAlgMatMul(graph, in_node_a, in_node_b,
                                    n_rows_a, n_cols_a, n_cols_b))
+
+def AlgChain(graph, in_nodes):
+    return _Check(_lib.ffAlgChain(graph, in_nodes, len(in_nodes)))
+
+def AlgTake(graph, in_nodes, elems):
+    for x in elems:
+        if len(x) != 2:
+            raise ERROR
+    return _Check(_lib.ffAlgTake(graph, in_nodes, len(in_nodes),
+                                 [x for x in _chain(*elems)],
+                                 len(elems)))
+
+def AlgSlice(graph, in_node, begin, end=-1):
+    return _Check(_lib.ffAlgSlice(graph, in_node, begin, end))
+
+def AlgAdd(graph, in_nodes):
+    return _Check(_lib.ffAlgAdd(graph, in_nodes, len(in_nodes)))
+
+def AlgMul(graph, in_nodes):
+    return _Check(_lib.ffAlgMul(graph, in_nodes, len(in_nodes)))
+
+def AlgTakeAndAdd(graph, in_nodes, elems):
+    def nested(chain_list):
+        for x in chain_list:
+            yield x[0]
+            yield x[1]
+    return  _Check(_lib.ffAlgTakeAndAdd(graph, in_nodes, len(in_nodes),
+                                        len(elems),
+                                        [len(x) for x in elems],
+                                        [y for y in nested(_chain(*elems))]))
+
+def AlgSparseMatMul(graph, in_node_a, in_node_b, n_rows_a, n_cols_a, n_cols_b,
+                    non_zeroes_a, non_zeroes_b):
+    if len(non_zeroes_a) != n_rows_a or len(non_zeroes_b) != n_cols_a:
+        raise ERROR
+    return _Check(_lib.ffAlgSparseMatMul(graph, in_node_a, in_node_b,
+                                         n_rows_a, n_cols_a, n_cols_b,
+                                         [len(x) for x in non_zeroes_a],
+                                         [x for x in _chain(*non_zeroes_a)],
+                                         [len(x) for x in non_zeroes_b],
+                                         [x for x in _chain(*non_zeroes_b)]))
 
 
 def LaurentMaxOrders(graph, node):
@@ -309,34 +354,16 @@ ffNewRatFunList instead.
 
 
 def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
-                            non_zer_els, non_zero_coeffs,
-                            needed_vars = None):
-    needed = needed_vars
-    if needed is None:
-        needed = _ffi.NULL
-        neededlen = 0
-    else:
-        needelen = len(needed)
-    retc = _lib.ffAlgAnalyticSparseLSolve(graph, in_node,
-                                          len(non_zero_els), n_vars,
-                                          [len(x) for x in non_zer_els],
-                                          [_chain(*non_zer_els)],
-                                          non_zero_coeffs,
-                                          needed,
-                                          neededlen)
-    return _Check(retc)
-
-
-def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
                             non_zero_els, non_zero_coeffs,
                             needed_vars = None):
-    # TODO: add some more checks
     needed = needed_vars
     if needed is None:
         needed = _ffi.NULL
         neededlen = 0
     else:
         needelen = len(needed)
+    if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
+        raise ERROR
     retc = _lib.ffAlgAnalyticSparseLSolve(graph, in_node,
                                           len(non_zero_els), n_vars,
                                           [len(x) for x in non_zero_els],
@@ -350,13 +377,14 @@ def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
 def AlgNumericSparseLSolve(graph, n_vars,
                            non_zero_els, non_zero_coeffs,
                            needed_vars = None):
-    # TODO: add some more checks
     needed = needed_vars
     if needed is None:
         needed = _ffi.NULL
         neededlen = 0
     else:
         needelen = len(needed)
+    if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
+        raise ERROR
     coeffs = [_ffi.new("char[]", x.encode('utf8')) for x in non_zero_coeffs]
     retc = _lib.ffAlgNumericSparseLSolve(graph,
                                          len(non_zero_els), n_vars,

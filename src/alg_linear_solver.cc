@@ -449,26 +449,35 @@ namespace fflow {
   }
 
 
-  void SparseLinearSolver::reset(AlgorithmData * data)
+  Ret SparseLinearSolver::reset(AlgorithmData * data)
   {
+    const unsigned nv = nvars();
+
     adata_(data).depv_.clear();
     indepv_.clear();
 
     std::fill(xinfo_.get(), xinfo_.get()+nvars()+1, LSVar::IS_NON_ZERO);
-    for (unsigned i=0; i<nneeded_ext_; ++i)
+    for (unsigned i=0; i<nneeded_ext_; ++i) {
+      if (needed_ext_[i] >= nv+1 || xinfo_[needed_ext_[i]] & LSVar::IS_NEEDED)
+        return FAILED;
       xinfo_[needed_ext_[i]] |= LSVar::IS_NEEDED;
+    }
 
     nnindepeqs_ = adata_(data).mat_.nrows();
     for (unsigned i=0; i<nnindepeqs_; ++i)
       indepeqs_[i] = i;
+
+    return SUCCESS;
   }
 
   Ret SparseLinearSolver::reset_needed(AlgorithmData * data,
                                        const unsigned * needed_vars,
                                        unsigned needed_size)
   {
+    const unsigned nv = nvars();
+
     for (unsigned i=0; i<needed_size; ++i)
-      if (needed_vars[i] >= nvars() ||
+      if (needed_vars[i] >= nv ||
           !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED)))
         return FAILED;
 
@@ -479,11 +488,13 @@ namespace fflow {
     for (unsigned i=0; i<needed_size; ++i)
       needed_ext_[i] = needed_vars[i];
 
-    unsigned nv = nvars();
     for (unsigned i=0; i<nv; ++i)
       xinfo_[i] &= ~flag_t(LSVar::IS_NEEDED);
-    for (unsigned i=0; i<nneeded_ext_; ++i)
+    for (unsigned i=0; i<nneeded_ext_; ++i) {
+      if (xinfo_[needed_ext_[i]] & LSVar::IS_NEEDED)
+        return FAILED;
       xinfo_[needed_ext_[i]] |= LSVar::IS_NEEDED;
+    }
 
     if (stage_ >= SECOND_) {
       learn_needed_(data);

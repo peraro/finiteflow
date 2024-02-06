@@ -162,6 +162,7 @@ extern "C" {
                              FFCStr json_file);
   FFNode ffAlgRatFunEval(FFGraph graph, FFNode in_node,
                          const FFRatFunList * rf);
+  FFNode ffAlgRatNumEval(FFGraph graph, FFCStr * nums, unsigned n_nums);
 
   // The array pointed by order must have length ==
   // ffNodeNParsOut(subgraph).  max_deg is the maximum degree in the
@@ -177,6 +178,43 @@ extern "C" {
 
   FFNode ffAlgMatMul(FFGraph graph, FFNode in_node_a, FFNode in_node_b,
                      unsigned n_rows_a, unsigned n_cols_a, unsigned n_cols_b);
+
+  FFNode ffAlgChain(FFGraph graph,
+                    const FFNode * in_nodes, unsigned n_in_nodes);
+
+  // This algorithm simply copies some elements of the input nodes to
+  // its output.
+  //
+  // elems is an array of (n_elems * 2) integers.  The j-th output
+  // element of this node will be the elems[2*j+1]-th output element
+  // of the elems[2*j]-th input node (as listed in in_nodes), for
+  // j=0,...,n_elems-1
+  FFNode ffAlgTake(FFGraph graph,
+                   const FFNode * in_nodes, unsigned n_in_nodes,
+                   const unsigned * elems, unsigned n_elems);
+
+  // Slices the input to its [begin, end) subset
+  // If end is negative, the slice ends at the end of the input
+  FFNode ffAlgSlice(FFGraph graph, FFNode in_node,
+                    unsigned begin, int end);
+
+  FFNode ffAlgAdd(FFGraph graph,
+                  const FFNode * in_nodes, unsigned n_in_nodes);
+  FFNode ffAlgMul(FFGraph graph,
+                  const FFNode * in_nodes, unsigned n_in_nodes);
+
+  FFNode ffAlgTakeAndAdd(FFGraph graph,
+                         const FFNode * in_nodes, unsigned n_in_nodes,
+                         unsigned n_elems, const unsigned * elems_len,
+                         const unsigned * elems);
+
+  FFNode ffAlgSparseMatMul(FFGraph graph, FFNode in_node_a, FFNode in_node_b,
+                           unsigned n_rows_a, unsigned n_cols_a,
+                           unsigned n_cols_b,
+                           const unsigned * n_non_zero_a,
+                           const unsigned * non_zero_els_a,
+                           const unsigned * n_non_zero_b,
+                           const unsigned * non_zero_els_b);
 
 
   /////////////////////////////

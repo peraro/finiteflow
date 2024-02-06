@@ -231,7 +231,7 @@ namespace fflow {
 
     void copy_data(const AlgorithmData * data, AlgorithmData * dataout) const;
 
-    void reset(AlgorithmData * data);
+    Ret reset(AlgorithmData * data);
 
     void init(std::size_t neqs, std::size_t nvars,
               const unsigned * needed_vars, unsigned needed_size,

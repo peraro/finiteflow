@@ -21,6 +21,7 @@
 #include <fflow/mp_functions.hh>
 #include <fflow/json.hh>
 #include <fflow/ratfun_parser.hh>
+#include <fflow/algorithm.hh>
 using namespace fflow;
 
 #define FF_MIN_ERROR (FF_ERROR - 10)
@@ -61,6 +62,36 @@ static ReconstructionOptions toRecOpt(FFRecOptions options)
   opt.dbginfo = options.dbginfo;
   opt.polymethod = options.polymethod;
   return opt;
+}
+
+// We check that columns are sorted and they don't exceed the matrix
+// size
+static FFStatus CopyNonZeroColumnEls(unsigned n_vars,
+                                     const unsigned * elems,
+                                     unsigned n_elems,
+                                     unsigned * dest)
+{
+  int last_var = -1;
+  for (unsigned j=0; j<n_elems; ++j, ++dest) {
+    if (int(elems[j]) <= last_var || elems[j] >= n_vars + 1)
+      return FF_ERROR;
+    last_var = elems[j];
+    *dest = elems[j];
+  }
+  return FF_SUCCESS;
+}
+
+static FFStatus CopyNonZeroColumnElsUnordered(unsigned n_cols,
+                                              const unsigned * elems,
+                                              unsigned n_elems,
+                                              unsigned * dest)
+{
+  for (unsigned j=0; j<n_elems; ++j, ++dest) {
+    if (elems[j] >= n_cols)
+      return FF_ERROR;
+    *dest = elems[j];
+  }
+  return FF_SUCCESS;
 }
 
 
@@ -466,7 +497,10 @@ extern "C" {
       rinf.cols.reset(new unsigned[csize]);
       data.c[i].reset(new HornerRatFunPtr[csize]);
       sys.cmap[i].reset(new MPHornerRatFunMap[csize]);
-      std::copy(non_zero_els, non_zero_els+csize, rinf.cols.get());
+      FFStatus ret = CopyNonZeroColumnEls(n_vars, non_zero_els, csize,
+                                          rinf.cols.get());
+      if (ret != FF_SUCCESS)
+        return ret;
       non_zero_els += csize;
       if (idx + csize > n_functions)
         return FF_ERROR;
@@ -523,7 +557,10 @@ extern "C" {
       rinf.size = csize;
       rinf.cols.reset(new unsigned[csize]);
       sys.c[i].reset(new MPRational[csize]);
-      std::copy(non_zero_els, non_zero_els+csize, rinf.cols.get());
+      FFStatus ret = CopyNonZeroColumnEls(n_vars, non_zero_els, csize,
+                                          rinf.cols.get());
+      if (ret != FF_SUCCESS)
+        return ret;
       non_zero_els += csize;
       for (int j=0; j<csize; ++j, ++idx)
         sys.c[i][j] = MPRational(non_zero_coeffs[idx]);
@@ -573,7 +610,10 @@ extern "C" {
       rinf.start = idx;
       rinf.size = csize;
       rinf.cols.reset(new unsigned[csize]);
-      std::copy(non_zero_els, non_zero_els+csize, rinf.cols.get());
+      FFStatus ret = CopyNonZeroColumnEls(n_vars, non_zero_els, csize,
+                                          rinf.cols.get());
+      if (ret != FF_SUCCESS)
+        return ret;
       non_zero_els += csize;
       idx += csize;
     }
@@ -677,6 +717,254 @@ extern "C" {
   {
     std::unique_ptr<MatrixMul> algptr(new MatrixMul());
     auto & alg = *algptr;
+
+    alg.init(n_rows_a, n_cols_a, n_cols_b);
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    FFNode input[2] = {in_node_a, in_node_b};
+    unsigned id = g->new_node(std::move(algptr), nullptr, input);
+
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
+  FFNode ffAlgChain(FFGraph graph,
+                    const FFNode * in_nodes, unsigned n_in_nodes)
+  {
+    std::unique_ptr<Chain> algptr(new Chain());
+    Chain & alg = *algptr;
+    std::vector<unsigned> nparsin(n_in_nodes);
+    for (unsigned i=0; i<n_in_nodes; ++i) {
+      Node * node = session.node(graph, in_nodes[i]);
+      if (!node)
+        return FF_ERROR;
+      nparsin[i] = node->algorithm()->nparsout;
+    }
+    alg.init(nparsin.data(), nparsin.size());
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, in_nodes);
+
+    return id;
+  }
+
+  FFNode ffAlgTake(FFGraph graph,
+                   const FFNode * in_nodes, unsigned n_in_nodes,
+                   const unsigned * elems, unsigned n_elems)
+  {
+    std::unique_ptr<Take> algptr(new Take());
+    Take & alg = *algptr;
+    std::vector<unsigned> nparsin(n_in_nodes);
+    for (unsigned i=0; i<n_in_nodes; ++i) {
+      Node * node = session.node(graph, in_nodes[i]);
+      if (!node)
+        return FF_ERROR;
+      nparsin[i] = node->algorithm()->nparsout;
+    }
+
+    std::vector<Take::InputEl> els;
+    els.resize(n_elems);
+    for (int j=0; j<n_elems; ++j, elems += 2) {
+
+      els[j].list = elems[0];
+      els[j].el = elems[1];
+
+      // checks
+      if (elems[0] >= n_in_nodes)
+        return FF_ERROR;
+      Node * node = session.node(graph, in_nodes[elems[0]]);
+      if (!node || node->algorithm()->nparsout <= elems[1])
+        return FF_ERROR;
+    }
+
+    alg.init(nparsin.data(), nparsin.size(), std::move(els));
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, in_nodes);
+
+    return id;
+  }
+
+  FFNode ffAlgSlice(FFGraph graph, FFNode in_node,
+                    unsigned begin, int end)
+  {
+    std::unique_ptr<Slice> algptr(new Slice());
+    Slice & alg = *algptr;
+
+    Node * node = nullptr;
+    if (!(node = session.node(graph, in_node)))
+      return FF_ERROR;
+
+    unsigned nparsin = node->algorithm()->nparsout;
+    if (end < 0)
+      end = nparsin;
+
+    Ret ret = alg.init(nparsin, begin, end);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, &in_node);
+
+    return id;
+  }
+
+  FFNode ffAlgAdd(FFGraph graph,
+                  const FFNode * in_nodes, unsigned n_in_nodes)
+  {
+    std::unique_ptr<Add> algptr(new Add());
+    Add & alg = *algptr;
+    std::vector<unsigned> nparsin(n_in_nodes);
+    unsigned len = 0;
+    for (unsigned i=0; i<n_in_nodes; ++i) {
+      Node * node = session.node(graph, in_nodes[i]);
+      if (!node)
+        return FF_ERROR;
+      nparsin[i] = node->algorithm()->nparsout;
+      if (i != 0) {
+        if (nparsin[i] != len)
+          return FF_ERROR;
+      } else {
+        len = nparsin[0];
+      }
+    }
+
+    alg.init(nparsin.size(), len);
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, in_nodes);
+
+    return id;
+  }
+
+  FFNode ffAlgMul(FFGraph graph,
+                  const FFNode * in_nodes, unsigned n_in_nodes)
+  {
+    std::unique_ptr<Mul> algptr(new Mul());
+    Mul & alg = *algptr;
+    std::vector<unsigned> nparsin(n_in_nodes);
+    unsigned len = 0;
+    for (unsigned i=0; i<n_in_nodes; ++i) {
+      Node * node = session.node(graph, in_nodes[i]);
+      if (!node)
+        return FF_ERROR;
+      nparsin[i] = node->algorithm()->nparsout;
+      if (i != 0) {
+        if (nparsin[i] != len)
+          return FF_ERROR;
+      } else {
+        len = nparsin[0];
+      }
+    }
+
+    alg.init(nparsin.size(), len);
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, in_nodes);
+
+    return id;
+  }
+
+  FFNode ffAlgTakeAndAdd(FFGraph graph,
+                         const FFNode * in_nodes, unsigned n_in_nodes,
+                         unsigned n_elems,
+                         const unsigned * elems_len,
+                         const unsigned * elems)
+  {
+    std::unique_ptr<TakeAndAdd> algptr(new TakeAndAdd());
+    TakeAndAdd & alg = *algptr;
+    std::vector<unsigned> nparsin(n_in_nodes);
+    for (unsigned i=0; i<n_in_nodes; ++i) {
+      Node * node = session.node(graph, in_nodes[i]);
+      if (!node)
+        return FF_ERROR;
+      nparsin[i] = node->algorithm()->nparsout;
+    }
+
+    std::vector<std::vector<TakeAndAdd::InputEl>> els;
+    els.resize(n_elems);
+    for (int j=0; j<n_elems; ++j) {
+
+      const unsigned this_len = elems_len[j];
+      els[j].resize(this_len);
+
+      for (int k=0; k<this_len; ++k, elems += 2) {
+
+        els[j][k].list = elems[0];
+        els[j][k].el = elems[1];
+
+        // checks
+        if (elems[0] >= n_in_nodes)
+          return FF_ERROR;
+        Node * node = session.node(graph, in_nodes[elems[0]]);
+        if (!node || node->algorithm()->nparsout <= elems[1])
+          return FF_ERROR;
+      }
+    }
+
+    alg.init(nparsin.data(), nparsin.size(), std::move(els));
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, in_nodes);
+
+    return id;
+  }
+
+  FFNode ffAlgSparseMatMul(FFGraph graph, FFNode in_node_a, FFNode in_node_b,
+                           unsigned n_rows_a, unsigned n_cols_a,
+                           unsigned n_cols_b,
+                           const unsigned * n_non_zero_a,
+                           const unsigned * non_zero_els_a,
+                           const unsigned * n_non_zero_b,
+                           const unsigned * non_zero_els_b)
+  {
+    std::unique_ptr<SparseMatrixMul> algptr(new SparseMatrixMul());
+    auto & alg = *algptr;
+
+    alg.row1.resize(n_rows_a);
+    for (unsigned j=0; j<n_rows_a; ++j) {
+      unsigned len = alg.row1[j].size = n_non_zero_a[j];
+      alg.row1[j].cols.reset(new unsigned[len]);
+      unsigned * rcols = alg.row1[j].cols.get();
+      Ret ret = CopyNonZeroColumnElsUnordered(n_cols_a,
+                                              non_zero_els_a, len, rcols);
+      if (ret != FF_SUCCESS)
+        return FF_ERROR;
+      non_zero_els_a += len;
+    }
+
+    const unsigned n_rows_b = n_cols_a;
+    alg.row2.resize(n_rows_b);
+    for (unsigned j=0; j<n_rows_b; ++j) {
+      unsigned len = alg.row2[j].size = n_non_zero_b[j];
+      alg.row2[j].cols.reset(new unsigned[len]);
+      unsigned * rcols = alg.row2[j].cols.get();
+      Ret ret = CopyNonZeroColumnElsUnordered(n_cols_b,
+                                              non_zero_els_b, len, rcols);
+      if (ret != FF_SUCCESS)
+        return FF_ERROR;
+      non_zero_els_b += len;
+    }
 
     alg.init(n_rows_a, n_cols_a, n_cols_b);
 
@@ -1035,6 +1323,30 @@ extern "C" {
 
     alg.init(nparsin, nfunctions, *data);
     unsigned id = g->new_node(std::move(algptr), std::move(data), &in_node);
+
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
+  FFNode ffAlgRatNumEval(FFGraph graph, FFCStr * nums, unsigned n_nums)
+  {
+    typedef EvalRationalNumbersData Data;
+    std::unique_ptr<EvalRationalNumbers> algptr(new EvalRationalNumbers());
+    std::unique_ptr<Data> data(new Data());
+    EvalRationalNumbers & alg = *algptr;
+
+    std::vector<MPRational> numbers(n_nums);
+    for (int i=0; i<n_nums; ++i)
+      numbers[i] = MPRational(nums[i]);
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    alg.init(std::move(numbers), *data);
+    unsigned id = g->new_node(std::move(algptr), std::move(data), nullptr);
 
     if (id == ALG_NO_ID)
       return FF_ERROR;
