@@ -19,7 +19,7 @@ namespace fflow {
       UInt * r = m.row(i);
       const DenseLinearSolver::flag_t * info = xinfo();
 
-      for (unsigned j=0; j<n_cols; ++j, ++r)
+      for (unsigned j=0; j<n_cols; ++j, ++r, ++info)
         if ((*info) & LSVar::IS_NON_ZERO) {
           *r = x[row_i*n_cols + j];
         }
