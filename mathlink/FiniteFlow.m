@@ -1335,7 +1335,7 @@ FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
 
 Options[FFInverse] := FilterRules[Join[Options[FFDenseSolve],{"Sparse"->False}], Except["NeededVars"|"IndepVarsOnly"]];
 FFInverse[mat_List, OptionsPattern[]]:=Module[
-    {eqs, len, varx, vary, varsx, varsy, sol, params,res,graph,in,sys,learn,sparse,opt},
+    {eqs, len, varx, vary, varsx, varsy, sol, params,res,graph,in,sys,learn,sparse,opt,perm},
     opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFInverse];
     
     len = Length[mat];
@@ -1372,14 +1372,15 @@ FFInverse[mat_List, OptionsPattern[]]:=Module[
                  FFDenseSolverLearn[graph,Join[varsx,varsy]]];
       If[TrueQ[learn==FFImpossible],Throw[FFSingularMatrix]];
       If[!TrueQ[learn[[0]]==List],Throw[learn]];
-      If[!TrueQ[("DepVars"/.learn) == varsx && ("IndepVars"/.learn) == varsy],Throw[FFSingularMatrix]];
+      If[!TrueQ[Union[("DepVars"/.learn)] == varsx && ("IndepVars"/.learn) == varsy],Throw[FFSingularMatrix]];
 
       res = If[TrueQ[params == {}],
                FFReconstructNumeric[graph, Sequence@@FilterRules[{opt}, Options[FFReconstructNumeric]]],
                FFReconstructFunction[graph,params, Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
              ];
        If[!TrueQ[res[[0]]==List],Throw[res]];
-       ArrayReshape[res,{len,len}]
+       perm = InversePermutation[("DepVars"/.learn)[[;;,1]]];
+       ArrayReshape[res,{len,len}][[perm]]
     ];
     FFDeleteGraph[graph];
     res
