@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <gmp.h>
 #include <flint/flint.h>
 #if defined(__FLINT_VERSION) && (__FLINT_VERSION >= 3)
 # include <flint/nmod.h>
