@@ -80,7 +80,7 @@ namespace fflow {
         if (res == FAILED || res == 0)
           return FAILED;
         r.el(j).col = col;
-        r.el(j).val = res;
+        r.el(j).val.set(res);
       }
       r.el(j).col = SparseMatrixRow::END;
     }

@@ -714,9 +714,9 @@ namespace fflow {
           const unsigned elsize = elems.size();
           for (unsigned j=0; j<elsize; ++j) {
             if (homog_ || elems[j] != nvars())
-              xout[pos++] = neg_mod(mat.row(i).el(j+1).val, mod);
+              xout[pos++] = neg_mod(mat.row(i).el(j+1).val.get(), mod);
             else
-              xout[pos++] = mat.row(i).el(j+1).val;
+              xout[pos++] = mat.row(i).el(j+1).val.get();
           }
           ++k;
         }

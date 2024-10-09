@@ -310,13 +310,42 @@ namespace fflow {
   std::ostream & operator << (std::ostream & os,
                               const MatrixView & m);
 
+  // A 64-bit integer aligned to 32 bits
+  struct SMUInt {
+#if FFLOW_BIG_ENDIAN
+    unsigned high, low;
+#else
+    unsigned low, high;
+#endif
+    UInt get() const;
+    void set(UInt z);
+  };
+
+  namespace detail {
+    union SMUIntHL64 {
+      SMUInt smval;
+      UInt val;
+    };
+  }
+
+  inline UInt SMUInt::get() const
+  {
+    return detail::SMUIntHL64{*this}.val;
+  }
+  inline void SMUInt::set(UInt z)
+  {
+    detail::SMUIntHL64 z64;
+    z64.val = z;
+    *this = z64.smval;
+  }
+
   union SparseMatCell {
     struct {
-      UInt col, val;
+      unsigned col;
+      SMUInt val;
     };
     struct {
-      unsigned size, cap;
-      UInt id;
+      unsigned size, cap, id;
     };
   };
 
@@ -326,7 +355,7 @@ namespace fflow {
     enum {
       DEF_SIZE = 8,
       EL_SIZE = sizeof(SparseMatCell),
-      END = fflow::FAILED
+      END = ~(unsigned)(0)
     };
 
     SparseMatrixRow()
@@ -362,17 +391,17 @@ namespace fflow {
       std::copy(data_+1, data_+size()+2, oth.data_+1);
     }
 
-    UInt capacity() const
+    unsigned capacity() const
     {
       return data_[0].cap;
     }
 
-    UInt id() const
+    unsigned id() const
     {
       return data_[0].id;
     }
 
-    UInt & id()
+    unsigned & id()
     {
       return data_[0].id;
     }
@@ -387,7 +416,7 @@ namespace fflow {
       return data_[0].size;
     }
 
-    UInt first_nonzero_column() const
+    unsigned first_nonzero_column() const
     {
       return el(0).col;
     }
@@ -449,7 +478,7 @@ namespace fflow {
       for (unsigned i=0; i<ncols; ++i)
         if (r[i]) {
           el(idx).col = i;
-          el(idx).val = r[i];
+          el(idx).val.set(r[i]);
           ++idx;
         }
       el(idx).col = END;
@@ -462,14 +491,14 @@ namespace fflow {
       if (incl_id)
         r[ncols] = data_[0].id;
       for (unsigned idx=0; el(idx).col != END; ++idx)
-        r[el(idx).col] = el(idx).val;
+        r[el(idx).col] = el(idx).val.get();
     }
 
     // z must be nonzero
     void mul(UInt z, Mod mod)
     {
       for (unsigned idx=0; el(idx).col != END; ++idx)
-        el(idx).val = mul_mod(el(idx).val, z, mod);
+        el(idx).val.set(mul_mod(el(idx).val.get(), z, mod));
     }
 
     unsigned eq_to_substitute(const unsigned * eqs) const
@@ -547,19 +576,19 @@ namespace fflow {
       unsigned idx=0;
       while (el(idx).col < col)
         ++idx;
-      return el(idx).col == col ? el(idx).val : 0;
+      return el(idx).col == col ? el(idx).val.get() : 0;
     }
 
     // same as get but assumes col is either the first non-vanishing
     // column or not present at all
     UInt get_first(UInt col) const
     {
-      return el(0).col == col ? el(0).val : 0;
+      return el(0).col == col ? el(0).val.get() : 0;
     }
 
     UInt get_first() const
     {
-      return el(0).col != END ? el(0).val : 0;
+      return el(0).col != END ? el(0).val.get() : 0;
     }
 
     bool is_zero() const

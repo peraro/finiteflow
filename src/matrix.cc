@@ -250,7 +250,7 @@ namespace fflow {
     }
 
     // Assuming r1el->col == pivot now
-    const UInt r1p = r1el->val;
+    const UInt r1p = r1el->val.get();
     ++r1el;
     ++r2el;
 
@@ -293,16 +293,16 @@ namespace fflow {
 
       while(r1el->col > r2el->col) {
         thisel->col = r2el->col;
-        thisel->val = neg_mod(mul_mod(r2el->val, r1p, mod), mod);
+        thisel->val.set(neg_mod(mul_mod(r2el->val.get(), r1p, mod), mod));
         ++thisel;
         ++r2el;
       }
 
       while (r1el->col == r2el->col && r1el->col != END) {
-        UInt res = ambc_mod(r1el->val, r2el->val, r1p, mod);
+        UInt res = ambc_mod(r1el->val.get(), r2el->val.get(), r1p, mod);
         if (res) {
           thisel->col = r1el->col;
-          thisel->val = res;
+          thisel->val.set(res);
           ++thisel;
         }
         ++r1el;
@@ -325,7 +325,7 @@ namespace fflow {
   {
     os << "|" << data_[0].cap << "|" << data_[0].id << "|";
     for (SparseMatCell * c = data_ + 1; (*c).col != END; ++c)
-      os << c->col << "," << c->val << "|";
+      os << c->col << "," << c->val.get() << "|";
     os << std::endl;
   }
 

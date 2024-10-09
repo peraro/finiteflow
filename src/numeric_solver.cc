@@ -84,7 +84,7 @@ namespace fflow {
         rat_mod(*f, mpmod, mpres);
         unsigned col = cols[j];
         r.el(j).col = col;
-        r.el(j).val = mpres.to_uint();
+        r.el(j).val.set(mpres.to_uint());
       }
       r.el(j).col = SparseMatrixRow::END;
     }
