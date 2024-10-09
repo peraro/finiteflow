@@ -338,10 +338,12 @@ namespace fflow {
       data_[1].col = END;
     }
 
+#if 0
     SparseMatrixRow(SparseMatrixRow && oth) : data_(oth.data_)
     {
       oth.data_ = nullptr;
     }
+#endif
 
     void swap(SparseMatrixRow & oth)
     {
@@ -531,10 +533,14 @@ namespace fflow {
     }
 
     // r1 = r1-r1(pivot)*r2
-    void gauss_elimination(SparseMatrixRow & r1,
+    void gauss_elimination(const SparseMatrixRow & r1,
                            const SparseMatrixRow & r2,
                            std::size_t pivot,
                            Mod mod);
+    void gauss_elimination_shoup(SparseMatrixRow & r1,
+                                 const SparseMatrixRow & r2,
+                                 std::size_t pivot,
+                                 Mod mod);
 
     UInt get(UInt col) const
     {
@@ -579,6 +585,8 @@ namespace fflow {
 
     typedef LSVar::flag_t flag_t;
 
+    static const unsigned N_WORKING_ROWS = 2;
+
     typedef SmallVector<unsigned,16> EqDeps;
 
     SparseMatrix() : rows_(nullptr), n_(0), m_(0) {}
@@ -586,7 +594,7 @@ namespace fflow {
     void resize(std::size_t n, std::size_t m)
     {
       if (n_ != n)
-        rows_.reset(new SparseMatrixRow[n+1]);
+        rows_.reset(new SparseMatrixRow[n+N_WORKING_ROWS]);
       n_ = n;
       m_ = m;
       var_eq_.reset(new unsigned[m]);
@@ -595,7 +603,7 @@ namespace fflow {
     void restrict_rows(std::size_t n)
     {
       if (n<n_) {
-        for (unsigned i=n+1; i<n_; ++i)
+        for (unsigned i=n+N_WORKING_ROWS; i<n_+N_WORKING_ROWS; ++i)
           rows_[i].free();
         n_ = n;
       }
@@ -663,9 +671,14 @@ namespace fflow {
       return rows_[i];
     }
 
-    SparseMatrixRow & working_row()
+    SparseMatrixRow & working_row(unsigned i)
     {
-      return rows_[n_];
+      return rows_[n_+i];
+    }
+
+    void swap_working_rows()
+    {
+      rows_[n_].swap(rows_[n_+1]);
     }
 
     unsigned nrows() const
