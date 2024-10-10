@@ -183,6 +183,7 @@ install(TARGETS fflow ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DE
 
 set(TEST_TARGETS
     testjson
+    testbench
     )
 
 set(TEST_CTARGETS
