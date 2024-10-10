@@ -265,98 +265,8 @@ namespace fflow {
     std::swap(rows_, newrows);
   }
 
-  void SparseMatrix::toRowEcholon(Mod mod, EqDeps * eqdeps)
-  {
-    std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
-    UInt elif;
-    for (unsigned i=0; i<n_; ++i) {
-      elif = rows_[i].get_first();
-      if (!elif)
-        continue;
-
-      {
-        unsigned eq = NO_EQ_;
-        bool first_sub = true;
-        SparseMatrixRow * r = &rows_[i];
-        while ((eq = r->eq_to_substitute(var_eq_.get())) != NO_EQ_) {
-          if (first_sub) {
-            rows_[i].copy_into(working_row(1));
-            first_sub = false;
-          }
-          UInt first_col = rows_[eq].first_nonzero_column();
-          working_row(0).gauss_elimination(working_row(1),
-                                           rows_[eq],first_col,mod);
-          swap_working_rows();
-          r = &working_row(1);
-          if (eqdeps)
-            eqdeps[i].push_back(eq);
-        }
-        if (!first_sub)
-          working_row(1).copy_into(rows_[i]);
-      }
-
-      elif = rows_[i].get_first();
-      if (!elif)
-        continue;
-
-      var_eq_[rows_[i].first_nonzero_column()] = i;
-
-      if (elif != 1) {
-        UInt ielif = mul_inv(elif, mod);
-        rows_[i].mul(ielif, mod);
-      }
-    }
-  }
-
-  void SparseMatrix::toReducedRowEcholon(Mod mod,
-                                         flag_t * flags,
-                                         EqDeps * eqdeps)
-  {
-    toRowEcholon(mod, eqdeps);
-
-    std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
-
-    unsigned nindep = std::remove_if(rows_.get(), rows_.get()+n_,
-                                     [](const SparseMatrixRow & r)
-                                     {
-                                       return r.is_zero();
-                                     }) - rows_.get();
-
-    for (unsigned i=0; i<nindep; ++i)
-      var_eq_[rows_[i].first_nonzero_column()] = i;
-
-    if (nindep < 2)
-      return;
-
-    for (unsigned i=0; i<nindep-1; ++i) {
-      if (flags) {
-        unsigned this_var = rows_[i].first_nonzero_column();
-        if (!(flags[this_var] & LSVar::IS_NEEDED))
-          continue;
-      }
-      unsigned eq = NO_EQ_;
-      bool first_sub = true;
-      SparseMatrixRow * r = &rows_[i];
-      while ((eq = r->eq_to_back_substitute(var_eq_.get())) != NO_EQ_) {
-        if (first_sub) {
-          rows_[i].copy_into(working_row(1));
-          first_sub = false;
-        }
-        UInt first_col = rows_[eq].first_nonzero_column();
-        working_row(0).gauss_elimination(working_row(1),
-                                         rows_[eq],first_col, mod);
-        swap_working_rows();
-        r = &working_row(1);
-        if (eqdeps)
-          eqdeps[i].push_back(eq);
-      }
-      if (!first_sub)
-        working_row(1).copy_into(rows_[i]);
-    }
-  }
-
-  void SparseMatrix::toRowEcholonWithMaxRow(Mod mod, unsigned maxrow,
-                                            EqDeps * eqdeps)
+  void SparseMatrix::toRowEcholon(Mod mod, unsigned maxrow,
+                                  EqDeps * eqdeps)
   {
     std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
     UInt elif;
@@ -390,6 +300,7 @@ namespace fflow {
       if (!elif)
         continue;
 
+#if 0 // FIX THIS
       // In this version, two (or more) equations may end up having "solutions"
       // for the same unknown.  In this case, we keep the simplest equation and
       // throw away the other(s).
@@ -399,6 +310,8 @@ namespace fflow {
         var_eq_[rows_[i].first_nonzero_column()] = i;
       else
         rows_[i].clear();
+#endif
+      var_eq_[rows_[i].first_nonzero_column()] = i;
 
       if (elif != 1) {
         UInt ielif = mul_inv(elif, mod);
@@ -407,13 +320,13 @@ namespace fflow {
     }
   }
 
-  void SparseMatrix::toReducedRowEcholonWithMaxRow(Mod mod,
-                                                   unsigned maxrow,
-                                                   bool reduced,
-                                                   flag_t * flags,
-                                                   EqDeps * eqdeps)
+  void SparseMatrix::toReducedRowEcholon(Mod mod,
+                                         unsigned maxrow,
+                                         bool reduced,
+                                         flag_t * flags,
+                                         EqDeps * eqdeps)
   {
-    toRowEcholonWithMaxRow(mod, maxrow, eqdeps);
+    toRowEcholon(mod, maxrow, eqdeps);
 
     std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
 
@@ -426,7 +339,8 @@ namespace fflow {
     for (unsigned i=0; i<nindep; ++i)
       var_eq_[rows_[i].first_nonzero_column()] = i;
 
-    if (!reduced || nindep < 2)
+    (void)(reduced);
+    if (/*!reduced ||*/ nindep < 2) // <-- FIX THIS
       return;
 
     for (unsigned i=0; i<nindep-1; ++i) {

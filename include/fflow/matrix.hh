@@ -654,25 +654,15 @@ namespace fflow {
 
     void sortRows();
 
-    void toRowEcholon(Mod mod, EqDeps * eqdeps = nullptr);
-    void toReducedRowEcholon(Mod mod,
+    void toRowEcholon(Mod mod, unsigned maxrow,
+                      EqDeps * eqdeps = nullptr);
+    void toReducedRowEcholon(Mod mod, unsigned maxrow, bool reduced,
                              flag_t * flags = nullptr,
                              EqDeps * eqdeps = nullptr);
-    void toReducedRowEcholon(Mod mod, EqDeps * eqdeps)
+    void toReducedRowEcholon(Mod mod, unsigned maxrow, bool reduced,
+                             EqDeps * eqdeps)
     {
-      toReducedRowEcholon(mod, nullptr, eqdeps);
-    }
-
-    void toRowEcholonWithMaxRow(Mod mod, unsigned maxrow,
-                                EqDeps * eqdeps = nullptr);
-    void toReducedRowEcholonWithMaxRow(Mod mod,
-                                       unsigned maxrow, bool reduced,
-                                       flag_t * flags = nullptr,
-                                       EqDeps * eqdeps = nullptr);
-    void toReducedRowEcholonWithMaxRow(Mod mod, unsigned maxrow, bool reduced,
-                                       EqDeps * eqdeps)
-    {
-      toReducedRowEcholonWithMaxRow(mod, maxrow, reduced, nullptr, eqdeps);
+      toReducedRowEcholon(mod, maxrow, reduced, nullptr, eqdeps);
     }
 
     UInt el(unsigned i, unsigned j) const

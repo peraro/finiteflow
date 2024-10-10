@@ -600,10 +600,7 @@ namespace fflow {
     number_eqs_(data);
     mat_(data).sortRows();
 
-    if (!has_max_row_())
-      mat_(data).toReducedRowEcholon(mod);
-    else
-      mat_(data).toReducedRowEcholonWithMaxRow(mod, maxrow_, backsubst_);
+    mat_(data).toReducedRowEcholon(mod, maxrow_, backsubst_);
 
     if (mat_(data).isImpossibleSystem()) {
       stage_ = SECOND_;
@@ -629,11 +626,8 @@ namespace fflow {
       return FAILED;
 
     eqdeps_.resize(nnindepeqs_);
-    if (!has_max_row_())
-      mat_(data).toReducedRowEcholon(mod, xinfo_.get(), eqdeps_.data());
-    else
-      mat_(data).toReducedRowEcholonWithMaxRow(mod, maxrow_, backsubst_,
-                                               xinfo_.get(), eqdeps_.data());
+    mat_(data).toReducedRowEcholon(mod, maxrow_, backsubst_,
+                                   xinfo_.get(), eqdeps_.data());
 
     if (mat_(data).isImpossibleSystem()) {
       if (is_learning_impossible_(data))
@@ -677,10 +671,7 @@ namespace fflow {
 
     SparseMatrix & mat = mat_(data);
 
-    if (!has_max_row_())
-      mat.toReducedRowEcholon(mod, xinfo_.get());
-    else
-      mat.toReducedRowEcholonWithMaxRow(mod, maxrow_, backsubst_, xinfo_.get());
+    mat.toReducedRowEcholon(mod, maxrow_, backsubst_, xinfo_.get());
 
     if (mat.isImpossibleSystem())
       return FAILED;
