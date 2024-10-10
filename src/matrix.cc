@@ -172,72 +172,13 @@ namespace fflow {
     return os;
   }
 
-#if 0
-  void SparseMatrixRow::gauss_elimination(SparseMatrixRow & r1,
-                                          const SparseMatrixRow & r2,
-                                          std::size_t pivot,
-                                          Mod mod)
-  {
-    const UInt r1p = r1.get(pivot);
-    unsigned idx=0;
-    if (!r1p)
-      return;
-    auto * r1el = &r1.el(0);
-    const auto * r2el = &r2.el(0);
-    resize(r1.size()+r2.size());
-    while (1) {
-      const UInt r1col = r1el->col;
-      const UInt r2col = r2el->col;
-      if (r1col < r2col) {
-        auto & thisel = el(idx);
-        thisel.col = r1col;
-        thisel.val = r1el->val;
-        ++idx;
-        ++r1el;
-      } else if (r1col > r2col) {
-        auto & thisel = el(idx);
-        thisel.col = r2col;
-        thisel.val = neg_mod(mul_mod(r2el->val, r1p, mod), mod);
-        ++idx;
-        ++r2el;
-      } else if (r1col != END) {
-        if (r2col != pivot) {
-          UInt res = ambc_mod(r1el->val, r2el->val, r1p, mod);
-          if (res) {
-            auto & thisel = el(idx);
-            thisel.col = r1col;
-            thisel.val = res;
-            ++idx;
-          }
-        }
-        ++r1el;
-        ++r2el;
-      } else {
-        auto & thisel = el(idx);
-        thisel.col = END;
-        size() = idx;
-        id() = r1.id();
-        //r1.swap(*this);
-        copy_into(r1);
-        return;
-      }
-    }
-  }
-
-#else
-
-  // TODO: add back shoup mul option
   void SparseMatrixRow::gauss_elimination(const SparseMatrixRow & r1,
                                           const SparseMatrixRow & r2,
                                           std::size_t pivot,
                                           Mod mod)
   {
     resize(r1.size()+r2.size());
-#if 0
-    // should never happen!
-    if (!r1p)
-      return;
-#endif
+
     __restrict auto * thisel = &el(0);
     __restrict const auto * r1el = &r1.el(0);
     __restrict const auto * r2el = &r2.el(0);
@@ -253,35 +194,6 @@ namespace fflow {
     const UInt r1p = r1el->val.get();
     ++r1el;
     ++r2el;
-
-#if 0
-    while (1) {
-      const UInt r1col = r1el->col;
-      const UInt r2col = r2el->col;
-      if (r1col == r2col && r1col == END)
-        break;
-      const bool r1_less = r1col < r2col;
-      const bool r2_less = r2col < r1col;
-      const UInt r1val = r2_less ? 0 : r1el->val;
-      const UInt r2val = r1_less ? 0 : r2el->val;
-      UInt res = ambc_mod(r1val, r2val, r1p, mod);
-      if (res) {
-        thisel->col = r2_less ? r2col : r1col;
-        thisel->val = res;
-        ++thisel;
-      }
-      r1el += !r2_less;
-      r2el += !r1_less;
-    }
-
-    {
-      thisel->col = END;
-      size() = thisel - el0;
-      id() = r1.id();
-      copy_into(r1);
-      return;
-    }
-#endif
 
     while (1) {
       while (r1el->col < r2el->col) {
@@ -318,8 +230,6 @@ namespace fflow {
     }
 
   }
-
-#endif
 
   void SparseMatrixRow::debug_print(std::ostream & os)
   {
