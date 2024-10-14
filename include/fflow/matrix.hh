@@ -566,10 +566,12 @@ namespace fflow {
                            const SparseMatrixRow & r2,
                            std::size_t pivot,
                            Mod mod);
-    void gauss_elimination_shoup(SparseMatrixRow & r1,
-                                 const SparseMatrixRow & r2,
-                                 std::size_t pivot,
-                                 Mod mod);
+
+    template<bool Shoup>
+    void gauss_elimination_impl(const SparseMatrixRow & r1,
+                                const SparseMatrixRow & r2,
+                                std::size_t pivot,
+                                Mod mod);
 
     UInt get(UInt col) const
     {

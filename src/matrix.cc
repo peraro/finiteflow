@@ -172,10 +172,37 @@ namespace fflow {
     return os;
   }
 
-  void SparseMatrixRow::gauss_elimination(const SparseMatrixRow & r1,
-                                          const SparseMatrixRow & r2,
-                                          std::size_t pivot,
-                                          Mod mod)
+  namespace {
+
+    template<bool Shoup=false>
+    struct GaussArithmetic {
+      static UInt ambc(UInt a, UInt b, UInt c, UInt, Mod mod)
+      {
+        return ::fflow::ambc_mod(a, b, c, mod);
+      }
+      static UInt negmul(UInt a, UInt b, UInt, Mod mod)
+      {
+        return ::fflow::neg_mod(mul_mod(a, b, mod), mod);
+      }
+    };
+    template<>
+    struct GaussArithmetic<true> {
+      static UInt ambc(UInt a, UInt b, UInt c, UInt sh_c, Mod mod)
+      {
+        return ::fflow::sub_mod(a, mul_mod_shoup(b, c, sh_c, mod), mod);
+      }
+      static UInt negmul(UInt a, UInt b, UInt sh_b, Mod mod)
+      {
+        return ::fflow::neg_mod(mul_mod_shoup(a, b, sh_b, mod), mod);
+      }
+    };
+  }
+
+  template<bool Shoup>
+  void SparseMatrixRow::gauss_elimination_impl(const SparseMatrixRow & r1,
+                                               const SparseMatrixRow & r2,
+                                               std::size_t pivot,
+                                               Mod mod)
   {
     resize(r1.size()+r2.size());
 
@@ -195,6 +222,10 @@ namespace fflow {
     ++r1el;
     ++r2el;
 
+    const UInt r1ps = Shoup ? precomp_mul_shoup(r1p, mod) : 0;
+
+    typedef GaussArithmetic<Shoup> GA;
+
     while (1) {
       while (r1el->col < r2el->col) {
         thisel->col = r1el->col;
@@ -205,13 +236,13 @@ namespace fflow {
 
       while(r1el->col > r2el->col) {
         thisel->col = r2el->col;
-        thisel->val.set(neg_mod(mul_mod(r2el->val.get(), r1p, mod), mod));
+        thisel->val.set(GA::negmul(r2el->val.get(), r1p, r1ps, mod));
         ++thisel;
         ++r2el;
       }
 
       while (r1el->col == r2el->col && r1el->col != END) {
-        UInt res = ambc_mod(r1el->val.get(), r2el->val.get(), r1p, mod);
+        UInt res = GA::ambc(r1el->val.get(), r2el->val.get(), r1p, r1ps, mod);
         if (res) {
           thisel->col = r1el->col;
           thisel->val.set(res);
@@ -229,6 +260,19 @@ namespace fflow {
       }
     }
 
+  }
+
+  // TODO: fine tune this using benchmarks on several machines
+  const unsigned FF_GAUSS_SHOUP_THRESHOLD = 6;
+  void SparseMatrixRow::gauss_elimination(const SparseMatrixRow & r1,
+                                          const SparseMatrixRow & r2,
+                                          std::size_t pivot,
+                                          Mod mod)
+  {
+    if (r2.size() < FF_GAUSS_SHOUP_THRESHOLD)
+      gauss_elimination_impl<false>(r1, r2, pivot, mod);
+    else
+      gauss_elimination_impl<true>(r1, r2, pivot, mod);
   }
 
   void SparseMatrixRow::debug_print(std::ostream & os)
