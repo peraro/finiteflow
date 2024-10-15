@@ -7,6 +7,7 @@
 #define FF_MOD_H
 
 #include <stdint.h>
+#include <fflow/config.hh>
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +19,7 @@ extern "C" {
   typedef unsigned __int128 FFU128;
   typedef union {
     struct {
-#if FF_BIG_ENDIAN
+#if FFLOW_BIG_ENDIAN
       FFU64 high, low;
 #else
       FFU64 low, high;
