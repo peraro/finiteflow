@@ -263,7 +263,7 @@ namespace fflow {
   }
 
   // TODO: fine tune this using benchmarks on several machines
-  const unsigned FF_GAUSS_SHOUP_THRESHOLD = 6;
+  const unsigned FF_GAUSS_SHOUP_THRESHOLD = 4;
   void SparseMatrixRow::gauss_elimination(const SparseMatrixRow & r1,
                                           const SparseMatrixRow & r2,
                                           std::size_t pivot,

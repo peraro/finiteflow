@@ -1,10 +1,8 @@
-#include "fflow/matrix.hh"
-#include "fflow/primes.hh"
-#include <cstdlib>
-#include <fflow/common.hh>
 #include <chrono>
 #include <vector>
 #include <random>
+#include <fflow/primes.hh>
+#include <fflow/common.hh>
 using namespace fflow;
 
 int main(int argc, char** argv)

@@ -2,6 +2,8 @@
 #define FFLOW_GCD_HH
 
 #include <stdexcept>
+#include <flint.h>
+#include <ulong_extras.h>
 #include <fflow/common.hh>
 
 namespace fflow {
