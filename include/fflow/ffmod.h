@@ -67,7 +67,7 @@ extern "C" {
    *    by Niels Moller and Torbjorn Granlund
    *
    * The main difference is that, in that paper, they divide by a
-   * number `n` satisfying n >= 2^64.  Hence, in our division
+   * number `n` satisfying n >= 2^63.  Hence, in our division
    * algorithm, we first multiply `n` and the `dividend` by 2 (with a
    * shift) to satisfy this requirement, and then we shift back the
    * reminder.
@@ -172,8 +172,8 @@ extern "C" {
   //
   //   wp = quotient(2^64 * w, p)
   //
-  // with precomp_mul_shoup, and then use the fast multiplication
-  // algoritm mul_mod_shoup.
+  // with ffPrecomputedMulShoup, and then use the fast multiplication
+  // algoritm ffMulShoup.
 
   inline FFU64 ffPrecomputedMulShoup(FFU64 w, FFMod p)
   {
