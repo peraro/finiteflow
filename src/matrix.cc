@@ -234,13 +234,6 @@ namespace fflow {
         ++r1el;
       }
 
-      while(r1el->col > r2el->col) {
-        thisel->col = r2el->col;
-        thisel->val.set(GA::negmul(r2el->val.get(), r1p, r1ps, mod));
-        ++thisel;
-        ++r2el;
-      }
-
       while (r1el->col == r2el->col && r1el->col != END) {
         UInt res = GA::ambc(r1el->val.get(), r2el->val.get(), r1p, r1ps, mod);
         if (res) {
@@ -249,6 +242,13 @@ namespace fflow {
           ++thisel;
         }
         ++r1el;
+        ++r2el;
+      }
+
+      while(r1el->col > r2el->col) {
+        thisel->col = r2el->col;
+        thisel->val.set(GA::negmul(r2el->val.get(), r1p, r1ps, mod));
+        ++thisel;
         ++r2el;
       }
 
