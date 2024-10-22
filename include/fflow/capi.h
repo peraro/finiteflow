@@ -279,8 +279,11 @@ extern "C" {
   // This uses a simple and limited parser of rational functions:
   // - functions must be collected under common denominator
   // - numerators and denominators must be in expanded form
-  // - rational coefficients must be in front of their monomials
-  //   (e.g. "1/2 z" is ok but "z/2" is not)
+  // - rational coefficients must be in front of their monomials,
+  //   except for their denominator (e.g. "3/2 z" and "3z/2" are both
+  //   ok but "z 3/2" is not)
+  // This may also return valid rational functions for some invalid
+  // inputs.
   //
   // If these lmitations are too restrictive, consider using the
   // parser of a proper CAS and then pass the functions to fflow using

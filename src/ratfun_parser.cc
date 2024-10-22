@@ -322,6 +322,26 @@ namespace fflow {
       }
       m.degree() = tot_deg;
 
+      // Check if there's an integer denominator, which we absorb in
+      // the coefficient
+      if (curr_token.type != RatFunToken::DIV)
+        return SUCCESS;
+      {
+        while (std::isspace(*tokenizer.cur))
+          ++tokenizer.cur;
+        const char * cur = tokenizer.cur;
+        if (std::isdigit(*cur)) {
+          const char * cdenstart = cur++;
+          while(std::isdigit(*cur))
+            ++cur;
+          cstr.assign(cdenstart, cur - cdenstart);
+          MPRational cden(cstr.c_str());
+          mpq_div(cnum.back().get(), cnum.back().get(), cden.get());
+          tokenizer.cur = cur;
+          DO_NEXT_TOKEN();
+        }
+      }
+
       return SUCCESS;
     }
 
