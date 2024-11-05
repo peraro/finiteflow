@@ -55,7 +55,7 @@ namespace fflow {
     void delete_unneeded_eqs(AlgorithmData * data);
 
     virtual Ret fill_matrix(Context * ctxt,
-                            std::size_t n_rows, const std::size_t rows[],
+                            unsigned n_rows, const unsigned rows[],
                             AlgInput xi[], Mod mod,
                             AlgorithmData * data,
                             SparseMatrix & m) const override;

@@ -414,19 +414,6 @@ namespace fflow {
     }
   }
 
-
-  void SparseMatrix::dependent_vars(std::vector<std::size_t> & vars) const
-  {
-    vars.clear();
-
-    for (unsigned j=0; j<n_; ++j) {
-      UInt col = rows_[j].first_nonzero_column();
-      if (col == SparseMatrixRow::END)
-        break;
-      vars.push_back(col);
-    }
-  }
-
   bool SparseMatrix::isImpossibleSystem() const
   {
     return !(var_eq_[m_-1] == NO_EQ_);

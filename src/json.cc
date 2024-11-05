@@ -307,7 +307,7 @@ namespace fflow {
 
       if (has_info) {
         eq_is_needed.reset(new bool[neqs]());
-        const std::size_t * needed_eqs = sys.indep_eqs();
+        const unsigned * needed_eqs = sys.indep_eqs();
         std::size_t n_needed_eqs = sys.n_indep_eqs();
         for (unsigned j=0; j<n_needed_eqs; ++j)
           eq_is_needed[needed_eqs[j]] = true;

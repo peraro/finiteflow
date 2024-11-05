@@ -676,8 +676,8 @@ namespace  {
         MLPutFunction(mlp, "List", 3);
 
         if (sizeof(std::size_t) == 8)
-          MLPutInteger64List(mlp,
-                             (mlint64*)ls.needed_depvars(),
+          MLPutInteger32List(mlp,
+                             (int*)ls.needed_depvars(),
                              ls.n_needed_depvars());
         else
           MLPutInteger32List(mlp,
@@ -686,8 +686,8 @@ namespace  {
 
         if (!ls.output_is_sparse()) {
           if (sizeof(std::size_t) == 8)
-            MLPutInteger64List(mlp,
-                               (mlint64*)ls.needed_indepvars(),
+            MLPutInteger32List(mlp,
+                               (int*)ls.needed_indepvars(),
                                ls.n_needed_indepvars());
           else
             MLPutInteger32List(mlp,

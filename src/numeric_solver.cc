@@ -46,7 +46,7 @@ namespace fflow {
     std::unique_ptr<bool[]> needed(new bool[n_rows]());
 
     std::size_t nindepeqs = n_indep_eqs();
-    const std::size_t * ieq = indep_eqs();
+    const unsigned * ieq = indep_eqs();
 
     for (unsigned i=0; i<nindepeqs; ++i)
       needed[ieq[i]] = true;
@@ -59,8 +59,8 @@ namespace fflow {
   }
 
   Ret NumericSparseSolver::fill_matrix(Context *,
-                                       std::size_t n_rows,
-                                       const std::size_t rows[],
+                                       unsigned n_rows,
+                                       const unsigned rows[],
                                        AlgInput[], Mod mod,
                                        AlgorithmData *,
                                        SparseMatrix & m) const

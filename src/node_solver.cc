@@ -53,8 +53,8 @@ namespace fflow {
   }
 
   Ret NodeSparseSolver::fill_matrix(Context *,
-                                    std::size_t n_rows,
-                                    const std::size_t rows[],
+                                    unsigned n_rows,
+                                    const unsigned rows[],
                                     AlgInput xin[], Mod,
                                     AlgorithmData *,
                                     SparseMatrix & m) const

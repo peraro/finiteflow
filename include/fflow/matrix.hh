@@ -20,6 +20,7 @@ namespace fflow {
       IS_NEEDED = 1 << 2,
       IS_NON_ZERO = 1 << 3,
       IS_SWEEPED = 1 << 4,
+      IS_NEEDED_EXT = 1 << 5, // only for sparse systems
       INIT = 0
     };
 
@@ -713,9 +714,6 @@ namespace fflow {
     }
 
     void debug_print(std::ostream & os);
-
-    // returns dependent variables
-    void dependent_vars(std::vector<std::size_t> & vars) const;
 
     bool isImpossibleSystem() const;
 

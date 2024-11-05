@@ -85,7 +85,7 @@ namespace fflow {
     if (xp_.get() == nullptr)
       xp_.reset(new UInt[ls.nparsin[0]]);
     std::size_t nindepeqs = ls.n_indep_eqs();
-    const std::size_t * ieq = ls.indep_eqs();
+    const unsigned * ieq = ls.indep_eqs();
     for (unsigned ind=0; ind<nindepeqs; ++ind) {
       std::size_t i = ieq[ind];
       std::size_t row_size = ls.rinfo[i].size;
@@ -102,7 +102,7 @@ namespace fflow {
     std::unique_ptr<bool[]> needed(new bool[n_rows]());
 
     std::size_t nindepeqs = n_indep_eqs();
-    const std::size_t * ieq = indep_eqs();
+    const unsigned * ieq = indep_eqs();
 
     for (unsigned i=0; i<nindepeqs; ++i)
       needed[ieq[i]] = true;
@@ -116,8 +116,8 @@ namespace fflow {
   }
 
   Ret AnalyticSparseSolver::fill_matrix(Context * ctxt,
-                                        std::size_t n_rows,
-                                        const std::size_t rows[],
+                                        unsigned n_rows,
+                                        const unsigned rows[],
                                         AlgInput xin[], Mod mod,
                                         AlgorithmData * datain,
                                         SparseMatrix & m) const
@@ -175,7 +175,7 @@ namespace fflow {
     std::size_t n_rows = rinfo.size();
 
     std::size_t nindepeqs = n_indep_eqs();
-    const std::size_t * ieq = indep_eqs();
+    const unsigned * ieq = indep_eqs();
     const unsigned nin = nparsin[0];
 
     newalg.c.resize(n_rows);
