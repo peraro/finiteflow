@@ -580,62 +580,62 @@ namespace fflow {
 
 
     // get dependent variables and needed
-   {
-     zerodeps_.clear();
+    {
+      zerodeps_.clear();
 
-     const auto & mat = adata_(data).mat_;
-     const unsigned neqs = mat.nrows();
-     nndeps_ = 0;
-     nnindepeqs_ = 0;
+      const auto & mat = adata_(data).mat_;
+      const unsigned neqs = mat.nrows();
+      nndeps_ = 0;
+      nnindepeqs_ = 0;
 
-     for (unsigned j=0; j<neqs; ++j, ++nnindepeqs_) {
+      for (unsigned j=0; j<neqs; ++j, ++nnindepeqs_) {
 
-       auto & row = mat.row(j);
-       const unsigned col = row.first_nonzero_column();
+        auto & row = mat.row(j);
+        const unsigned col = row.first_nonzero_column();
 
-       if (col == SparseMatrixRow::END)
-         break;
+        if (col == SparseMatrixRow::END)
+          break;
 
-       xinfo_[col] |= LSVar::IS_DEP;
+        xinfo_[col] |= LSVar::IS_DEP;
 
-       if (row.size() == 1) {
-         xinfo_[col] &= ~flag_t(LSVar::IS_NON_ZERO);
-         if (xinfo_[col] & LSVar::IS_NEEDED)
-           zerodeps_.push_back(col);
-       }
+        if (row.size() == 1) {
+          xinfo_[col] &= ~flag_t(LSVar::IS_NON_ZERO);
+          if (xinfo_[col] & LSVar::IS_NEEDED)
+            zerodeps_.push_back(col);
+        }
 
-       if (xinfo_[col] & LSVar::IS_NEEDED) {
+        if (xinfo_[col] & LSVar::IS_NEEDED) {
 
-         const unsigned rsize = row.size();
-         for (unsigned k=1; k<rsize; ++k)
-           xinfo_[row.el(k).col] |= LSVar::IS_NEEDED;
+          const unsigned rsize = row.size();
+          for (unsigned k=1; k<rsize; ++k)
+            xinfo_[row.el(k).col] |= LSVar::IS_NEEDED;
 
-         ++nndeps_;
-       }
+          ++nndeps_;
+        }
 
-     }
+      }
 
-     if (!output_is_sparse())
-       get_needed_indep_();
+      if (!output_is_sparse())
+        get_needed_indep_();
 
-     outeq_pos_.reset(new unsigned[nndeps_]);
-     needed_dep_.reset(new unsigned[nndeps_]);
-     unsigned ceqpos = 0;
-     unsigned ndc=0;
-     for (unsigned j=0; j<neqs; ++j) {
+      outeq_pos_.reset(new unsigned[nndeps_]);
+      needed_dep_.reset(new unsigned[nndeps_]);
+      unsigned ceqpos = 0;
+      unsigned ndc=0;
+      for (unsigned j=0; j<neqs; ++j) {
 
-       auto & row = mat.row(j);
-       const unsigned col = row.first_nonzero_column();
+        auto & row = mat.row(j);
+        const unsigned col = row.first_nonzero_column();
 
-       if (col == SparseMatrixRow::END)
-         break;
+        if (col == SparseMatrixRow::END)
+          break;
 
-       if (xinfo_[col] & LSVar::IS_NEEDED) {
-         needed_dep_[ndc++] = row.first_nonzero_column();
-         outeq_pos_[ceqpos++] = j;
-       }
-     }
-   }
+        if (xinfo_[col] & LSVar::IS_NEEDED) {
+          needed_dep_[ndc++] = row.first_nonzero_column();
+          outeq_pos_[ceqpos++] = j;
+        }
+      }
+    }
 
     // get independent eqs
     {
