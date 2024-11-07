@@ -206,9 +206,9 @@ namespace fflow {
   {
     resize(r1.size()+r2.size());
 
-    __restrict auto * thisel = &el(0);
-    __restrict const auto * r1el = &r1.el(0);
-    __restrict const auto * r2el = &r2.el(0);
+    auto * thisel = &el(0);
+    const auto * r1el = &r1.el(0);
+    const auto * r2el = &r2.el(0);
 
     while (r1el->col < pivot) {
       thisel->col = r1el->col;
