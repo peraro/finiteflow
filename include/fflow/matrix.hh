@@ -635,6 +635,8 @@ namespace fflow {
     void restrict_rows(std::size_t n)
     {
       if (n<n_) {
+        for (unsigned i=0; i<N_WORKING_ROWS; ++i)
+          rows_[n+i] = std::move(rows_[n_+i]);
         for (unsigned i=n+N_WORKING_ROWS; i<n_+N_WORKING_ROWS; ++i)
           rows_[i].free();
         n_ = n;
@@ -667,6 +669,10 @@ namespace fflow {
     {
       toReducedRowEcholon(mod, maxrow, reduced, nullptr, eqdeps);
     }
+
+    // Remove equations of the form 0==0 and x[i]==0, returning the
+    // new number of rows.
+    unsigned removeZeroDeps();
 
     UInt el(unsigned i, unsigned j) const
     {

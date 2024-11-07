@@ -127,6 +127,7 @@ namespace fflow {
     if (mod.n() != data.this_mod_)
       data.reset_mod_(*this, mod);
 
+    const SparseLinearSolver::flag_t * info = xinfo();
     const unsigned nin = nparsin[0];
     const UInt * xi = xin[0];
 
@@ -145,17 +146,21 @@ namespace fflow {
       const HornerRatFunPtr * fend = f + row_size;
 
       r.resize(row_size);
-      unsigned j=0;
+      unsigned j=0, oj=0;
 
       for (; f<fend; ++f, ++j) {
-        UInt res = (*f).eval(nin, ww, xi, xp, mod);
         unsigned col = cols[j];
-        if (res == FAILED || res == 0)
-          return FAILED;
-        r.el(j).col = col;
-        r.el(j).val.set(res);
+        if (info[col] & LSVar::IS_NON_ZERO) {
+          UInt res = (*f).eval(nin, ww, xi, xp, mod);
+          if (res == FAILED || res == 0)
+            return FAILED;
+          r.el(oj).col = col;
+          r.el(oj).val.set(res);
+          ++oj;
+        }
       }
-      r.el(j).col = SparseMatrixRow::END;
+      r.el(oj).col = SparseMatrixRow::END;
+      r.resize(oj);
     }
 
     return SUCCESS;

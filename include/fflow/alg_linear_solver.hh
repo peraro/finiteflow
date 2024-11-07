@@ -374,6 +374,10 @@ namespace fflow {
 
     void get_needed_indep_();
 
+    void sweep_zeroes_(AlgorithmData * data);
+
+    void relearn_zero_needed_();
+
   private:
 
     // Learning stages:

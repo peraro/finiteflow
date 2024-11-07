@@ -65,6 +65,7 @@ namespace fflow {
                                        AlgorithmData *,
                                        SparseMatrix & m) const
   {
+    const SparseLinearSolver::flag_t * info = xinfo();
     const MPInt mpmod(mod.n());
     MPInt mpres;
 
@@ -78,15 +79,19 @@ namespace fflow {
       const MPRational * fend = f + row_size;
 
       r.resize(row_size);
-      unsigned j=0;
+      unsigned j=0, oj=0;
 
       for (; f<fend; ++f, ++j) {
-        rat_mod(*f, mpmod, mpres);
         unsigned col = cols[j];
-        r.el(j).col = col;
-        r.el(j).val.set(mpres.to_uint());
+        if (info[col] & LSVar::IS_NON_ZERO) {
+          rat_mod(*f, mpmod, mpres);
+          r.el(oj).col = col;
+          r.el(oj).val.set(mpres.to_uint());
+          ++oj;
+        }
       }
-      r.el(j).col = SparseMatrixRow::END;
+      r.el(oj).col = SparseMatrixRow::END;
+      r.resize(oj);
     }
 
     return SUCCESS;

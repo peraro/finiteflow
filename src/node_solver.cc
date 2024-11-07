@@ -59,6 +59,7 @@ namespace fflow {
                                     AlgorithmData *,
                                     SparseMatrix & m) const
   {
+    const SparseLinearSolver::flag_t * info = xinfo();
     const UInt * xi = xin[0];
 
     for (unsigned i=0; i<n_rows; ++i) {
@@ -72,17 +73,20 @@ namespace fflow {
       const UInt * fend = f + row_size;
 
       r.resize(row_size);
-      unsigned j=0;
+      unsigned j=0, oj=0;
 
       for (; f<fend; ++f, ++j) {
-        UInt res = (*f);
         unsigned col = cols[j];
-        if (res == FAILED || res == 0)
-          return FAILED;
-        r.el(j).col = col;
-        r.el(j).val.set(res);
+        if (info[col] & LSVar::IS_NON_ZERO) {
+          UInt res = (*f);
+          if (res == FAILED || res == 0)
+            return FAILED;
+          r.el(oj).col = col;
+          r.el(oj).val.set(res);
+        }
       }
-      r.el(j).col = SparseMatrixRow::END;
+      r.el(oj).col = SparseMatrixRow::END;
+      r.resize(oj);
     }
 
     return SUCCESS;

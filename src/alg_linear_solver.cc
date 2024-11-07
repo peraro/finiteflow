@@ -437,6 +437,8 @@ namespace fflow {
     for (unsigned i=0; i<nnindepeqs_; ++i)
       indepeqs_[i] = i;
 
+    zerodeps_.clear();
+
     return SUCCESS;
   }
 
@@ -464,17 +466,24 @@ namespace fflow {
 
   void SparseLinearSolver::relearn_needed_(AlgorithmData * data)
   {
+    const unsigned old_nz = zerodeps_.size();
+
+    relearn_zero_needed_();
+    std::copy(zerodeps_.begin(), zerodeps_.end(), needed_dep_.get());
+
+    const unsigned nz = zerodeps_.size();
     const auto & mat = mat_(data);
     unsigned ieq=0;
-    for (unsigned j=0; j<nndeps_; ++j) {
-      const auto & row = mat.row(outeq_pos_[j]);
+    for (unsigned j=old_nz; j<nndeps_; ++j) {
+      const unsigned eqpos = outeq_pos_[j-old_nz];
+      const auto & row = mat.row(eqpos);
       const unsigned depv = row.first_nonzero_column();
       if (xinfo_[depv] & LSVar::IS_NEEDED) {
         const unsigned rsize = row.size();
         for (unsigned k=0; k<rsize; ++k)
           xinfo_[row.el(k).col] |= LSVar::IS_NEEDED;
-        outeq_pos_[ieq] = outeq_pos_[j];
-        needed_dep_[ieq] = depv;
+        outeq_pos_[ieq] = eqpos;
+        needed_dep_[ieq+nz] = depv;
         ++ieq;
       }
     }
@@ -524,7 +533,7 @@ namespace fflow {
     const auto & mat = adata_(data).mat_;
     const unsigned neqs = mat.nrows();
 
-    unsigned check_nneeded_deps = 0;
+    unsigned check_nneeded_deps = zerodeps_.size();
 
     for (unsigned j=0; j<neqs; ++j) {
 
@@ -557,6 +566,46 @@ namespace fflow {
     return SUCCESS;
   }
 
+  void SparseLinearSolver::relearn_zero_needed_()
+  {
+    unsigned nz = std::remove_if(zerodeps_.begin(),
+                                 zerodeps_.end(),
+                                 [&](unsigned col)
+                                 {
+                                   return !(xinfo_[col] & LSVar::IS_NEEDED);
+                                 }) - zerodeps_.begin();
+    zerodeps_.resize(nz);
+  }
+
+  void SparseLinearSolver::sweep_zeroes_(AlgorithmData * data)
+  {
+    const auto & mat = adata_(data).mat_;
+    const unsigned neqs = mat.nrows();
+
+    if (!zerodeps_.size()) {
+
+      for (unsigned j=0; j<neqs; ++j) {
+
+        auto & row = mat.row(j);
+        const unsigned col = row.first_nonzero_column();
+
+        if (col == SparseMatrixRow::END)
+          break;
+
+        if (row.size() == 1) {
+          xinfo_[col] |= LSVar::IS_DEP;
+          xinfo_[col] &= ~flag_t(LSVar::IS_NON_ZERO);
+          if (xinfo_[col] & LSVar::IS_NEEDED)
+            zerodeps_.push_back(col);
+        }
+
+      }
+
+      nnindepeqs_ = adata_(data).mat_.removeZeroDeps();
+
+    }
+  }
+
   Ret SparseLinearSolver::learn_1_(Context * ctxt, AlgInput xin[], Mod mod,
                                    AlgorithmData * data)
   {
@@ -578,17 +627,16 @@ namespace fflow {
       return SUCCESS;
     }
 
+    // Deal with zeroes first
+    sweep_zeroes_(data);
 
     // get dependent variables and needed
     {
-      zerodeps_.clear();
-
       const auto & mat = adata_(data).mat_;
       const unsigned neqs = mat.nrows();
-      nndeps_ = 0;
-      nnindepeqs_ = 0;
+      nndeps_ = zerodeps_.size();
 
-      for (unsigned j=0; j<neqs; ++j, ++nnindepeqs_) {
+      for (unsigned j=0; j<neqs; ++j) {
 
         auto & row = mat.row(j);
         const unsigned col = row.first_nonzero_column();
@@ -597,12 +645,6 @@ namespace fflow {
           break;
 
         xinfo_[col] |= LSVar::IS_DEP;
-
-        if (row.size() == 1) {
-          xinfo_[col] &= ~flag_t(LSVar::IS_NON_ZERO);
-          if (xinfo_[col] & LSVar::IS_NEEDED)
-            zerodeps_.push_back(col);
-        }
 
         if (xinfo_[col] & LSVar::IS_NEEDED) {
 
@@ -618,10 +660,11 @@ namespace fflow {
       if (!output_is_sparse())
         get_needed_indep_();
 
-      outeq_pos_.reset(new unsigned[nndeps_]);
+      outeq_pos_.reset(new unsigned[nndeps_ - zerodeps_.size()]);
       needed_dep_.reset(new unsigned[nndeps_]);
+      std::copy(zerodeps_.begin(), zerodeps_.end(), needed_dep_.get());
       unsigned ceqpos = 0;
-      unsigned ndc=0;
+      unsigned ndc = zerodeps_.size();
       for (unsigned j=0; j<neqs; ++j) {
 
         auto & row = mat.row(j);
@@ -644,7 +687,12 @@ namespace fflow {
         indepeqs_[eq] = mat.row(eq).id();
     }
 
-    mat_(data).restrict_rows(nnindepeqs_);
+    // Optimization: remove non-needed independent variables
+    {
+      for (unsigned j=0; j<nvars_; ++j)
+        if (!(xinfo_[j] & LSVar::IS_DEP) && !(xinfo_[j] & LSVar::IS_NEEDED))
+          xinfo_[j] &= ~flag_t(LSVar::IS_NON_ZERO);
+    }
 
     stage_ = SECOND_;
 
@@ -715,9 +763,15 @@ namespace fflow {
       return FAILED;
 
     unsigned pos = 0;
-    unsigned ndeps = nndeps_;
+    unsigned ndeps = nndeps_ - zerodeps_.size();
 
     if (!output_is_sparse()) {
+
+      if (zerodeps_.size()) {
+        const unsigned n0 = zerodeps_.size() * (nnindeps_ + unsigned(!(flag_ & HOMOG_)));
+        std::fill(xout, xout + n0, 0);
+        pos += n0;
+      }
 
       for (unsigned i=0; i<ndeps; ++i) {
 
@@ -734,10 +788,10 @@ namespace fflow {
       bool homog = (flag_ & HOMOG_);
       for (unsigned i=0; i<ndeps; ++i) {
 
-        const auto & elems = (*sparseout_data_)[i];
+        const auto & elems = (*sparseout_data_)[i+zerodeps_.size()];
         const unsigned elsize = elems.size();
         const auto & row = mat.row(outeq_pos_[i]);
-        if (row.size() < elsize)
+        if (row.size() < elsize + 1)
           return FAILED;
 
         for (unsigned j=0; j<elsize; ++j) {
@@ -859,12 +913,16 @@ namespace fflow {
     sparseout_data_->resize(nndeps_);
 
     const SparseMatrix & mat = mat_(data);
+    const unsigned zero_size = zerodeps_.size();
+
+    for (unsigned i=0; i<zero_size; ++i)
+      (*sparseout_data_)[i].resize(0);
 
     unsigned nout = 0;
     const bool homog = (flag_ & HOMOG_);
-    for (unsigned i=0; i<nndeps_; ++i) {
+    for (unsigned i=zero_size, eqidx=0; i<nndeps_; ++i,++eqidx) {
       auto & elems = (*sparseout_data_)[i];
-      const SparseMatrixRow & row = mat.row(outeq_pos_[i]);
+      const SparseMatrixRow & row = mat.row(outeq_pos_[eqidx]);
       const unsigned elsize = row.size()-1;
       elems.resize(elsize);
       for (unsigned j=0; j<elsize; ++j)
