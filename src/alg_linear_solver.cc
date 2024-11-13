@@ -493,6 +493,14 @@ namespace fflow {
       get_needed_indep_();
   }
 
+  void SparseLinearSolver::optimize_nonneeded_indeps_()
+  {
+    // Optimization: remove non-needed independent variables
+    for (unsigned j=0; j<nvars_; ++j)
+      if (!(xinfo_[j] & LSVar::IS_DEP) && !(xinfo_[j] & LSVar::IS_NEEDED))
+        xinfo_[j] &= ~flag_t(LSVar::IS_NON_ZERO);
+  }
+
   Ret SparseLinearSolver::reset_needed(AlgorithmData * data,
                                        const unsigned * needed_vars,
                                        unsigned needed_size)
@@ -513,6 +521,7 @@ namespace fflow {
 
     if (stage_ >= SECOND_) {
       relearn_needed_(data);
+      optimize_nonneeded_indeps_();
       if (output_is_sparse())
         set_sparseout_data_(data);
       else
@@ -687,12 +696,7 @@ namespace fflow {
         indepeqs_[eq] = mat.row(eq).id();
     }
 
-    // Optimization: remove non-needed independent variables
-    {
-      for (unsigned j=0; j<nvars_; ++j)
-        if (!(xinfo_[j] & LSVar::IS_DEP) && !(xinfo_[j] & LSVar::IS_NEEDED))
-          xinfo_[j] &= ~flag_t(LSVar::IS_NON_ZERO);
-    }
+    optimize_nonneeded_indeps_();
 
     stage_ = SECOND_;
 

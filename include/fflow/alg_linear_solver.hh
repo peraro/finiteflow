@@ -378,6 +378,8 @@ namespace fflow {
 
     void relearn_zero_needed_();
 
+    void optimize_nonneeded_indeps_();
+
   private:
 
     // Learning stages:
