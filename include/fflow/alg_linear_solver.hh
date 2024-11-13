@@ -213,7 +213,9 @@ namespace fflow {
 
     virtual UInt min_learn_times() override
     {
-      return 3;
+      if (stage_ == FIRST_)
+        return 2;
+      return 1;
     }
 
     virtual Ret learn(Context * ctxt,
