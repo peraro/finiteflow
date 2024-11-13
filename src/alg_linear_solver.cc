@@ -329,6 +329,8 @@ namespace fflow {
         file.write(reinterpret_cast<char*>(&z), sizeof(flag_t));
       };
 
+    dump_int32(neqs_);
+    dump_int32(nvars_);
     dump_int32(data.mat_.nrows());
     dump_int32(data.mat_.ncolumns());
     dump_int32(nndeps_);
@@ -336,6 +338,8 @@ namespace fflow {
     dump_int32(nnindepeqs_);
     dump_int32(nparsin[0]);
     dump_int32(nparsout);
+    dump_int32(maxrow_);
+    dump_int32(zerodeps_.size());
 
 #define dump_uptr(field, size)              \
     for (unsigned j=0; j<size; ++j)         \
@@ -344,13 +348,41 @@ namespace fflow {
     dump_uptr(needed_dep_, nndeps_);
     dump_uptr(needed_indep_, nnindeps_);
     dump_uptr(indepeqs_, nnindepeqs_);
-
-#undef dump_uptr
+    dump_uptr(outeq_pos_, nndeps_-zerodeps_.size());
+    dump_uptr(zerodeps_, zerodeps_.size());
 
     for (unsigned j=0; j<nvars()+1; ++j)
       dump_flag(xinfo_[j]);
 
     dump_flag(stage_);
+    dump_flag(flag_);
+
+    // sparse-output data
+    if (!output_is_sparse()) {
+
+      dump_flag(0);
+
+    }  else {
+
+      dump_flag(1);
+      const auto & spoutd = *sparseout_data_.get();
+      dump_int32(spoutd.size());
+      for (const auto & eqdata : spoutd) {
+        dump_int32(eqdata.size());
+        dump_uptr(eqdata.data(), eqdata.size());
+      }
+
+    }
+
+    // eq. dependencies
+    dump_int32(eqdeps_.size());
+    for (const auto & eqdep : eqdeps_) {
+      dump_int32(eqdep.size());
+      dump_uptr(eqdep, eqdep.size());
+    }
+
+
+#undef dump_uptr
 
     return SUCCESS;
   }
@@ -391,13 +423,13 @@ namespace fflow {
         return FAILED;  \
     } while (0)
 
+    LOAD_INT32(neqs_);
+    LOAD_INT32(nvars_);
     unsigned nr, nc;
     LOAD_INT32(nr);
     LOAD_INT32(nc);
     data.mat_.resize(nr, nc);
-    unsigned depsize, indepsize;
-    LOAD_INT32(depsize);
-    LOAD_INT32(indepsize);
+    //
     LOAD_INT32(nndeps_);
     needed_dep_.reset(new unsigned[nndeps_]);
     LOAD_INT32(nnindeps_);
@@ -407,6 +439,11 @@ namespace fflow {
     nparsin.resize(1);
     LOAD_INT32(nparsin[0]);
     LOAD_INT32(nparsout);
+    LOAD_INT32(maxrow_);
+    unsigned zerod_size;
+    LOAD_INT32(zerod_size);
+    zerodeps_.resize(zerod_size);
+    outeq_pos_.reset(new unsigned[nndeps_-zerod_size]);
 
 #define load_uptr(field, size)              \
     for (unsigned j=0; j<size; ++j)         \
@@ -415,15 +452,47 @@ namespace fflow {
     load_uptr(needed_dep_, nndeps_);
     load_uptr(needed_indep_, nnindeps_);
     load_uptr(indepeqs_, nnindepeqs_);
-
-#undef load_uptr
+    load_uptr(outeq_pos_, nndeps_-zerod_size);
+    load_uptr(zerodeps_, zerod_size);
 
     xinfo_.reset(new flag_t[nvars()+1]);
     for (unsigned j=0; j<nvars()+1; ++j)
       LOAD_FLAG(xinfo_[j]);
 
     LOAD_FLAG(stage_);
+    LOAD_FLAG(flag_);
 
+    // sparse-output data
+    flag_t is_sparse;
+    LOAD_FLAG(is_sparse);
+    if (is_sparse) {
+
+      sparseout_data_.reset(new std::vector<std::vector<unsigned>>());
+      auto & spoutd = *sparseout_data_.get();
+      unsigned spoutd_size;
+      LOAD_INT32(spoutd_size);
+      spoutd.resize(spoutd_size);
+      for (unsigned j=0; j<spoutd_size; ++j) {
+        unsigned eqdata_size;
+        LOAD_INT32(eqdata_size);
+        spoutd[j].resize(eqdata_size);
+        load_uptr(spoutd[j], eqdata_size);
+      }
+
+    }
+
+    // eq. dependencies
+    unsigned eqdep_size;
+    LOAD_INT32(eqdep_size);
+    eqdeps_.resize(eqdep_size);
+    for (unsigned j=0; j<eqdep_size; ++j) {
+      unsigned thiseqdep_size;
+      LOAD_INT32(thiseqdep_size);
+      eqdeps_[j].resize(thiseqdep_size);
+      load_uptr(eqdeps_[j], thiseqdep_size);
+    }
+
+#undef load_uptr
 #undef LOAD_INT32
 #undef LOAD_FLAG
 
