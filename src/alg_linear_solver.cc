@@ -655,10 +655,11 @@ namespace fflow {
     zerodeps_.resize(nz);
   }
 
-  void SparseLinearSolver::sweep_zeroes_(AlgorithmData * data)
+  bool SparseLinearSolver::check_zeroes_(AlgorithmData * data)
   {
     const auto & mat = adata_(data).mat_;
     const unsigned neqs = mat.nrows();
+    bool any_zero = false;
 
     if (!zerodeps_.size()) {
 
@@ -671,6 +672,7 @@ namespace fflow {
           break;
 
         if (row.size() == 1) {
+          any_zero = true;
           xinfo_[col] |= LSVar::IS_DEP;
           xinfo_[col] &= ~flag_t(LSVar::IS_NON_ZERO);
           if (xinfo_[col] & LSVar::IS_NEEDED)
@@ -679,9 +681,9 @@ namespace fflow {
 
       }
 
-      nnindepeqs_ = adata_(data).mat_.removeZeroDeps();
-
     }
+
+    return any_zero;
   }
 
   Ret SparseLinearSolver::learn_1_(Context * ctxt, AlgInput xin[], Mod mod,
@@ -706,7 +708,19 @@ namespace fflow {
     }
 
     // Deal with zeroes first
-    sweep_zeroes_(data);
+    bool any_zero = check_zeroes_(data);
+    if (any_zero) {
+      Ret ret = fill_matrix(ctxt, nnindepeqs_, indepeqs_.get(),
+                            xin, mod, data, mat_(data));
+      if (ret == FAILED)
+        return FAILED;
+      number_eqs_(data);
+      mat_(data).sortRows();
+      mat_(data).toReducedRowEcholon(mod, maxrow_, !(flag_ & NO_BACKSUBST_));
+    }
+
+    // Filter equations
+    nnindepeqs_ = adata_(data).mat_.removeZeroDeps();
 
     // get dependent variables and needed
     {

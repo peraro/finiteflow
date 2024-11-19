@@ -376,7 +376,7 @@ namespace fflow {
 
     void get_needed_indep_();
 
-    void sweep_zeroes_(AlgorithmData * data);
+    bool check_zeroes_(AlgorithmData * data);
 
     void relearn_zero_needed_();
 

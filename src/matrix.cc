@@ -437,6 +437,7 @@ namespace fflow {
     for (unsigned i=0; i<m.nrows(); ++i) {
       for (unsigned j=0; j<m.ncolumns(); ++j)
         os << m(i,j) << "    ";
+      os << "(id:" << m.row(i).id() << ")";
       os << "\n";
     }
     return os;
