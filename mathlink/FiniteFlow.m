@@ -50,7 +50,7 @@ FFAlgQ::usage = "FFAlgQ[graphname, nodename] returns True if the specified algor
 FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, neededvars] redefines the set of needed variables of a dense or sparse linear system."
 FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
 FFSolverSparseOutput::usage = "FFSolverSparseOutput[graph, node] makes a sparse linear solver return a sparse representation of the solution matrix."
-FFSolverSparseOutputWithMaxRow::usage = ""
+FFSolverSparseOutputWithMaxCol::usage = ""
 FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
 FFSetLearningOptions::usage = "FFLearn[graph,node,options...] sets the learning options of the specified node in the graph."
 FFLaurentLearn::usage = "FFLaurentLearn[graph] executes the learning phase on a Laurent expansion node, which must be the output node of graph.  It returns a list of two lists.  The first contains the starting power of the Laurent expansion of each element.  The second contains the order of the expansion requested for each element."
@@ -881,8 +881,8 @@ FFSolverOnlyHomogeneous[gid_,id_]:=Catch[FFSolverOnlyHomogeneousImplem[GetGraphI
 
 
 FFSolverSparseOutput[gid_,id_]:=Catch[FFSolverSparseOutputImplem[GetGraphId[gid],GetAlgId[gid,id]]];
-FFSolverSparseOutputWithMaxRow[gid_,id_,maxrow_]:=Catch[FFSolverSparseOutputWithMaxrowImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[maxrow],toFFInternalBooleanFlag[0,Automatic]]];
-FFSolverSparseOutputWithMaxRow[gid_,id_,maxrow_,"BackSubstitution"->flag_]:=Catch[FFSolverSparseOutputWithMaxrowImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[maxrow],toFFInternalBooleanFlag["BackSubstitution",flag]]];
+Options[FFSolverSparseOutputWithMaxCol]={"BackSubstitution"->True,"KeepFullOutput"->False};
+FFSolverSparseOutputWithMaxCol[gid_,id_,maxrow_,OptionsPattern[]]:=Catch[FFSolverSparseOutputWithMaxrowImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[maxrow],toFFInternalBooleanFlag["BackSubstitution",OptionValue["BackSubstitution"]],toFFInternalBooleanFlag["KeepFullOutput",OptionValue["KeepFullOutput"]]]];
 
 
 FFLearn[gid_]:=Catch[FFLearnImplem[GetGraphId[gid]]];
@@ -1736,7 +1736,7 @@ FFLoadLibObjects[] := Module[
     FFSolverResetNeededVarsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_reset_neeed", LinkObject, LinkObject];
     FFSolverOnlyHomogeneousImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_only_homogeneous", LinkObject, LinkObject];
     FFSolverSparseOutputImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output", LinkObject, LinkObject];
-    FFSolverSparseOutputWithMaxrowImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output_with_maxrow", LinkObject, LinkObject];
+    FFSolverSparseOutputWithMaxrowImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output_with_maxcol", LinkObject, LinkObject];
     FFIndependentOfImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_independent_of_var", LinkObject, LinkObject];
     FFAlgRatFunEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratfun_eval", LinkObject, LinkObject];
     FFAlgRatFunEvalFromCoeffsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_coeff_ratfun_eval", LinkObject, LinkObject];

@@ -338,7 +338,7 @@ namespace fflow {
     dump_int32(nnindepeqs_);
     dump_int32(nparsin[0]);
     dump_int32(nparsout);
-    dump_int32(maxrow_);
+    dump_int32(maxcol_);
     dump_int32(zerodeps_.size());
 
 #define dump_uptr(field, size)              \
@@ -439,7 +439,7 @@ namespace fflow {
     nparsin.resize(1);
     LOAD_INT32(nparsin[0]);
     LOAD_INT32(nparsout);
-    LOAD_INT32(maxrow_);
+    LOAD_INT32(maxcol_);
     unsigned zerod_size;
     LOAD_INT32(zerod_size);
     zerodeps_.resize(zerod_size);
@@ -699,7 +699,8 @@ namespace fflow {
     number_eqs_(data);
     mat_(data).sortRows();
 
-    mat_(data).toReducedRowEcholon(mod, maxrow_, !(flag_ & NO_BACKSUBST_));
+    mat_(data).toReducedRowEcholon(mod, maxcol_, !(flag_ & NO_BACKSUBST_),
+                                   !(flag_ & KEEP_ALL_OUTS_));
 
     if (mat_(data).isImpossibleSystem()) {
       flag_ |= IMPOSSIBLE_;
@@ -716,7 +717,8 @@ namespace fflow {
         return FAILED;
       number_eqs_(data);
       mat_(data).sortRows();
-      mat_(data).toReducedRowEcholon(mod, maxrow_, !(flag_ & NO_BACKSUBST_));
+      mat_(data).toReducedRowEcholon(mod, maxcol_, !(flag_ & NO_BACKSUBST_),
+                                     !(flag_ & KEEP_ALL_OUTS_));;
     }
 
     // Filter equations
@@ -795,7 +797,8 @@ namespace fflow {
       return FAILED;
 
     eqdeps_.resize(nnindepeqs_);
-    mat_(data).toReducedRowEcholon(mod, maxrow_, !(flag_ & NO_BACKSUBST_),
+    mat_(data).toReducedRowEcholon(mod, maxcol_, !(flag_ & NO_BACKSUBST_),
+                                   !(flag_ & KEEP_ALL_OUTS_),
                                    xinfo_.get(), eqdeps_.data());
 
     if (mat_(data).isImpossibleSystem()) {
@@ -840,8 +843,8 @@ namespace fflow {
 
     SparseMatrix & mat = mat_(data);
 
-    mat.toReducedRowEcholon(mod, maxrow_, !(flag_ & NO_BACKSUBST_),
-                            xinfo_.get());
+    mat.toReducedRowEcholon(mod, maxcol_, !(flag_ & NO_BACKSUBST_),
+                            !(flag_ & KEEP_ALL_OUTS_), xinfo_.get());
 
     if (mat.isImpossibleSystem())
       return FAILED;
@@ -978,17 +981,22 @@ namespace fflow {
     return SUCCESS;
   }
 
-  Ret SparseLinearSolver::sparse_output_with_maxrow(unsigned maxrow,
-                                                    bool backsubst)
+  Ret SparseLinearSolver::sparse_output_with_maxcol(unsigned maxcol,
+                                                    bool backsubst,
+                                                    bool keep_all_outs)
   {
     Ret ret = sparse_output();
     if (ret != SUCCESS)
       return ret;
-    maxrow_ = maxrow;
+    maxcol_ = maxcol;
     if (!backsubst)
       flag_ |= NO_BACKSUBST_;
     else
       flag_ &= ~flag_t(NO_BACKSUBST_);
+    if (!keep_all_outs)
+      flag_ |= KEEP_ALL_OUTS_;
+    else
+      flag_ &= ~flag_t(KEEP_ALL_OUTS_);
     return ret;
   }
 

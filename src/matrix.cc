@@ -309,7 +309,7 @@ namespace fflow {
     std::swap(rows_, newrows);
   }
 
-  void SparseMatrix::toRowEcholon(Mod mod, unsigned maxrow,
+  void SparseMatrix::toRowEcholon(Mod mod, unsigned maxrow, bool keep_all_outs,
                                   EqDeps * eqdeps)
   {
     std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
@@ -344,18 +344,12 @@ namespace fflow {
       if (!elif)
         continue;
 
-#if 0 // FIX THIS
-      // In this version, two (or more) equations may end up having "solutions"
-      // for the same unknown.  In this case, we keep the simplest equation and
-      // throw away the other(s).
-      //
-      // TODO: fix this.  We should (optionally) keep all of them!!!
-      if (var_eq_[rows_[i].first_nonzero_column()] == NO_EQ_)
+      if (maxrow == SparseMatrixRow::END ||
+          var_eq_[rows_[i].first_nonzero_column()] == NO_EQ_) {
         var_eq_[rows_[i].first_nonzero_column()] = i;
-      else
+      } else if (!keep_all_outs) {
         rows_[i].clear();
-#endif
-      var_eq_[rows_[i].first_nonzero_column()] = i;
+      }
 
       if (elif != 1) {
         UInt ielif = mul_inv(elif, mod);
@@ -367,10 +361,11 @@ namespace fflow {
   void SparseMatrix::toReducedRowEcholon(Mod mod,
                                          unsigned maxrow,
                                          bool reduced,
+                                         bool keep_all_outs,
                                          flag_t * flags,
                                          EqDeps * eqdeps)
   {
-    toRowEcholon(mod, maxrow, eqdeps);
+    toRowEcholon(mod, maxrow, keep_all_outs, eqdeps);
 
     std::fill(var_eq_.get(), var_eq_.get() + m_, NO_EQ_);
 
@@ -384,7 +379,7 @@ namespace fflow {
       var_eq_[rows_[i].first_nonzero_column()] = i;
 
     (void)(reduced);
-    if (/*!reduced ||*/ nindep < 2) // <-- FIX THIS
+    if (!reduced || nindep < 2)
       return;
 
     for (unsigned i=0; i<nindep-1; ++i) {

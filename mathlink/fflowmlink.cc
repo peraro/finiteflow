@@ -2044,13 +2044,13 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
-  int fflowml_alg_system_sparse_output_with_maxrow(WolframLibraryData libData, MLINK mlp)
+  int fflowml_alg_system_sparse_output_with_maxcol(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);
     FFLOWML_SET_DBGPRINT();
 
-    int id, nodeid, nargs, maxrow, back_subst_flag;
-    bool back_subst = true;
+    int id, nodeid, nargs, maxrow, back_subst_flag, keep_all_outs_flag;
+    bool back_subst = true, keep_all_outs = false;
     MLNewPacket(mlp);
 
     MLTestHead( mlp, "List", &nargs);
@@ -2058,10 +2058,13 @@ extern "C" {
     MLGetInteger32(mlp, &nodeid);
     MLGetInteger32(mlp, &maxrow);
     MLGetInteger32(mlp, &back_subst_flag);
+    MLGetInteger32(mlp, &keep_all_outs_flag);
     bool okay = true;
 
     if(back_subst_flag == -1)
       back_subst = false;
+    if (keep_all_outs_flag == 1)
+      keep_all_outs = true;
 
     Algorithm * alg = session.algorithm(id, nodeid);
     if (!alg || !alg->is_mutable())
@@ -2070,7 +2073,7 @@ extern "C" {
     if (okay) {
       if (dynamic_cast<SparseLinearSolver *>(alg)) {
         SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
-        Ret ret = ls.sparse_output_with_maxrow(maxrow, back_subst);
+        Ret ret = ls.sparse_output_with_maxcol(maxrow, back_subst, keep_all_outs);
         if (ret == SUCCESS)
           session.invalidate_subctxt_alg_data(id, nodeid);
         else

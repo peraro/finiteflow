@@ -659,16 +659,12 @@ namespace fflow {
 
     void sortRows();
 
-    void toRowEcholon(Mod mod, unsigned maxrow,
+    void toRowEcholon(Mod mod, unsigned maxrow, bool keep_all_outs,
                       EqDeps * eqdeps = nullptr);
-    void toReducedRowEcholon(Mod mod, unsigned maxrow, bool reduced,
+    void toReducedRowEcholon(Mod mod, unsigned maxrow,
+                             bool reduced, bool keep_all_outs,
                              flag_t * flags = nullptr,
                              EqDeps * eqdeps = nullptr);
-    void toReducedRowEcholon(Mod mod, unsigned maxrow, bool reduced,
-                             EqDeps * eqdeps)
-    {
-      toReducedRowEcholon(mod, maxrow, reduced, nullptr, eqdeps);
-    }
 
     // Remove equations of the form 0==0 and x[i]==0, returning the
     // new number of rows.

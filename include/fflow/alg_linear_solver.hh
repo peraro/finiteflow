@@ -315,7 +315,9 @@ namespace fflow {
     }
 
     Ret sparse_output(bool flag = true);
-    Ret sparse_output_with_maxrow(unsigned maxrow, bool back_subst = true);
+    Ret sparse_output_with_maxcol(unsigned maxcol,
+                                  bool back_subst,
+                                  bool keep_all_outs);
 
     // the returned pointer may be null
     const std::vector<std::vector<unsigned>> * sparse_output_data() const
@@ -353,9 +355,9 @@ namespace fflow {
       return flag_ & IMPOSSIBLE_;
     }
 
-    bool has_max_row_() const
+    bool has_max_col_() const
     {
-      return output_is_sparse() && (maxrow_ < SparseMatrixRow::END);
+      return output_is_sparse() && (maxcol_ < SparseMatrixRow::END);
     }
 
     void set_ext_needed_(const unsigned * needed_vars, unsigned needed_size);
@@ -399,7 +401,8 @@ namespace fflow {
       NO_BACKSUBST_ = 1,
       HOMOG_ = 1 << 1,
       MARKED_AND_SWEEPED_ = 1 << 2,
-      IMPOSSIBLE_ = 1 << 3
+      IMPOSSIBLE_ = 1 << 3,
+      KEEP_ALL_OUTS_ = 1 << 4 // only when maxcol_ is specified
     };
 
 
@@ -415,7 +418,7 @@ namespace fflow {
     std::unique_ptr<std::vector<std::vector<unsigned>>> sparseout_data_;
     unsigned neqs_, nvars_;
     unsigned nndeps_ = 0, nnindeps_ = 0, nnindepeqs_ = 0;
-    unsigned maxrow_ =  SparseMatrixRow::END;
+    unsigned maxcol_ =  SparseMatrixRow::END;
     flag_t stage_ = FIRST_;
     flag_t flag_;
   };
