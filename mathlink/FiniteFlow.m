@@ -122,6 +122,8 @@ FFAlgLinearFit::usage = "FFAlgLinearFit[graph,node,{input},params,ansatz, rhs, v
 FFAlgLaurent::usage = "FFAlgLaurent[graph,node,{input},subgraph,order] defines a subgraph node which computes the coefficients of the Laurent expansion of the output of subgraph around x=0, where x is the first input variable of subgraph.  If order is an integer, the expansion is truncated at x^order for all output elements.  If order is a list, the expansion of the i-th output element is truncated at x^order[[i]]."
 FFLaurentSol::usage = "FFLaurentSol[expr,x,learninfo] formats the output of a Laurent expansion node as series expansion in x, using the information learninfo returned by FFLearn."
 
+FFTakeUnique::usage = "FFTakeUnique[graph,node,{input}] defines a node which returns the subset of unique elements in input.  These are identified via numerical evaluations (their number can be changed with the option \"NEvals\"->nevals).  This function returns a list of integers such that input == output[[integers]], where input/output is the input/output of the new node."
+
 FFReconstructFunction::usage = "FFReconstructFunction[graph,vars] analytically reconstructs the output of graph as a rational function in the variables vars, by performing several numerical evaluations and reconstructing analytic expressions from these.  Note that for univariate functions, multi-threading is not used during the evaluation of the graph (for that, FFParallelReconstructUnivariate can be used)."
 FFParallelReconstructUnivariate::usage = "FFParallelReconstructUnivariate[graph,{x}] reconstructs the output of graph as a univariate rational function in the variable x.  Numerical evaluations are performed in parallel, and additional sample points are added until the reconstruction is successful."
 FFParallelReconstructUnivariateMod::usage = "FFParallelReconstructUnivariateMod[graph,{x}] is the same as FFParallelReconstructUnivariate[graph,{x}] but reconstruction is performed modulo the prime specified in the options."
@@ -1580,6 +1582,38 @@ FFLinearFit[params_,delta_,integrandin_, tauvarsin_,varsin_,opt:OptionsPattern[]
 
 FFRatRec[a_List,p_]:=Catch[ToExpression/@FFRatRecImplem[ToString[CheckedInt[#]]&/@a,ToString[CheckedInt[p]]]];
 FFRatRec[a_,p_]:=Catch[ToExpression[FFRatRecImplem[{ToString[CheckedInt[a]]},ToString[CheckedInt[p]]][[1]]]];
+
+
+Options[FFTakeUnique]:={"NEvals"->3};
+FFTakeUnique[g_,node_,{in_},OptionsPattern[]]:=Module[
+{nparsin,nevals,evals,check,asso,ii,jj,nout,outs, outn, fromouts},
+fromouts = Catch[
+check[a_]:=a;
+check[$Failed]:=Throw[$Failed];
+FFGraphOutput[g,in];
+nout = check[FFNParsOut[g,in]];
+nparsin = FFNodeNParsOutImplem[GetGraphId[g],0];
+nevals = OptionValue["NEvals"];
+evals = Transpose[check[FFGraphEvaluate[g,#]]&/@ArrayReshape[RandomInteger[{123456789123456789,FFPrimeNo[200]},nparsin*nevals],{nevals,nparsin}]];
+asso = Association[{}];
+outn = 0;
+outs = {};
+fromouts = Table[
+  jj = asso[evals[[ii]]];
+  If[!IntegerQ[jj],
+    outn = outn+1;
+    asso[evals[[ii]]] = outn;
+    AppendTo[outs,ii];
+    outn,
+    (* Else *)
+    jj
+  ]
+,{ii,nout}];
+check[FFAlgTake[g,node,{in},{1,#}&/@outs]];
+fromouts
+];
+fromouts
+]
 
 
 Options[FFSetLearningOptions]={"PrimeNo"->Automatic,"MaxSingularPoints"->Automatic};
