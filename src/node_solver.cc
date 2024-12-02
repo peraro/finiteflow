@@ -83,6 +83,7 @@ namespace fflow {
             return FAILED;
           r.el(oj).col = col;
           r.el(oj).val.set(res);
+          ++oj;
         }
       }
       r.el(oj).col = SparseMatrixRow::END;
