@@ -9,6 +9,7 @@
  */
 
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -37,7 +38,24 @@ extern "C" {
   typedef unsigned FFStatus;
   typedef const char * FFCStr;
 
+  // An opaque object representing a list of rational functions
   typedef struct FFRatFunList FFRatFunList;
+
+  // An opaque object representing an indexed list of rational
+  // functions, namely a list of functions and a list of indexes into
+  // the list of functions.  The indexes can be used to avoid
+  // repeating equal entries in the list.
+  //
+  // It is used to define matrices for sparse linear systems, which
+  // often have many repeated entries.
+  //
+  // As an example using
+  //     functions = [f0,f1,f2]
+  //     indexes = [0,0,1,2,2,0]
+  // would be effectively equivalent to the list
+  //     functions = [f0,f0,f1,f2,f2,f0]
+  // but it stores the functions [f0,f1,f2] only once.
+  typedef struct FFIdxRatFunList FFIdxRatFunList;
 
   // Zero-initialize this to pick default options
   typedef struct {
@@ -111,36 +129,53 @@ extern "C" {
    * varibles x.  The entries of the matrix a A and the vector b are
    * rational functions of the free parameters returned by in_node.
    *
-   * The input are the non vanishing entries of the n_eqs*vars+1
+   * The inputs are the non vanishing entries of the n_eqs*vars+1
    * dimensional matrix (A|b).  More precisely:
    * - n_non_zero[i] is the number of non-zero entries of row i
-   * - n_zero_cols is a list of the columns of the non-zero entries
-   *   for each row, stores in a contigous array (one row after the
-   *   other)
-   * - non_zero_coeffs is a list of rational functions representing
-   *   the non-vanishing coefficients in the matrix.
+   * - n_zero_cols lists the columns with non-zero entries for each
+   *   row, stored in a contigous array (one row after the other)
+   * - non_zero_coeffs is a list of indexes in the array of rational
+   *   functions rat_functions representing the non-vanishing
+   *   coefficients in the matrix.
    *
-   * Finally needed_vars is a list of variables whose solution will be
-   * in the output, if found.  If NULL, then all unknown variables are
-   * needed (in which case n_needed_vars is ignored).
+   * Finally, needed_vars is a list of variables whose solution will
+   * be in the output, if found.  If NULL, then all unknown variables
+   * are needed (in which case n_needed_vars is ignored).
    */
   FFNode ffAlgAnalyticSparseLSolve(FFGraph graph, FFNode in_node,
                                    unsigned n_eqs, unsigned n_vars,
                                    const unsigned * n_non_zero,
                                    const unsigned * non_zero_els,
-                                   const FFRatFunList * non_zero_coeffs,
+                                   const size_t * non_zero_coeffs,
+                                   const FFRatFunList * rat_functions,
                                    const unsigned * needed_vars,
                                    unsigned n_needed_vars);
 
   /*
+   * Same as ffAlgAnalyticSparseLSolve, but the indexes in the array
+   * of rational functions and the functions themselves are passed as
+   * the argument as a FFIdxRatFunList in non_zero_functions.
+   */
+  FFNode ffAlgAnalyticSparseLSolveIdx(FFGraph graph, FFNode in_node,
+                                      unsigned n_eqs, unsigned n_vars,
+                                      const unsigned * n_non_zero,
+                                      const unsigned * non_zero_els,
+                                      const FFIdxRatFunList * non_zero_functions,
+                                      const unsigned * needed_vars,
+                                      unsigned n_needed_vars);
+
+  /*
    * Same as ffAlgAnalyticSparseLSolve but the entries (A|b) are
-   * rational numbers passed as strings in non_zero_coeffs.
+   * indexes non_zero_coeffs[] into the array of rational numbers
+   * rat_coeffs[] of length n_rat_coeffs.
    */
   FFNode ffAlgNumericSparseLSolve(FFGraph graph,
                                   unsigned n_eqs, unsigned n_vars,
                                   const unsigned * n_non_zero,
                                   const unsigned * non_zero_els,
-                                  FFCStr * non_zero_coeffs,
+                                  const size_t * non_zero_coeffs,
+                                  FFCStr * rat_coeffs,
+                                  size_t n_rat_coeffs,
                                   const unsigned * needed_vars,
                                   unsigned n_needed_vars);
 
@@ -275,6 +310,16 @@ extern "C" {
   void ffFreeRatFun(FFRatFunList * rf);
   FFStatus ffRatFunToJSON(const FFRatFunList * rf, FFCStr file);
 
+  unsigned ffIdxRatFunListSize(const FFIdxRatFunList * rf);
+  unsigned ffIdxRatFunListNFunctions(const FFIdxRatFunList * rf);
+  unsigned ffIdxRatFunListNVars(const FFIdxRatFunList * rf);
+  void ffFreeIdxRatFun(FFIdxRatFunList * rf);
+
+  // When successful, this invalidates the input rf and creates a
+  // `FFIdxRatFunList` from it, using the provided list of indexes.
+  FFIdxRatFunList * ffMoveRatFunToIdx(FFRatFunList * rf,
+                                      const size_t * idx, size_t n_indexes);
+
 
   // This uses a simple and limited parser of rational functions:
   // - functions must be collected under common denominator
@@ -293,6 +338,21 @@ extern "C" {
   FFRatFunList * ffParseRatFunEx(FFCStr * vars, unsigned n_vars,
                                  FFCStr * inputs, const unsigned * input_strlen,
                                  unsigned n_functions);
+
+  /*
+   * Same as ffParseRatFun and ffParseRatFunEx but returns a
+   * FFIdxRatFunList based on the provided list of indexes.
+   */
+  FFIdxRatFunList * ffParseIdxRatFun(FFCStr * vars, unsigned n_vars,
+                                     FFCStr * inputs, size_t n_functions,
+                                     const size_t * idx,
+                                     size_t n_indexes);
+  FFIdxRatFunList * ffParseIdxRatFunEx(FFCStr * vars, unsigned n_vars,
+                                       FFCStr * inputs,
+                                       const unsigned * input_strlen,
+                                       size_t n_functions,
+                                       const size_t * idx,
+                                       size_t n_indexes);
 
 
   // API for creating a list of n_functions rational functions in
@@ -319,11 +379,18 @@ extern "C" {
   // indexes, stored contigously in memory.  Each n_vars-dimensional
   // array represents the exponents of a single term.  These must be
   // sorted the same way as their respective coefficients.
-  FFRatFunList * ffNewRatFunList(unsigned n_vars, unsigned n_functions,
+  FFRatFunList * ffNewRatFunList(unsigned n_vars, size_t n_functions,
                                  const unsigned * n_num_terms,
                                  const unsigned * n_den_terms,
                                  FFCStr * coefficients,
                                  const uint16_t * exponents);
+  FFIdxRatFunList * ffNewIdxRatFunList(unsigned n_vars, size_t n_functions,
+                                       const unsigned * n_num_terms,
+                                       const unsigned * n_den_terms,
+                                       FFCStr * coefficients,
+                                       const uint16_t * exponents,
+                                       const size_t * idx,
+                                       size_t n_indexes);
 
   // output must be freed using ffFreeMemoryU64
   FFUInt * ffEvaluateRatFunList(const FFRatFunList * rf,

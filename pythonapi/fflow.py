@@ -81,6 +81,52 @@ class RatFunList:
         return _lib.ffRatFunListNVars(self._ptr)
 
 
+class IdxRatFunList:
+    '''\
+An opaque object representing an indexed list of rational \
+functions, namely a list of functions and a list of indexes into \
+the list of functions.  The indexes are meant avoid repetition of \
+equal entries in the list.
+
+It is used to define sparse linear systems, which often have many \
+repeated entries.
+
+As an example using
+    functions = [f0,f1,f2]
+    indexes = [0,0,1,2,2,0]
+would be effectively equivalent to the list
+    functions = [f0,f0,f1,f2,f2,f0]
+but storing the functions [f0,f1,f2] only once.
+
+Note that the builtin len() function and the .size() method return \
+the length of the list of indexes.  Use the method .nfunctions() to \
+get the list of unique functions instead.
+'''
+    def __init__(self):
+        self._ptr = _ffi.NULL
+
+    def __del__(self):
+        _lib.ffFreeIdxRatFun(self._ptr)
+
+    def size(self):
+        if self._ptr == _ffi.NULL:
+            return 0
+        return _lib.ffIdxRatFunListSize(self._ptr)
+
+    def nfunctions(self):
+        if self._ptr == _ffi.NULL:
+            return 0
+        return _lib.ffIdxRatFunListNFunctions(self._ptr)
+
+    def __len__(self):
+        return self.size()
+
+    def nvars(self):
+        if self._ptr == _ffi.NULL:
+            return 0
+        return _lib.ffIdxRatFunListNVars(self._ptr)
+
+
 
 SUCCESS = _SuccessType()
 ERROR = _ErrorType()
@@ -343,7 +389,7 @@ inputs.
 If these lmitations are too restrictive, consider using the parser of
 a proper CAS and then pass the functions to fflow using
 ffNewRatFunList instead.
-    '''
+'''
     rf = [_ffi.new("char[]", x.encode('utf8')) for x in functions]
     rfl = [len(x) for x in functions]
     z = [_ffi.new("char[]", x.encode('utf8')) for x in variables]
@@ -352,6 +398,33 @@ ffNewRatFunList instead.
     if retc == _ffi.NULL:
         raise ERROR
     ret = RatFunList()
+    ret._ptr = retc
+    return ret
+
+
+def _getUniqueAndIdx(somelist):
+    uni = dict()
+    ret = list()
+    for el in somelist:
+        if el in uni:
+            ret.append(uni[el])
+        else:
+            idx = len(uni)
+            ret.append(idx)
+            uni[el] = idx
+    return (list(k for k,v in sorted(uni.items(), key = lambda x : x[1])), ret)
+
+
+def ParseIdxRatFun(variables, functions, indexes = None):
+    if indexes is None:
+        (unique, indexes) = _getUniqueAndIdx(functions)
+    else:
+        unique = functions
+    ret0 = ParseRatFun(variables, unique)
+    retc = _lib.ffMoveRatFunToIdx(ret0._ptr, indexes, len(indexes))
+    if retc == _ffi.NULL:
+        raise ERROR
+    ret = IdxRatFunList()
     ret._ptr = retc
     return ret
 
@@ -367,13 +440,13 @@ def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
         needelen = len(needed)
     if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
         raise ERROR
-    retc = _lib.ffAlgAnalyticSparseLSolve(graph, in_node,
-                                          len(non_zero_els), n_vars,
-                                          [len(x) for x in non_zero_els],
-                                          [x for x in _chain(*non_zero_els)],
-                                          non_zero_coeffs._ptr,
-                                          needed,
-                                          neededlen)
+    retc = _lib.ffAlgAnalyticSparseLSolveIdx(graph, in_node,
+                                             len(non_zero_els), n_vars,
+                                             [len(x) for x in non_zero_els],
+                                             [x for x in _chain(*non_zero_els)],
+                                             non_zero_coeffs._ptr,
+                                             needed,
+                                             neededlen)
     return _Check(retc)
 
 
@@ -388,14 +461,14 @@ def AlgNumericSparseLSolve(graph, n_vars,
         needelen = len(needed)
     if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
         raise ERROR
-    coeffs = [_ffi.new("char[]", x.encode('utf8')) for x in non_zero_coeffs]
+    (uniqueccs, indexes) = _getUniqueAndIdx(non_zero_coeffs)
+    coeffs = [_ffi.new("char[]", x.encode('utf8')) for x in uniqueccs]
     retc = _lib.ffAlgNumericSparseLSolve(graph,
                                          len(non_zero_els), n_vars,
                                          [len(x) for x in non_zero_els],
                                          [x for x in _chain(*non_zero_els)],
-                                         coeffs,
-                                         needed,
-                                         neededlen)
+                                         indexes, coeffs, len(coeffs),
+                                         needed, neededlen)
     return _Check(retc)
 
 
@@ -442,6 +515,20 @@ def NewRatFunList(nvars, allterms):
     res = RatFunList()
     res._ptr = resc
     return res
+
+
+def NewIdxRatFunList(nvars, allterms, indexes = None):
+    if indexes is None:
+        (unique, indexes) = _getUniqueAndIdx(allterms)
+    else:
+        unique = allterms
+    ret0 = NewRatFunList(nvars, unique)
+    retc = _lib.ffMoveRatFunToIdx(ret0._ptr, indexes, len(indexes))
+    if retc == _ffi.NULL:
+        raise ERROR
+    res = IdxRatFunList()
+    ret._ptr = retc
+    return ret
 
 
 def EvaluateRatFunList(rf, z, prime_no):

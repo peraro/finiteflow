@@ -511,10 +511,17 @@ namespace  {
     long n_rows, two, lcsize;
     int csize;
 
+    MLCheckFunction(mlp, "List", &lcsize);
+    data.c.resize(lcsize);
+    sys.cmap.resize(lcsize);
+    for (int j=0; j<lcsize; ++j) {
+      MathGetHornerFun getfun;
+      getfun.get_horner_ratfun(mlp, data.c[j], sys.cmap[j], ww);
+      nparsin = getfun.nvars;
+    }
+
     MLCheckFunction(mlp, "List", &n_rows);
     sys.rinfo.resize(n_rows);
-    data.c.resize(n_rows);
-    sys.cmap.resize(n_rows);
     for (int i=0; i<n_rows; ++i) {
       MLCheckFunction(mlp, "List", &two);
       {
@@ -523,16 +530,14 @@ namespace  {
         AnalyticSparseSolver::RowInfo & rinf = sys.rinfo[i];
         rinf.size = csize;
         rinf.cols.reset(new unsigned[csize]);
-        data.c[i].reset(new HornerRatFunPtr[csize]);
-        sys.cmap[i].reset(new MPHornerRatFunMap[csize]);
         std::copy(crinfo, crinfo+csize, rinf.cols.get());
         MLReleaseInteger32List(mlp, crinfo, csize);
-      }
-      MLCheckFunction(mlp, "List", &lcsize);
-      for (int j=0; j<csize; ++j) {
-        MathGetHornerFun getfun;
-        getfun.get_horner_ratfun(mlp, data.c[i][j], sys.cmap[i][j], ww);
-        nparsin = getfun.nvars;
+
+        mlint64 * idxrinfo;
+        MLGetInteger64List(mlp, &idxrinfo, &csize);
+        rinf.idx.reset(new std::size_t[csize]);
+        std::copy(idxrinfo, idxrinfo+csize, rinf.idx.get());
+        MLReleaseInteger64List(mlp, idxrinfo, csize);
       }
     }
   }
@@ -561,9 +566,13 @@ namespace  {
     long n_rows, two, lcsize;
     int csize;
 
+    MLCheckFunction(mlp, "List", &lcsize);
+    sys.c.resize(lcsize);
+    for (int j=0; j<lcsize; ++j)
+      get_rational(mlp, sys.c[j]);
+
     MLCheckFunction(mlp, "List", &n_rows);
     sys.rinfo.resize(n_rows);
-    sys.c.resize(n_rows);
     for (int i=0; i<n_rows; ++i) {
       MLCheckFunction(mlp, "List", &two);
       {
@@ -572,13 +581,15 @@ namespace  {
         NumericSparseSolver::RowInfo & rinf = sys.rinfo[i];
         rinf.size = csize;
         rinf.cols.reset(new unsigned[csize]);
-        sys.c[i].reset(new MPRational[csize]);
         std::copy(crinfo, crinfo+csize, rinf.cols.get());
         MLReleaseInteger32List(mlp, crinfo, csize);
+
+        mlint64 * idxrinfo;
+        MLGetInteger64List(mlp, &idxrinfo, &csize);
+        rinf.idx.reset(new std::size_t[csize]);
+        std::copy(idxrinfo, idxrinfo+csize, rinf.idx.get());
+        MLReleaseInteger64List(mlp, idxrinfo, csize);
       }
-      MLCheckFunction(mlp, "List", &lcsize);
-      for (int j=0; j<csize; ++j)
-        get_rational(mlp, sys.c[i][j]);
     }
   }
 
@@ -1566,7 +1577,7 @@ extern "C" {
     int * neededv;
     int needed_size;
     MLGetInteger32List(mlp, &neededv, &needed_size);
-    alg.init(data->c.size(), nvars, (unsigned*)neededv, needed_size, *data);
+    alg.init(alg.rinfo.size(), nvars, (unsigned*)neededv, needed_size, *data);
     MLReleaseInteger32List(mlp, neededv, needed_size);
     MLNewPacket(mlp);
 
@@ -1784,7 +1795,7 @@ extern "C" {
     int * neededv;
     int needed_size;
     MLGetInteger32List(mlp, &neededv, &needed_size);
-    alg.init(alg.c.size(), nvars, (unsigned*)neededv, needed_size, *data);
+    alg.init(alg.rinfo.size(), nvars, (unsigned*)neededv, needed_size, *data);
     MLReleaseInteger32List(mlp, neededv, needed_size);
     MLNewPacket(mlp);
 

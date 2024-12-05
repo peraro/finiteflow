@@ -232,7 +232,7 @@ def testLSolver(type):
 
     if type == "analytic":
         mygraph, myinput = NewGraphWithInput(len(["a1", "a2"]))
-        ccs = ParseRatFun(["a1", "a2"], coeffs)
+        ccs = ParseIdxRatFun(["a1", "a2"], coeffs)
         sys = AlgAnalyticSparseLSolve(mygraph, myinput, n_unknowns, cols, ccs)
     elif type == "node":
         mygraph, myinput = NewGraphWithInput(len(["a1", "a2"]))
@@ -245,7 +245,8 @@ def testLSolver(type):
     SetOutputNode(mygraph,sys)
     Learn(mygraph)
     if LSolveDepVars(mygraph,sys) != [0,1]:
-        print(- "Test failed: something wrong with the system")
+        print("- Dep vars = ",LSolveDepVars(mygraph,sys))
+        print("- Test failed: something wrong with the system")
         exit(1)
 
     LSolveMarkAndSweepEqs(mygraph, sys)
@@ -255,11 +256,11 @@ def testLSolver(type):
     if type == "analytic" or type == "node":
         rec = ReconstructFunction(mygraph)
         if EvaluateRatFunList(rec, [1,2], 0) != [2767011611056432735, 3689348814741910313]:
-            print(- "Test failed: something wrong with the reconstructed solution")
+            print("- Test failed: something wrong with the reconstructed solution")
             exit(1)
     else:
         if EvaluateGraph(mygraph, [], 0) != [2767011611056432735, 3689348814741910313]:
-            print(- "Test failed: something wrong with the reconstructed solution")
+            print("- Test failed: something wrong with the reconstructed solution")
             exit(1)
 
     print("- Test passed!")

@@ -39,14 +39,16 @@ namespace fflow {
 
   struct AnalyticSparseSolverData : public SparseLinearSolverData {
   public:
-    std::vector<std::unique_ptr<HornerRatFunPtr[]>> c;
+    std::vector<HornerRatFunPtr> c;
 
   private:
     friend class AnalyticSparseSolver;
     void reset_mod_(const AnalyticSparseSolver & ls, Mod mod);
+    void reset_evals_(const AnalyticSparseSolver & ls);
 
   private:
     std::unique_ptr<UInt[]> xp_ = nullptr;
+    std::unique_ptr<UInt[]> evals_ = nullptr;
     UInt this_mod_ = 0;
   };
 
@@ -67,11 +69,23 @@ namespace fflow {
     struct RowInfo {
       std::size_t size;
       std::unique_ptr<unsigned[]> cols;
+      std::unique_ptr<std::size_t[]> idx;
     };
 
     std::vector<RowInfo> rinfo;
-    std::vector<std::unique_ptr<MPHornerRatFunMap[]>> cmap;
+    std::vector<MPHornerRatFunMap> cmap;
   };
+
+  inline
+  void AnalyticSparseSolverData::reset_evals_(const AnalyticSparseSolver & ls)
+  {
+    std::size_t len = ls.cmap.size();
+    if (!evals_)
+      evals_.reset(new UInt[len]);
+    for (unsigned j=0; j<len; ++j)
+      evals_[j] = MISSING_SAMPLES;
+  }
+
 
 } // namespace fflow
 

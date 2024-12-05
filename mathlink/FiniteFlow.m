@@ -690,35 +690,6 @@ FFAlgNodeSparseSolver[gid_,id_,inputs_List,columns_List,vars_,OptionsPattern[]]:
 ];
 
 
-(*RegisterSparseSolver[gid_,inputs_,{params_,eqsin_,vars_,neededvarsin_,applyfun_}]:=Module[
-  {eqs, neededvars, lincoeffs, dummy, position, tointernal},
-  Catch[
-    position = Association[{}];
-    Table[position[vars[[ii]]]=ii-1;,{ii,Length[vars]}];
-    eqs = Select[eqsin, !TrueQ[#]&];
-    neededvars = If[TrueQ[neededvarsin==Automatic], vars, neededvarsin];
-    CheckVariables[vars];
-    CheckVariables[neededvars];
-    If[!SubsetQ[vars,neededvars], Message[FF::badneededvars]; Throw[$Failed];];
-    If[!TrueQ[eqs[[0]]==List && And@@(((#[[0]] == Equal) && (Length[#] == 2))&/@eqs)],
-        Message[FF::badsystem]; Throw[$Failed];
-    ];
-    eqs = (#[[1]]-#[[2]])&/@eqs;
-    lincoeffs = SparseLinearEqCoeffs[#,vars,applyfun]&/@eqs;
-    If[!TrueQ[params == {}],
-      tointernal[expr_]:=tointernal[expr]=toFFInternalRatFun[expr,params];,
-      tointernal[expr_]:=tointernal[expr]=If[!TrueQ[FFRationalQ[expr]],
-                                             Message[FF::badfunarg, expr, params]; Throw[$Failed],
-                                             ToString[expr,InputForm]];
-    ];
-    lincoeffs = Map[{#[[1]],tointernal/@#[[2]]}&, lincoeffs];
-    If[!TrueQ[params == {}],
-      FFRegisterSparseSolverImplem[gid,inputs,Length[params],Length[vars],lincoeffs,position/@neededvars],
-      FFRegisterSparseSolverImplemN[gid,inputs,Length[vars],lincoeffs,position/@neededvars]
-    ]
-  ]
-];*)
-
 RegisterSparseSolver[gid_,inputs_,{params_,eqsin_,vars_,neededvarsin_,applyfun_}]:=Module[
   {varmap,xx,xvars},
   Catch[
@@ -729,7 +700,7 @@ RegisterSparseSolver[gid_,inputs_,{params_,eqsin_,vars_,neededvarsin_,applyfun_}
 ];
 
 RegisterSparseSolver[gid_,inputs_,{params_,eqsin_,vars_,pattern_,neededvarsin_,applyfun_}]:=Module[
-  {eqs, neededvars, lincoeffs, dummy, position, tointernal},
+  {eqs, neededvars, lincoeffs, dummy, position, tointernal, uniqueccs, uniquemap, ii},
   Catch[
     position = Association[{}];
     Table[position[vars[[ii]]]=ii-1;,{ii,Length[vars]}];
@@ -747,15 +718,20 @@ RegisterSparseSolver[gid_,inputs_,{params_,eqsin_,vars_,pattern_,neededvarsin_,a
         Message[FF::badpattern,#[[2]]&/@Union[Cases[lincoeffs,_Missing,Infinity]]]; Throw[$Failed];
     ];
     If[!TrueQ[params == {}],
-      tointernal[expr_]:=tointernal[expr]=toFFInternalRatFun[expr,params];,
-      tointernal[expr_]:=tointernal[expr]=If[!TrueQ[FFRationalQ[expr]],
-                                             Message[FF::badfunarg, expr, params]; Throw[$Failed],
-                                             ToString[expr,InputForm]];
+      tointernal[expr_]:=toFFInternalRatFun[expr,params];,
+      tointernal[expr_]:=If[!TrueQ[FFRationalQ[expr]],
+                            Message[FF::badfunarg, expr, params]; Throw[$Failed],
+                            ToString[expr,InputForm]];
     ];
-    lincoeffs = Map[{#[[1]],tointernal/@#[[2]]}&, lincoeffs];
+    uniqueccs = DeleteDuplicates[Flatten[lincoeffs[[;;,2]]]];
+    uniquemap = Association[{}];
+    Do[uniquemap[uniqueccs[[ii]]]=ii-1;,{ii,1,Length[uniqueccs]}];
+    uniqueccs = tointernal/@uniqueccs;
+    lincoeffs = Map[{#[[1]],uniquemap/@#[[2]]}&, lincoeffs];
+    Clear[uniquemap];
     If[!TrueQ[params == {}],
-      FFRegisterSparseSolverImplem[gid,inputs,Length[params],Length[vars],lincoeffs,position/@neededvars],
-      FFRegisterSparseSolverImplemN[gid,inputs,Length[vars],lincoeffs,position/@neededvars]
+      FFRegisterSparseSolverImplem[gid,inputs,Length[params],Length[vars],uniqueccs,lincoeffs,position/@neededvars],
+      FFRegisterSparseSolverImplemN[gid,inputs,Length[vars],uniqueccs,lincoeffs,position/@neededvars]
     ]
   ]
 ];
@@ -791,7 +767,7 @@ FFSerializeSparseEqs[filename_,params_,eqsin_,vars_,pattern_,position_,OptionsPa
 ];
 
 RegisterSparseSerializedEqs[gid_, inputs_, {params_, files_, vars_, neededvarsin_}]:=Module[
-  {needed,position,neededvars,lincoeffs},
+  {needed,position,neededvars,lincoeffs,uniqueccs,uniquemap},
   position = Association[{}];
   Table[position[vars[[ii]]]=ii-1;,{ii,Length[vars]}];
   neededvars = If[TrueQ[neededvarsin==Automatic], vars, neededvarsin];
@@ -799,7 +775,12 @@ RegisterSparseSerializedEqs[gid_, inputs_, {params_, files_, vars_, neededvarsin
   CheckVariables[neededvars];
   If[!SubsetQ[vars,neededvars], Message[FF::badneededvars]; Throw[$Failed];];
   lincoeffs=Join@@(Import/@files);
-  FFRegisterSparseSolverImplem[gid,inputs,Length[params],Length[vars],lincoeffs,position/@neededvars]
+  uniqueccs = DeleteDuplicates[Join@@(lincoeffs[[;;,2]])];
+  uniquemap = Association[{}];
+  Do[uniquemap[uniqueccs[[ii]]]=ii-1;,{ii,1,Length[uniqueccs]}];
+  lincoeffs = Map[{#[[1]],uniquemap/@#[[2]]}&, lincoeffs];
+  Clear[uniquemap];
+  FFRegisterSparseSolverImplem[gid,inputs,Length[params],Length[vars],uniqueccs,lincoeffs,position/@neededvars]
 ];
 
 Options[FFAlgSerializedSparseSolver]:={"NeededVars"->Automatic};

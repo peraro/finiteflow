@@ -121,3 +121,9 @@ freely, subject to the following restrictions:
 
    3. This notice may not be removed or altered from any source
    distribution.
+
+---------------------------------------------------------------------
+
+The files `src/WjCryptLib_Sha1.c` and `src/WjCryptLib_Sha1.h` are
+based on the ones in https://github.com/WaterJuice/WjCryptLib which
+are in the public domain (see the sources for full acknowledgements).

@@ -1,9 +1,33 @@
 #include <fstream>
 #include <numeric>
+#include <unordered_map>
 #include <fflow/graph.hh>
 #include <fflow/analytic_solver.hh>
 #include <fflow/alg_functions.hh>
 #include <fflow/json.hh>
+#include "ffuhash.h"
+
+namespace {
+
+  struct HashFFUHash {
+    inline std::size_t operator()(const FFUHashVal & val) const
+    {
+      return ((std::size_t)val.val[0] << 32) | val.val[1];
+    }
+  };
+
+  struct EqFFUHash {
+    inline bool operator()(const FFUHashVal & v1, const FFUHashVal & v2) const
+    {
+      return (v1.val[0] == v2.val[0])
+        && (v1.val[1] == v2.val[1])
+        && (v1.val[2] == v2.val[2])
+        && (v1.val[3] == v2.val[3])
+        && (v1.val[4] == v2.val[4]);
+    }
+  };
+
+}
 
 namespace fflow {
 
@@ -167,6 +191,9 @@ namespace fflow {
       Ret parse_eq(unsigned i,
                    AnalyticSparseSolver & sys,
                    AnalyticSparseSolverData & data);
+      Ret check_ls_ratfun(std::vector<HornerRatFunPtr> & f,
+                          std::vector<MPHornerRatFunMap> & map,
+                          std::size_t & idx);
       Ret parse_ratfun(HornerRatFunPtr & f, MPHornerRatFunMap & map);
       Ret parse_ratfun_list(const char * filename,
                             AnalyticFunction & fun,
@@ -212,6 +239,8 @@ namespace fflow {
       std::vector<Monomial> num_monomials, den_monomials;
 
       std::unique_ptr<bool[]> eq_is_needed;
+
+      std::unordered_map<FFUHashVal, std::size_t, HashFFUHash, EqFFUHash> cmap;
     };
 
 
@@ -404,8 +433,7 @@ namespace fflow {
       unsigned csize = curr_token.val;
       rinf.size = csize;
       rinf.cols.reset(new unsigned[csize]);
-      data.c[i].reset(new HornerRatFunPtr[csize]);
-      sys.cmap[i].reset(new MPHornerRatFunMap[csize]);
+      rinf.idx.reset(new std::size_t[csize]);
 
       EXPECT_TOKEN(JSONToken::COMMA);
 
@@ -425,13 +453,71 @@ namespace fflow {
       for (unsigned j=0; j<csize; ++j) {
         if (j)
           EXPECT_TOKEN(JSONToken::COMMA);
-        Ret ret = parse_ratfun(data.c[i][j], sys.cmap[i][j]);
+        Ret ret = check_ls_ratfun(data.c, sys.cmap, rinf.idx[j]);
         if (ret != SUCCESS)
             return ret;
       }
       EXPECT_TOKEN(JSONToken::CLOSE_SQUARE_PAR);
 
       EXPECT_TOKEN(JSONToken::CLOSE_SQUARE_PAR);
+
+      return SUCCESS;
+    }
+
+
+    // Parse rational function for a Sparse Solver.
+    //
+    // We try to quickly get to the end of the substring for the
+    // function.  If check with our hashmap whether (the "unique" hash
+    // of) the same substring has already been parsed and in that case
+    // we add it to the list of coefficients.  Otherwise we proceed
+    // via normal parsing.
+    Ret JSONParser::check_ls_ratfun(std::vector<HornerRatFunPtr> & f,
+                                    std::vector<MPHornerRatFunMap> & map,
+                                    std::size_t & idx)
+    {
+      const char * c = tokenizer.cur;
+      const char * cend = tokenizer.end;
+      while (isspace(*c) && c < cend)
+        ++c;
+
+      // NOTE: zero functions are not allowed in sparse solvers, so we
+      // don't check for that
+      if (*c != '[')
+        return FAILED;
+
+      const char * c2 = c+1;
+      int par_count = 1;
+      for (;c2 < cend; ++c2) {
+        if (*c2 == '[') {
+          ++par_count;
+        } else if (*c2 == ']') {
+          --par_count;
+          if (par_count == 0)
+            break;
+        }
+      }
+      ++c2;
+
+      if (par_count != 0)
+        return FAILED;
+
+      FFUHashVal hval = ffUHash(static_cast<const void *>(c), c2-c);
+      auto found = cmap.find(hval);
+      if (found != cmap.end()) {
+        idx = found->second;
+        tokenizer.cur = c2;
+        return SUCCESS;
+      } else {
+        // insert a new element at the end
+        idx = map.size();
+        cmap[hval] = idx;
+        f.push_back(HornerRatFunPtr());
+        map.push_back(MPHornerRatFunMap());
+        auto & fel = f.back();
+        auto & mapel = map.back();
+        return parse_ratfun(fel, mapel);
+      }
 
       return SUCCESS;
     }

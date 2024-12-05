@@ -84,13 +84,22 @@ namespace fflow {
     this_mod_ = mod.n();
     if (xp_.get() == nullptr)
       xp_.reset(new UInt[ls.nparsin[0]]);
+    reset_evals_(ls);
+    const SparseLinearSolver::flag_t * info = ls.xinfo();
     std::size_t nindepeqs = ls.n_indep_eqs();
     const unsigned * ieq = ls.indep_eqs();
     for (unsigned ind=0; ind<nindepeqs; ++ind) {
       std::size_t i = ieq[ind];
       std::size_t row_size = ls.rinfo[i].size;
-      for (unsigned j=0; j<row_size; ++j)
-        horner_ratfunmap_mprational(ls.cmap[i][j], mod, c[i][j]);
+      const std::size_t * idx = ls.rinfo[i].idx.get();
+      const unsigned * cols = ls.rinfo[i].cols.get();
+      const unsigned * cols_end = cols + row_size;
+      for (; cols<cols_end; ++idx, ++cols)
+        if ((info[*cols] & LSVar::IS_NON_ZERO)
+            && evals_[*idx] == MISSING_SAMPLES) {
+          horner_ratfunmap_mprational(ls.cmap[*idx], mod, c[*idx]);
+          evals_[*idx] = 1;
+        }
     }
   }
 
@@ -98,21 +107,42 @@ namespace fflow {
   {
     auto & data = *static_cast<AnalyticSparseSolverData*>(datain);
 
+    data.reset_evals_(*this);
+
+    const SparseLinearSolver::flag_t * info = xinfo();
     std::size_t n_rows = rinfo.size();
     std::unique_ptr<bool[]> needed(new bool[n_rows]());
 
     std::size_t nindepeqs = n_indep_eqs();
     const unsigned * ieq = indep_eqs();
 
-    for (unsigned i=0; i<nindepeqs; ++i)
-      needed[ieq[i]] = true;
+    // Mark all needed functions
+    for (unsigned ind=0; ind<nindepeqs; ++ind) {
+      std::size_t i = ieq[ind];
+      needed[i] = true;
+      std::size_t row_size = rinfo[i].size;
+      const std::size_t * idx = rinfo[i].idx.get();
+      const unsigned * cols = rinfo[i].cols.get();
+      const unsigned * cols_end = cols + row_size;
+      for (; cols<cols_end; ++idx, ++cols)
+        if (info[*cols] & LSVar::IS_NON_ZERO)
+          data.evals_[*idx] = 1;
+    }
 
-    for (unsigned i=0; i<n_rows; ++i)
-      if (!needed[i]) {
-        rinfo[i] = RowInfo();
-        data.c[i].reset(nullptr);
-        cmap[i].reset(nullptr);
+    // Delete what is not needed anymore
+    std::size_t len = cmap.size();
+    for (unsigned j=0; j<len; ++j)
+      if (data.evals_[j] == MISSING_SAMPLES) {
+        data.c[j] = HornerRatFunPtr();
+        cmap[j] = MPHornerRatFunMap();
       }
+
+    // Remove RowInfo of deleted equations
+    for (unsigned i=0; i<n_rows; ++i)
+      if (!needed[i])
+        rinfo[i] = RowInfo();
+
+    // TODO: we could also shrink c and cmap, not doing it for now
   }
 
   Ret AnalyticSparseSolver::fill_matrix(Context * ctxt,
@@ -127,6 +157,8 @@ namespace fflow {
     if (mod.n() != data.this_mod_)
       data.reset_mod_(*this, mod);
 
+    data.reset_evals_(*this);
+
     const SparseLinearSolver::flag_t * info = xinfo();
     const unsigned nin = nparsin[0];
     const UInt * xi = xin[0];
@@ -135,6 +167,7 @@ namespace fflow {
     precomp_array_mul_shoup(xi, nin, mod, xp);
 
     UInt * ww = ctxt->ww.get();
+    const HornerRatFunPtr * c = data.c.data();
 
     for (unsigned i=0; i<n_rows; ++i) {
 
@@ -142,16 +175,16 @@ namespace fflow {
 
       const std::size_t row_size = rinfo[rows[i]].size;
       const unsigned * cols = rinfo[rows[i]].cols.get();
-      const HornerRatFunPtr * f = data.c[rows[i]].get();
-      const HornerRatFunPtr * fend = f + row_size;
+      const unsigned * cols_end = cols + row_size;
+      const std::size_t * idx = rinfo[rows[i]].idx.get();
 
       r.resize(row_size);
-      unsigned j=0, oj=0;
+      unsigned oj=0;
 
-      for (; f<fend; ++f, ++j) {
-        unsigned col = cols[j];
+      for (; cols<cols_end; ++cols, ++idx) {
+        unsigned col = *cols;
         if (info[col] & LSVar::IS_NON_ZERO) {
-          UInt res = (*f).eval(nin, ww, xi, xp, mod);
+          UInt res = c[*idx].eval(nin, ww, xi, xp, mod);
           if (res == FAILED || res == 0)
             return FAILED;
           r.el(oj).col = col;
@@ -177,20 +210,26 @@ namespace fflow {
 
     copy_data(datain, ptr.get());
 
-    std::size_t n_rows = rinfo.size();
-
+    const SparseLinearSolver::flag_t * info = xinfo();
     std::size_t nindepeqs = n_indep_eqs();
     const unsigned * ieq = indep_eqs();
     const unsigned nin = nparsin[0];
 
-    newalg.c.resize(n_rows);
+    newalg.c.resize(cmap.size());
+    newalg.reset_evals_(*this);
 
     for (unsigned ind=0; ind<nindepeqs; ++ind) {
       std::size_t i = ieq[ind];
       std::size_t row_size = rinfo[i].size;
-      newalg.c[i].reset(new HornerRatFunPtr[row_size]);
-      for (unsigned j=0; j<row_size; ++j)
-        horner_ratfun_clone(data.c[i][j], nin, newalg.c[i][j]);
+      const std::size_t * idx = rinfo[i].idx.get();
+      const unsigned * cols = rinfo[i].cols.get();
+      const unsigned * cols_end = cols + row_size;
+      for (; cols<cols_end; ++cols, ++idx)
+        if ((info[*cols] & LSVar::IS_NON_ZERO)
+            && newalg.evals_[*idx] == MISSING_SAMPLES) {
+          horner_ratfun_clone(data.c[*idx], nin, newalg.c[*idx]);
+          newalg.evals_[*idx] = 1;
+        }
     }
 
     return std::move(ptr);

@@ -118,6 +118,11 @@ set(FFLOW_SOURCES
     src/cached_subgraph.cc
     src/ffmod.c
     src/capi.cc
+
+    src/ffuhash.h
+    src/ffuhash.c
+    src/WjCryptLib_Sha1.h
+    src/WjCryptLib_Sha1.c
     )
 
 set(FFLOW_HEADERS

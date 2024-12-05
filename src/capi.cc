@@ -80,6 +80,18 @@ static FFStatus CopyNonZeroColumnEls(unsigned n_vars,
   }
   return FF_SUCCESS;
 }
+static FFStatus CopyNonZeroIdxEls(std::size_t max_els,
+                                  const std::size_t * elems,
+                                  std::size_t n_elems,
+                                  std::size_t * dest)
+{
+  for (unsigned j=0; j<n_elems; ++j, ++dest) {
+    if (elems[j] >= max_els)
+      return FF_ERROR;
+    *dest = elems[j];
+  }
+  return FF_SUCCESS;
+}
 
 static FFStatus CopyNonZeroColumnElsUnordered(unsigned n_cols,
                                               const unsigned * elems,
@@ -132,8 +144,14 @@ extern "C" {
 
   struct FFRatFunList {
     std::unique_ptr<MPReconstructedRatFun[]> rf;
-    unsigned n_functions = 0;
+    size_t n_functions = 0;
     unsigned n_vars = 0;
+  };
+
+  struct FFIdxRatFunList {
+    FFRatFunList rf;
+    std::unique_ptr<std::size_t[]> idx;
+    size_t n_indexes = 0;
   };
 
 } // extern "C"
@@ -472,7 +490,8 @@ extern "C" {
                                    unsigned n_eqs, unsigned n_vars,
                                    const unsigned * n_non_zero,
                                    const unsigned * non_zero_els,
-                                   const FFRatFunList * non_zero_coeffs,
+                                   const size_t * non_zero_coeffs,
+                                   const FFRatFunList * rat_functions,
                                    const unsigned * needed_vars,
                                    unsigned n_needed_vars)
   {
@@ -484,34 +503,33 @@ extern "C" {
 
     const unsigned n_rows = n_eqs;
     sys.rinfo.resize(n_rows);
-    data.c.resize(n_rows);
-    sys.cmap.resize(n_rows);
 
-    const unsigned n_functions = non_zero_coeffs->n_functions;
-    unsigned idx = 0;
+    const std::size_t max_functions = rat_functions->n_functions;
+    data.c.resize(max_functions);
+    sys.cmap.resize(max_functions);
+
+    for (int j=0; j<max_functions; ++j)
+      get_horner_ratfun(rat_functions, j, data.c[j], sys.cmap[j],
+                        session.main_context()->ww);
 
     for (int i=0; i<n_rows; ++i) {
       const unsigned csize = n_non_zero[i];
       AnalyticSparseSolver::RowInfo & rinf = sys.rinfo[i];
       rinf.size = csize;
       rinf.cols.reset(new unsigned[csize]);
-      data.c[i].reset(new HornerRatFunPtr[csize]);
-      sys.cmap[i].reset(new MPHornerRatFunMap[csize]);
+      rinf.idx.reset(new std::size_t[csize]);
       FFStatus ret = CopyNonZeroColumnEls(n_vars, non_zero_els, csize,
                                           rinf.cols.get());
       if (ret != FF_SUCCESS)
         return ret;
+      ret = CopyNonZeroIdxEls(max_functions, non_zero_coeffs, csize,
+                              rinf.idx.get());
       non_zero_els += csize;
-      if (idx + csize > n_functions)
-        return FF_ERROR;
-      for (int j=0; j<csize; ++j, ++idx) {
-        get_horner_ratfun(non_zero_coeffs, idx, data.c[i][j], sys.cmap[i][j],
-                          session.main_context()->ww);
-      }
+      non_zero_coeffs += csize;
     }
 
     sys.nparsin.resize(1);
-    sys.nparsin[0] = non_zero_coeffs->n_vars;
+    sys.nparsin[0] = rat_functions->n_vars;
 
     if (needed_vars) {
       sys.init(n_eqs, n_vars, needed_vars, n_needed_vars, data);
@@ -531,11 +549,28 @@ extern "C" {
     return id;
   }
 
+  FFNode ffAlgAnalyticSparseLSolveIdx(FFGraph graph, FFNode in_node,
+                                      unsigned n_eqs, unsigned n_vars,
+                                      const unsigned * n_non_zero,
+                                      const unsigned * non_zero_els,
+                                      const FFIdxRatFunList * non_zero_functions,
+                                      const unsigned * needed_vars,
+                                      unsigned n_needed_vars)
+  {
+    return ffAlgAnalyticSparseLSolve(graph, in_node, n_eqs, n_vars,
+                                     n_non_zero, non_zero_els,
+                                     non_zero_functions->idx.get(),
+                                     &non_zero_functions->rf,
+                                     needed_vars, n_needed_vars);
+  }
+
   FFNode ffAlgNumericSparseLSolve(FFGraph graph,
                                   unsigned n_eqs, unsigned n_vars,
                                   const unsigned * n_non_zero,
                                   const unsigned * non_zero_els,
-                                  FFCStr * non_zero_coeffs,
+                                  const size_t * non_zero_coeffs,
+                                  FFCStr * rat_coeffs,
+                                  size_t n_rat_coeffs,
                                   const unsigned * needed_vars,
                                   unsigned n_needed_vars)
   {
@@ -547,23 +582,25 @@ extern "C" {
 
     const unsigned n_rows = n_eqs;
     sys.rinfo.resize(n_rows);
-    sys.c.resize(n_rows);
+    sys.c.resize(n_rat_coeffs);
 
-    unsigned idx = 0;
+    for (int i=0; i<n_rat_coeffs; ++i)
+      sys.c[i] = MPRational(rat_coeffs[i]);
 
     for (int i=0; i<n_rows; ++i) {
       const unsigned csize = n_non_zero[i];
       NumericSparseSolver::RowInfo & rinf = sys.rinfo[i];
       rinf.size = csize;
       rinf.cols.reset(new unsigned[csize]);
-      sys.c[i].reset(new MPRational[csize]);
+      rinf.idx.reset(new std::size_t[csize]);
       FFStatus ret = CopyNonZeroColumnEls(n_vars, non_zero_els, csize,
                                           rinf.cols.get());
       if (ret != FF_SUCCESS)
         return ret;
+      ret = CopyNonZeroIdxEls(n_rat_coeffs, non_zero_coeffs, csize,
+                              rinf.idx.get());
       non_zero_els += csize;
-      for (int j=0; j<csize; ++j, ++idx)
-        sys.c[i][j] = MPRational(non_zero_coeffs[idx]);
+      non_zero_coeffs += csize;
     }
 
     sys.nparsin.clear();
@@ -1215,6 +1252,54 @@ extern "C" {
     return FF_SUCCESS;
   }
 
+  void ffFreeIdxRatFun(FFIdxRatFunList * rf)
+  {
+    delete rf;
+  }
+
+  unsigned ffIdxRatFunListSize(const FFIdxRatFunList * rf)
+  {
+    return rf->n_indexes;
+  }
+
+  unsigned ffIdxRatFunListNFunctions(const FFIdxRatFunList * rf)
+  {
+    return rf->rf.n_functions;
+  }
+
+  unsigned ffIdxRatFunListNVars(const FFIdxRatFunList * rf)
+  {
+    return rf->rf.n_vars;
+  }
+
+
+
+  FFIdxRatFunList * ffMoveRatFunToIdx(FFRatFunList * rf,
+                                      const size_t * idx, size_t n_indexes)
+
+  {
+    FFIdxRatFunList * ret = new FFIdxRatFunList();
+    ret->rf.n_functions = rf->n_functions;
+    ret->rf.n_vars = rf->n_vars;
+    ret->n_indexes = n_indexes;
+    ret->idx.reset(new std::size_t[n_indexes]);
+
+    const size_t max_idx = rf->n_functions;
+    for (size_t j=0; j<n_indexes; ++j) {
+      if (idx[j] >= max_idx)
+        goto fail;
+      ret->idx[j] = idx[j];
+    }
+
+    ret->rf.rf = std::move(rf->rf);
+    rf->n_functions = 0;
+    return ret;
+
+  fail:
+    ffFreeIdxRatFun(ret);
+    return 0;
+  }
+
 
   FFRatFunList * ffParseRatFun(FFCStr * vars, unsigned n_vars,
                                FFCStr * inputs, unsigned n_functions)
@@ -1262,7 +1347,7 @@ extern "C" {
   }
 
 
-  FFRatFunList * ffNewRatFunList(unsigned n_vars, unsigned n_functions,
+  FFRatFunList * ffNewRatFunList(unsigned n_vars, size_t n_functions,
                                  const unsigned * n_num_terms,
                                  const unsigned * n_den_terms,
                                  FFCStr * coefficients,
@@ -1271,7 +1356,7 @@ extern "C" {
     typedef MPReconstructedRatFun ResT;
     std::unique_ptr<ResT[]> res (new ResT[n_functions]);
 
-    for (unsigned j=0; j<n_functions; ++j) {
+    for (std::size_t j=0; j<n_functions; ++j) {
       res[j] = MPReconstructedRatFun(n_vars);
 
       // numerator
@@ -1297,6 +1382,43 @@ extern "C" {
     ret->rf = std::move(res);
 
     return ret;
+  }
+
+
+  FFIdxRatFunList * ffParseIdxRatFun(FFCStr * vars, unsigned n_vars,
+                                     FFCStr * inputs, size_t n_functions,
+                                     const size_t * idx,
+                                     size_t n_indexes)
+  {
+    FFRatFunList * rf = ffParseRatFun(vars, n_vars, inputs, n_functions);
+    return ffMoveRatFunToIdx(rf, idx, n_indexes);
+  }
+
+  FFIdxRatFunList * ffParseIdxRatFunEx(FFCStr * vars, unsigned n_vars,
+                                       FFCStr * inputs,
+                                       const unsigned * input_strlen,
+                                       size_t n_functions,
+                                       const size_t * idx,
+                                       size_t n_indexes)
+  {
+    FFRatFunList * rf = ffParseRatFunEx(vars, n_vars, inputs, input_strlen,
+                                        n_functions);
+    return ffMoveRatFunToIdx(rf, idx, n_indexes);
+  }
+
+
+  FFIdxRatFunList * ffNewIdxRatFunList(unsigned n_vars, size_t n_functions,
+                                       const unsigned * n_num_terms,
+                                       const unsigned * n_den_terms,
+                                       FFCStr * coefficients,
+                                       const uint16_t * exponents,
+                                       const size_t * idx,
+                                       size_t n_indexes)
+  {
+    FFRatFunList * rf = ffNewRatFunList(n_vars, n_functions,
+                                        n_num_terms, n_den_terms,
+                                        coefficients, exponents);
+    return ffMoveRatFunToIdx(rf, idx, n_indexes);
   }
 
 

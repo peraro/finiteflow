@@ -42,20 +42,37 @@ namespace fflow {
 
   void NumericSparseSolver::delete_unneeded_eqs(AlgorithmData *)
   {
-    std::size_t n_rows = rinfo.size();
+    const SparseLinearSolver::flag_t * info = xinfo();
+    const std::size_t n_rows = rinfo.size();
+    const std::size_t c_len = c.size();
     std::unique_ptr<bool[]> needed(new bool[n_rows]());
+    std::unique_ptr<bool[]> needed_ccs(new bool[c_len]());
 
     std::size_t nindepeqs = n_indep_eqs();
     const unsigned * ieq = indep_eqs();
 
-    for (unsigned i=0; i<nindepeqs; ++i)
-      needed[ieq[i]] = true;
+    // Mark all needed functions
+    for (unsigned ind=0; ind<nindepeqs; ++ind) {
+      std::size_t i = ieq[ind];
+      needed[i] = true;
+      std::size_t row_size = rinfo[i].size;
+      const std::size_t * idx = rinfo[i].idx.get();
+      const unsigned * cols = rinfo[i].cols.get();
+      const unsigned * cols_end = cols + row_size;
+      for (; cols<cols_end; ++idx, ++cols)
+        if (info[*cols] & LSVar::IS_NON_ZERO)
+          needed_ccs[*idx] = true;
+    }
 
+    // Delete what is not needed anymore
+    for (unsigned j=0; j<c_len; ++j)
+      if (!needed_ccs[j])
+        c[j] = MPRational();
+
+    // Clean up row info
     for (unsigned i=0; i<n_rows; ++i)
-      if (!needed[i]) {
+      if (!needed[i])
         rinfo[i] = RowInfo();
-        c[i].reset(nullptr);
-      }
   }
 
   Ret NumericSparseSolver::fill_matrix(Context *,
@@ -75,16 +92,18 @@ namespace fflow {
 
       const std::size_t row_size = rinfo[rows[i]].size;
       const unsigned * cols = rinfo[rows[i]].cols.get();
-      const MPRational * f = c[rows[i]].get();
-      const MPRational * fend = f + row_size;
+      const unsigned * cols_end = cols + row_size;
+      const std::size_t * idx = rinfo[rows[i]].idx.get();
 
       r.resize(row_size);
-      unsigned j=0, oj=0;
+      unsigned oj=0;
 
-      for (; f<fend; ++f, ++j) {
-        unsigned col = cols[j];
+      // NOTE: rat_mod is evaluated many times here for the same c[j]
+      // in the (very likely) case there are duplicates.
+      for (; cols<cols_end; ++cols, ++idx) {
+        unsigned col = *cols;
         if (info[col] & LSVar::IS_NON_ZERO) {
-          rat_mod(*f, mpmod, mpres);
+          rat_mod(c[*idx], mpmod, mpres);
           r.el(oj).col = col;
           r.el(oj).val.set(mpres.to_uint());
           ++oj;
