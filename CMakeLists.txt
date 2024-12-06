@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.4)
 
 project(finiteflow CXX C)
 
+set(FFLOW_VERSION 2)
+set(FFLOW_VERSION_MINOR 0)
+
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 if(NOT CMAKE_BUILD_TYPE)
