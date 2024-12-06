@@ -993,8 +993,11 @@ RegisterAlgChain[gid_,inputs_,{}]:=Catch[FFAlgChainImplem[gid,inputs]];
 FFAlgChain[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgChain,gid,id,inputs,{}];
 
 
-ValidateTakeElemsList[a_List,False]:=If[AllTrue[a,#[[0]]==List && Length[#]==2&],a,Throw[$Failed]];
-ValidateTakeElemsList[a_List,True]:=If[AllTrue[a,#[[0]]==List && Length[#]==4&],a,Throw[$Failed]];
+And@@(IntegerQ/@{1,2,3})
+
+
+ValidateTakeElemsList[a_List,False]:=If[AllTrue[a,#[[0]]==List && Length[#]==2 && And@@(IntegerQ/@#)&],a,Throw[$Failed]];
+ValidateTakeElemsList[a_List,True]:=If[AllTrue[a,#[[0]]==List && Length[#]==4 && And@@(IntegerQ/@#)&],a,Throw[$Failed]];
 TakeElemsToInternal[a_List,bl_:False]:=ValidateTakeElemsList[a,bl]-1;
 TakeElemsToInternal[full_List->subset_List,bl_:False]:=Module[{position,i,j,sublist,res},
   If[!AllTrue[full,#[[0]]==List&],Throw[$Failed]];
