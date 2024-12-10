@@ -212,6 +212,16 @@ extern "C" {
     // ...nothing for now...
   }
 
+  unsigned ffVersion(void)
+  {
+    return FFLOW_VERSION;
+  }
+
+  unsigned ffVersionMinor(void)
+  {
+    return FFLOW_VERSION_MINOR;
+  }
+
   FFUInt ffMulInv(FFUInt z, unsigned prime_no)
   {
     if (prime_no >= BIG_UINT_PRIMES_SIZE)

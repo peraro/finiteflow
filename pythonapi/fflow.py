@@ -166,6 +166,10 @@ def _StatusCheck(arg):
 
 _lib.ffInit()
 
+FFLOW_VERSION = _lib.ffVersion()
+FFLOW_VERSION_MINOR = _lib.ffVersionMinor()
+__version__ = str(FFLOW_VERSION) + "." + str(FFLOW_VERSION_MINOR)
+
 def MulInv(z, prime_no):
     return _ToUint(_lib.ffMulInv(z, prime_no))
 

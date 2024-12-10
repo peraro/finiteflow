@@ -891,6 +891,25 @@ extern "C" {
 	return 0;
   }
 
+  int fflowml_version(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int zero;
+
+    MLTestHead( mlp, "List", &zero);
+    MLNewPacket(mlp);
+
+    const int version[2] = {
+      FFLOW_VERSION,
+      FFLOW_VERSION_MINOR
+    };
+
+    MLPutInteger32List(mlp, version, 2);
+
+    return LIBRARY_NO_ERROR;
+  }
 
   int fflowml_mul_inv(WolframLibraryData libData, MLINK mlp)
   {

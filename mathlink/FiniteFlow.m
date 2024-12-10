@@ -3,6 +3,9 @@
 BeginPackage["FiniteFlow`"]
 
 
+$FFVersion::usage = "$FFVersion is the major version of FiniteFlow (see also $FFVersionMinor)."
+$FFVersionMinor::usage = "$FFVersionMinor is the minor version of FiniteFlow (see also $FFVersion)."
+
 FFInt64Max::usage = "Maximum 64-bit integer."
 
 FFLoadLib::usage = "FFLoadLib[] (re)loads the finiteflow library."
@@ -1708,6 +1711,7 @@ FFLoadLib[] := Module[
 FFLoadLibObjects[] := Module[
     {},
 
+    FFVersionImplem = LibraryFunctionLoad[fflowlib, "fflowml_version", LinkObject, LinkObject];
     (*FFMulInvImplem = LibraryFunctionLoad[fflowlib, "fflowml_mul_inv", LinkObject, LinkObject];*)
 
     FFDefaultNThreadsImplem = LibraryFunctionLoad[fflowlib, "fflowml_default_nthreads", LinkObject, LinkObject];
@@ -1803,6 +1807,11 @@ FFLoadLib[];
 
 
 FFAlreadyLoaded = True;
+
+
+Unprotect[$FFVersion, $FFVersionMinor];
+{$FFVersion, $FFVersionMinor} = FFVersionImplem[];
+Protect[$FFVersion, $FFVersionMinor];
 
 
 End[] (* "`Private`" *)

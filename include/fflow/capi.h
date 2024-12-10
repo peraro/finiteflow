@@ -72,6 +72,12 @@ extern "C" {
   void ffInit(void);
   void ffDeinit(void);
 
+  // These return FFLOW_VERSION and FFLOW_VERSION_MINOR respectively
+  // (note: in C/C++ one should just use the macros, these functions
+  // are meant for interfaces with other programs or languages).
+  unsigned ffVersion(void);
+  unsigned ffVersionMinor(void);
+
   // checks if a FFStatus, FFGraph or FFNode represents an error
   bool ffIsError(unsigned val);
 
