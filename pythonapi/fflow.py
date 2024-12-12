@@ -8,6 +8,7 @@ WARNING: This is a w.i.p. and the API is not stable yet.
 
 from _cffi_fflow import lib as _lib, ffi as _ffi
 from itertools import chain as _chain
+from random import randint as _randint
 
 
 _FF_SUCCESS = 0
@@ -556,6 +557,46 @@ def ReconstructFunction(graph, **kwargs):
         ret = RatFunList()
         ret._ptr = res[0]
     return ret
+
+
+def TakeUnique(graph, nodein, nevals=3):
+    '''\
+TakeUnique(graph, nodein, nevals=3) returns a tuple
+
+    (newnode, fromouts)
+
+where `newnode` is the integer id of a newly created node which takes
+`nodein` as input and returns the subset of its unique elements.
+These are identified via numerical evaluations (their number can be
+changed with the optional argument `nevals`).  The list `fromouts` is
+such that
+```
+    input == list(output[i] for i in fromouts)
+```
+where input/output is the input/output of the new node.
+'''
+    SetOutputNode(graph, nodein)
+    nout = GraphNParsOut(graph)
+    nin = NodeNParsOut(graph,0)
+    rand = lambda : _randint(123456789123456789, PrimeNo(200)-1)
+    evals = list(EvaluateGraph(graph, list(rand() for _ in range(nin)), 0)
+                 for _ in range(nevals))
+    evals = list(map(tuple, zip(*evals))) # transpose
+    asso = dict()
+    outn = 0
+    outs = []
+    fromouts = []
+    for ii in range(nout):
+        evii = evals[ii]
+        if not evii in asso:
+            asso[evii] = outn
+            outs.append(ii)
+            fromouts.append(outn)
+            outn += 1
+        else:
+            fromouts.append(asso[evii])
+    newnode = AlgTake(graph, [nodein], list((0,jj) for jj in outs))
+    return (newnode, fromouts)
 
 
 if __name__ == '__main__':

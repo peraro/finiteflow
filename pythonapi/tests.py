@@ -339,6 +339,15 @@ def testLists():
     if EvaluateGraph(g, [], 0) != [30, 164, 80]:
         print("- Check failed!")
         exit(1)
+
+    # Test TakeUnique
+    unique_ab,fromunique_ab = TakeUnique(g, node_ab)
+    SetOutputNode(g, unique_ab)
+    if EvaluateGraph(g, [], 0) != list(range(5)) or \
+       fromunique_ab != list(range(4)) + list(range(5)):
+        print("- Check failed for TakeUnique!")
+        exit(1)
+
     print("- Test passed!")
 
 
