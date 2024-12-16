@@ -1065,6 +1065,14 @@ namespace fflow {
       std::unique_ptr<UInt[]> xi(new UInt[a.nparsin[0]]);
       std::unique_ptr<UInt[]> xo(new UInt[a.nparsout]);
       Mod mod(BIG_UINT_PRIMES[0]);
+      {
+        // do a warm-up evaluation first, since first evaluation is
+        // often slower, so we only time the second one
+        for (unsigned i=0; i<a.nparsin[0]; ++i)
+          xi[i] = sample_uint(OFFSET_1, 40 + i, mod);
+        const UInt * xiptr = xi.get();
+        a.evaluate(&ctxt_, &xiptr, mod, ctxt_.graph_data(graphid), xo.get());
+      }
       for (unsigned i=0; i<a.nparsin[0]; ++i)
         xi[i] = sample_uint(OFFSET_1, 20 + i, mod);
       const UInt * xiptr = xi.get();
