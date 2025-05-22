@@ -69,6 +69,7 @@ namespace fflow {
   void DenseLinearSolver::get_dependent_variables_(AlgorithmData * data,
                                                    MatrixView & mv)
   {
+    indepv_.clear();
     mv.dependent_vars(adata_(data).depv_);
     for (auto dep : adata_(data).depv_)
       xinfo_[dep] |= LSVar::IS_DEP;
@@ -115,6 +116,9 @@ namespace fflow {
   // check_dependent_variables_
   void DenseLinearSolver::learn_zeroes_(AlgorithmData * data, MatrixView & mv)
   {
+    if (only_non_homog_)
+      return learn_zeroes_onlynonhomog_(data, mv);
+
     unsigned eq = 0;
     zero_vars_ = 0;
 
@@ -134,6 +138,32 @@ namespace fflow {
 
       ++eq;
     }
+  }
+
+  void DenseLinearSolver::learn_zeroes_onlynonhomog_(AlgorithmData * data,
+                                                     MatrixView & mv)
+  {
+    unsigned eq = 0;
+    zero_vars_ = 0;
+
+    for (auto dep : adata_(data).depv_) {
+
+      bool non_zero = mv(eq,nvars()) != 0;
+
+      if (!non_zero) {
+        xinfo_[dep] &= ~flag_t(LSVar::IS_NON_ZERO);
+        ++zero_vars_;
+      }
+
+      ++eq;
+    }
+
+    for (auto indep : indepv_) {
+      xinfo_[indep] |= LSVar::IS_DEP;
+      xinfo_[indep] &= ~flag_t(LSVar::IS_NON_ZERO);
+    }
+    zero_vars_ += indepv_.size();
+    indepv_.clear();
   }
 
   // must be called after get_dependent_variables_ or
@@ -298,6 +328,14 @@ namespace fflow {
     return SUCCESS;
   }
 
+  Ret DenseLinearSolver::only_non_homogeneous(bool flag)
+  {
+    if (!is_mutable())
+      return FAILED;
+    invalidate();
+    only_non_homog_ = flag;
+    return SUCCESS;
+  }
 
 
   // Sparse
@@ -657,6 +695,9 @@ namespace fflow {
 
   bool SparseLinearSolver::check_zeroes_(AlgorithmData * data)
   {
+    if (flag_ & ONLY_NON_HOMOG_)
+      return check_zeroes_onlynonhomog_(data);
+
     const auto & mat = adata_(data).mat_;
     const unsigned neqs = mat.nrows();
     bool any_zero = false;
@@ -681,6 +722,51 @@ namespace fflow {
 
       }
 
+    }
+
+    return any_zero;
+  }
+
+  bool SparseLinearSolver::check_zeroes_onlynonhomog_(AlgorithmData * data)
+  {
+    const auto & mat = adata_(data).mat_;
+    const unsigned neqs = mat.nrows();
+    bool any_zero = false;
+
+    if (!zerodeps_.size()) {
+
+      for (unsigned j=0; j<neqs; ++j) {
+
+        auto & row = mat.row(j);
+        const unsigned col = row.first_nonzero_column();
+
+        if (col == SparseMatrixRow::END)
+          break;
+
+        xinfo_[col] |= LSVar::IS_DEP;
+
+        bool non_zero = false;
+        const unsigned rsize = row.size();
+        if (row.el(rsize-1).col == nvars())
+          non_zero = true;
+
+        if (!non_zero) {
+          any_zero = true;
+          xinfo_[col] &= ~flag_t(LSVar::IS_NON_ZERO);
+          if (xinfo_[col] & LSVar::IS_NEEDED)
+            zerodeps_.push_back(col);
+        }
+
+      }
+
+      for (unsigned j=0; j<nvars(); ++j)
+        if (!(xinfo_[j] & LSVar::IS_DEP)) {
+          any_zero = true;
+          xinfo_[j] |= LSVar::IS_DEP;
+          xinfo_[j] &= ~flag_t(LSVar::IS_NON_ZERO);
+          if (xinfo_[j] & LSVar::IS_NEEDED)
+            zerodeps_.push_back(j);
+        }
     }
 
     return any_zero;
@@ -961,6 +1047,18 @@ namespace fflow {
       flag_ |= HOMOG_;
     else
       flag_ &= ~flag_t(HOMOG_);
+    return SUCCESS;
+  }
+
+  Ret SparseLinearSolver::only_non_homogeneous(bool flag)
+  {
+    if (!is_mutable() || stage_ != FIRST_)
+      return FAILED;
+    invalidate();
+    if (flag)
+      flag_ |= ONLY_NON_HOMOG_;
+    else
+      flag_ &= ~flag_t(ONLY_NON_HOMOG_);
     return SUCCESS;
   }
 

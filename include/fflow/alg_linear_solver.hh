@@ -119,6 +119,7 @@ namespace fflow {
     }
 
     Ret only_homogeneous(bool flag = true);
+    Ret only_non_homogeneous(bool flag = true);
 
   private:
 
@@ -152,6 +153,7 @@ namespace fflow {
     }
 
     void learn_zeroes_(AlgorithmData * data, MatrixView & mv);
+    void learn_zeroes_onlynonhomog_(AlgorithmData * data, MatrixView & mv);
     void learn_needed_(AlgorithmData * data, MatrixView & mv);
 
     void replace_zeroes_(MatrixView & mv) const;
@@ -188,7 +190,7 @@ namespace fflow {
     std::size_t nneeded_ext_;
     std::size_t zero_vars_ = 0, nndeps_ = 0, nnindeps_ = 0, nnindepeqs_ = 0;
     flag_t stage_ = FIRST_;
-    bool homog_ = false;
+    bool homog_ = false, only_non_homog_ = false;
   };
 
 
@@ -303,6 +305,7 @@ namespace fflow {
     void mark_and_sweep_eqs(AlgorithmData * data);
 
     Ret only_homogeneous(bool flag = true);
+    Ret only_non_homogeneous(bool flag = true);
 
     bool marked_and_sweeped() const
     {
@@ -379,6 +382,7 @@ namespace fflow {
     void get_needed_indep_();
 
     bool check_zeroes_(AlgorithmData * data);
+    bool check_zeroes_onlynonhomog_(AlgorithmData * data);
 
     void relearn_zero_needed_();
 
@@ -402,7 +406,8 @@ namespace fflow {
       HOMOG_ = 1 << 1,
       MARKED_AND_SWEEPED_ = 1 << 2,
       IMPOSSIBLE_ = 1 << 3,
-      KEEP_ALL_OUTS_ = 1 << 4 // only when maxcol_ is specified
+      KEEP_ALL_OUTS_ = 1 << 4, // only when maxcol_ is specified
+      ONLY_NON_HOMOG_ = 1 << 5
     };
 
 

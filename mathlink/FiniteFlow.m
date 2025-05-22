@@ -52,6 +52,7 @@ FFAllAlgs::usage = "FFAllAlgs[] returns a list with all the algorithms in all th
 FFAlgQ::usage = "FFAlgQ[graphname, nodename] returns True if the specified algorithm exists."
 FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, neededvars] redefines the set of needed variables of a dense or sparse linear system."
 FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
+FFSolverOnlyNonHomogeneous::usage =  "FFSolverOnlyNonHomogeneous[graph, node] makes a linear solver return only the non-homogeneous part of its solution and sets to zero all the independent variables (useful if only one solution of the system is needed, rather than the full space of solutions)."
 FFSolverSparseOutput::usage = "FFSolverSparseOutput[graph, node] makes a sparse linear solver return a sparse representation of the solution matrix."
 FFSolverSparseOutputWithMaxCol::usage = ""
 FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
@@ -866,6 +867,9 @@ FFListSubsetFromJSON[file_,list_]:=list[[Import[file][[2]]+1]];
 FFSolverOnlyHomogeneous[gid_,id_]:=Catch[FFSolverOnlyHomogeneousImplem[GetGraphId[gid],GetAlgId[gid,id]]];
 
 
+FFSolverOnlyNonHomogeneous[gid_,id_]:=Catch[FFSolverOnlyNonHomogeneousImplem[GetGraphId[gid],GetAlgId[gid,id]]];
+
+
 FFSolverSparseOutput[gid_,id_]:=Catch[FFSolverSparseOutputImplem[GetGraphId[gid],GetAlgId[gid,id]]];
 Options[FFSolverSparseOutputWithMaxCol]={"BackSubstitution"->True,"KeepFullOutput"->False};
 FFSolverSparseOutputWithMaxCol[gid_,id_,maxrow_,OptionsPattern[]]:=Catch[FFSolverSparseOutputWithMaxrowImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[maxrow],toFFInternalBooleanFlag["BackSubstitution",OptionValue["BackSubstitution"]],toFFInternalBooleanFlag["KeepFullOutput",OptionValue["KeepFullOutput"]]]];
@@ -1241,7 +1245,7 @@ FFMultiFitSol[sol_,learn_]:=MapThread[FFDenseSolverSol,{PartitionsWithLen[sol,(L
 AutoReconstructionOptions[]:=Options[FFReconstructFunction];
 
 
-Options[FFDenseSolve] := Join[{"Parameters"->Automatic, "IndepVarsOnly"->False},
+Options[FFDenseSolve] := Join[{"Parameters"->Automatic, "IndepVarsOnly"->False, "OnlyNonHomogeneous"->False},
                                    AutoReconstructionOptions[],
                                    Options[FFAlgDenseSolver]];
 FFDenseSolve[eqs_, vars_, OptionsPattern[]] := Module[
@@ -1260,6 +1264,10 @@ FFDenseSolve[eqs_, vars_, OptionsPattern[]] := Module[
                                 Sequence@@FilterRules[{opt}, Options[FFAlgDenseSolver]]];
       If[res==$Failed,Throw[$Failed]];
       
+      If[TrueQ[OptionValue["OnlyNonHomogeneous"]],
+        FFSolverOnlyNonHomogeneous[graph,sys];
+      ];
+
       FFGraphOutput[graph,sys];
       If[TrueQ[OptionValue["IndepVarsOnly"]], FFSetLearningOptions[graph,sys,"PrimeNo"->OptionValue["StartingPrimeNo"]];];
       learn = FFDenseSolverLearn[graph,vars];
@@ -1278,7 +1286,7 @@ FFDenseSolve[eqs_, vars_, OptionsPattern[]] := Module[
 ];
 
 
-Options[FFSparseSolve] := Join[{"Parameters"->Automatic, "IndepVarsOnly"->False, "MarkAndSweep"->True, "SparseOutput"->False},
+Options[FFSparseSolve] := Join[{"Parameters"->Automatic, "IndepVarsOnly"->False, "MarkAndSweep"->True, "SparseOutput"->False, "OnlyNonHomogeneous"->False},
                                    AutoReconstructionOptions[],
                                    Options[FFAlgSparseSolver]];
 FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
@@ -1299,7 +1307,10 @@ FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
       If[(!TrueQ[OptionValue["IndepVarsOnly"]]) && TrueQ[OptionValue["SparseOutput"]],
         FFSolverSparseOutput[graph,sys];
       ];
-      
+      If[TrueQ[OptionValue["OnlyNonHomogeneous"]],
+        FFSolverOnlyNonHomogeneous[graph,sys];
+      ];
+
       FFGraphOutput[graph,sys];
       If[TrueQ[OptionValue["IndepVarsOnly"]], FFSetLearningOptions[graph,sys,"PrimeNo"->OptionValue["StartingPrimeNo"]];];
       learn = FFSparseSolverLearn[graph,vars];
@@ -1757,6 +1768,7 @@ FFLoadLibObjects[] := Module[
     FFGraphPruneImplem = LibraryFunctionLoad[fflowlib, "fflowml_graph_prune", LinkObject, LinkObject];
     FFSolverResetNeededVarsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_reset_neeed", LinkObject, LinkObject];
     FFSolverOnlyHomogeneousImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_only_homogeneous", LinkObject, LinkObject];
+    FFSolverOnlyNonHomogeneousImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_only_non_homogeneous", LinkObject, LinkObject];
     FFSolverSparseOutputImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output", LinkObject, LinkObject];
     FFSolverSparseOutputWithMaxrowImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output_with_maxcol", LinkObject, LinkObject];
     FFIndependentOfImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_independent_of_var", LinkObject, LinkObject];

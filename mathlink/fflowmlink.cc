@@ -2038,6 +2038,52 @@ extern "C" {
   }
 
 
+  int fflowml_alg_system_only_non_homogeneous(WolframLibraryData libData,
+                                              MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int id, nodeid, nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    bool okay = true;
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+    if (!alg || !alg->is_mutable())
+      okay = false;
+
+    if (okay) {
+      if (dynamic_cast<DenseLinearSolver *>(alg)) {
+          DenseLinearSolver & ls = *static_cast<DenseLinearSolver *>(alg);
+          if (ls.only_non_homogeneous() != SUCCESS)
+            okay = false;
+          session.invalidate_subctxt_alg_data(id, nodeid);
+
+      } else if (dynamic_cast<SparseLinearSolver *>(alg)) {
+          SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+          if (ls.only_non_homogeneous() != SUCCESS)
+            okay = false;
+          session.invalidate_subctxt_alg_data(id, nodeid);
+
+      } else {
+        okay = false;
+      }
+    }
+    MLNewPacket(mlp);
+
+    if (okay)
+      MLPutSymbol(mlp, "Null");
+    else
+      MLPutSymbol(mlp, "$Failed");
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_system_sparse_output(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);
