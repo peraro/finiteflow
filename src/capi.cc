@@ -1089,6 +1089,32 @@ extern "C" {
     return FF_SUCCESS;
   }
 
+  FFStatus ffLSolveOnlyNonHomogeneous(FFGraph graph, FFNode node)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    if (!alg || !alg->is_mutable())
+      return FF_ERROR;
+
+
+    if (dynamic_cast<DenseLinearSolver *>(alg)) {
+      DenseLinearSolver & ls = *static_cast<DenseLinearSolver *>(alg);
+      if (ls.only_non_homogeneous() != SUCCESS)
+        return FF_ERROR;
+      session.invalidate_subctxt_alg_data(graph, node);
+
+    } else if (dynamic_cast<SparseLinearSolver *>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+      if (ls.only_non_homogeneous() != SUCCESS)
+        return FF_ERROR;
+      session.invalidate_subctxt_alg_data(graph, node);
+
+    } else {
+      return FF_ERROR;
+    }
+
+    return FF_SUCCESS;
+  }
+
   FFStatus ffLSolveSparseOutput(FFGraph graph, FFNode node, bool sparse)
   {
     Algorithm * alg = session.algorithm(graph, node);

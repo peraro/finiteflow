@@ -282,6 +282,7 @@ extern "C" {
   FFStatus ffLSolveResetNeededVars(FFGraph graph, FFNode node,
                                    const unsigned * vars, unsigned n_vars);
   FFStatus ffLSolveOnlyHomogeneous(FFGraph graph, FFNode node);
+  FFStatus ffLSolveOnlyNonHomogeneous(FFGraph graph, FFNode node);
   FFStatus ffLSolveSparseOutput(FFGraph graph, FFNode node, bool sparse);
   FFStatus ffLSolveMarkAndSweepEqs(FFGraph graph, FFNode node);
 
