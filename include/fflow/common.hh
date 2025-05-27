@@ -536,6 +536,11 @@ namespace fflow {
   // checked wrapper of malloc and realloc
   inline void * crealloc(void * ptr, std::size_t size)
   {
+    if (!size) {
+      if (ptr)
+        std::free(ptr);
+      return 0;
+    }
     ptr = std::realloc(ptr, size);
     if (!ptr)
       std::terminate();
