@@ -139,6 +139,20 @@ static FFStatus getPoly(unsigned n_vars,
   return FF_SUCCESS;
 }
 
+static char * writer_to_cstr(MemoryWriter & w)
+{
+  char * ret = (char*)malloc(w.size() + 1);
+  strcpy(ret, w.c_str());
+  return ret;
+}
+
+static char * cstr_to_cstr(const char * str, size_t n)
+{
+  char * ret = (char*)malloc(n + 1);
+  strcpy(ret, str);
+  return ret;
+}
+
 
 extern "C" {
 
@@ -253,6 +267,26 @@ extern "C" {
   }
 
   void ffFreeMemoryU64(uint64_t * mem)
+  {
+    free(mem);
+  }
+
+  void ffFreeMemoryU16(uint16_t * mem)
+  {
+    free(mem);
+  }
+
+  void ffFreeCStrArray(char ** mem)
+  {
+    if (!mem)
+      return;
+    char ** el = mem;
+    for (; *el != 0; ++el)
+      free(*el);
+    free(mem);
+  }
+
+  void ffFreeCStr(char * mem)
   {
     free(mem);
   }
@@ -1418,6 +1452,145 @@ extern "C" {
     ret->rf = std::move(res);
 
     return ret;
+  }
+
+  unsigned ffRatFunNumNTerms(const FFRatFunList * rf, unsigned idx)
+  {
+    if (idx >= rf->n_functions)
+      return FF_ERROR;
+    return rf->rf[idx].numerator().size();
+  }
+
+  unsigned ffRatFunDenNTerms(const FFRatFunList * rf, unsigned idx)
+  {
+    if (idx >= rf->n_functions)
+      return FF_ERROR;
+    return rf->rf[idx].denominator().size();
+  }
+
+  static char ** ffRatNumRatPolyCoeff(const MPReconstructedPoly & poly)
+  {
+    unsigned poly_size = poly.size();
+
+    char ** ccs = (char **)malloc((poly_size+1) * sizeof(char*));
+    std::string strbuff;
+
+    MemoryWriter w;
+    for (unsigned j=0; j<poly_size; ++j) {
+      w.clear();
+      poly.coeff(j).print(w);
+      ccs[j] = writer_to_cstr(w);
+    }
+    ccs[poly_size] = 0;
+
+    return ccs;
+  }
+
+  char ** ffRatFunNumCoeffs(const FFRatFunList * rf, unsigned idx)
+  {
+    if (idx >= rf->n_functions)
+      return 0;
+    const MPReconstructedPoly & poly = rf->rf[idx].numerator();
+    return ffRatNumRatPolyCoeff(poly);
+  }
+
+  char ** ffRatFunDenCoeffs(const FFRatFunList * rf, unsigned idx)
+  {
+    if (idx >= rf->n_functions)
+      return 0;
+    const MPReconstructedPoly & poly = rf->rf[idx].denominator();
+    return ffRatNumRatPolyCoeff(poly);
+  }
+
+  static uint16_t * ffRatNumRatPolyExps(const MPReconstructedPoly & poly)
+  {
+    unsigned num_size = poly.size();
+    unsigned nv = poly.nvars();
+
+    uint16_t * ret = (uint16_t *)malloc(num_size * nv * sizeof(uint16_t));
+    uint16_t * out = ret;
+    for (unsigned j=0; j<num_size; ++j)
+      for (unsigned k=0; k<nv; ++k, ++out)
+        *out = poly.monomial(j).exponent(k);
+
+    return ret;
+  }
+
+  uint16_t * ffRatFunNumExponents(const FFRatFunList * rf, unsigned idx)
+  {
+    if (idx >= rf->n_functions)
+      return 0;
+    const MPReconstructedPoly & poly = rf->rf[idx].numerator();
+    return ffRatNumRatPolyExps(poly);
+  }
+
+  uint16_t * ffRatFunDenExponents(const FFRatFunList * rf, unsigned idx)
+  {
+    if (idx >= rf->n_functions)
+      return 0;
+    const MPReconstructedPoly & poly = rf->rf[idx].denominator();
+    return ffRatNumRatPolyExps(poly);
+  }
+
+  static void ffMemoryWritePoly(MemoryWriter & w,
+                                const MPReconstructedPoly & poly,
+                                const FFCStr * vars)
+  {
+    const unsigned nv = poly.nvars();
+    const unsigned poly_size = poly.size();
+
+    if (!poly_size) {
+      w << "0";
+      return;
+    }
+
+    for (unsigned j=0; j<poly_size; ++j) {
+
+      const auto & coeff = poly.coeff(j);
+      if (j && coeff.sign() > 0)
+        w << "+";
+      coeff.print(w);
+
+      const auto & mon = poly.monomial(j);
+      for (unsigned k=0; k<nv; ++k) {
+        unsigned e = mon.exponent(k);
+        if (e) {
+          w << "*" << vars[k];
+          if (e > 1)
+            w << "^" << e;
+        }
+      }
+    }
+  }
+
+  char * ffRatFunToStr(const FFRatFunList * rf, unsigned idx,
+                       const FFCStr * vars)
+  {
+    if (idx >= rf->n_functions)
+      return 0;
+
+    MemoryWriter w;
+
+    const auto & ratfun = rf->rf[idx];
+    const auto & num = ratfun.numerator();
+
+    if (num.size() == 0)
+      return cstr_to_cstr("0", 1);
+
+    const auto & den = ratfun.denominator();
+    if (den.size() == 1 && den.monomial(0).degree() == 0
+        && den.coeff(0).cmp(1) == 0) {
+      // trivial denominator
+      ffMemoryWritePoly(w,num,vars);
+      return writer_to_cstr(w);
+    }
+
+    w << "( ";
+    ffMemoryWritePoly(w,num,vars);
+    w << " )/( ";
+    ffMemoryWritePoly(w,den,vars);
+    w << " )";
+    return writer_to_cstr(w);
   }
 
 

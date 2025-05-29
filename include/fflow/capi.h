@@ -91,6 +91,12 @@ extern "C" {
   void ffFreeMemoryS32(int * mem);
   // Frees arrays of 64-bit integers returned by several routines
   void ffFreeMemoryU64(uint64_t * mem);
+  // Frees arrays of 16-bit integers
+  void ffFreeMemoryU16(uint16_t * mem);
+  // Frees string
+  void ffFreeCStr(char * mem);
+  // Frees null-terminated arrays of null-terminated strings
+  void ffFreeCStrArray(char ** mem);
 
   FFGraph ffNewGraph(void);
   FFGraph ffNewGraphWithInput(unsigned nvars, FFNode * node);
@@ -317,6 +323,24 @@ extern "C" {
   unsigned ffRatFunListNVars(const FFRatFunList * rf);
   void ffFreeRatFun(FFRatFunList * rf);
   FFStatus ffRatFunToJSON(const FFRatFunList * rf, FFCStr file);
+
+  // These return FF_ERROR if idx is out of bounds
+  unsigned ffRatFunNumNTerms(const FFRatFunList * rf, unsigned idx);
+  unsigned ffRatFunDenNTerms(const FFRatFunList * rf, unsigned idx);
+
+  // These return a null-terminated array of null-terminated strings
+  // representing the rational coefficients
+  char ** ffRatFunNumCoeffs(const FFRatFunList * rf, unsigned idx);
+  char ** ffRatFunDenCoeffs(const FFRatFunList * rf, unsigned idx);
+
+  // These return an nterms*nvars array of exponents (see
+  // ffRatFunListNVars, ffRatFunNumNTerms and ffRatFunDenNTerms)
+  uint16_t * ffRatFunNumExponents(const FFRatFunList * rf, unsigned idx);
+  uint16_t * ffRatFunDenExponents(const FFRatFunList * rf, unsigned idx);
+
+  // returned string must be freed using ffFreeCStr
+  char * ffRatFunToStr(const FFRatFunList * rf, unsigned idx,
+                       const FFCStr * vars);
 
   unsigned ffIdxRatFunListSize(const FFIdxRatFunList * rf);
   unsigned ffIdxRatFunListNFunctions(const FFIdxRatFunList * rf);

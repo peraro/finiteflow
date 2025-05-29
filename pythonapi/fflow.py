@@ -81,6 +81,92 @@ class RatFunList:
             return 0
         return _lib.ffRatFunListNVars(self._ptr)
 
+    def _poly_coeffs(self,gettems,getcoeffs,idx):
+        nterms = _Check(gettems(self._ptr,idx))
+        ccoeffs = getcoeffs(self._ptr,idx)
+        ret = list(_ffi.string(ccoeffs[i]).decode() for i in range(nterms))
+        _lib.ffFreeCStrArray(ccoeffs)
+        return ret
+
+    def num_coeffs(self,idx=None):
+        if idx is None:
+            return list(self.num_coeffs(i) for i in range(self.size()))
+        else:
+            return self._poly_coeffs(_lib.ffRatFunNumNTerms,
+                                     _lib.ffRatFunNumCoeffs, idx)
+
+    def den_coeffs(self,idx=None):
+        if idx is None:
+            return list(self.den_coeffs(i) for i in range(self.size()))
+        else:
+            return self._poly_coeffs(_lib.ffRatFunDenNTerms,
+                                     _lib.ffRatFunDenCoeffs, idx)
+
+    def coeffs(self,idx=None):
+        if idx is None:
+            return list(self.coeffs(i) for i in range(self.size()))
+        else:
+            return (self.num_coeffs(idx), self.den_coeffs(idx))
+
+    def _poly_exponents(self,getterms,getexps,idx):
+        nterms = _Check(getterms(self._ptr,idx))
+        nv = self.nvars()
+        exps = getexps(self._ptr,idx)
+        ret = list(tuple(exps[i*nv: i*nv+nv]) for i in range(nterms))
+        _lib.ffFreeMemoryU16(exps)
+        return ret
+
+    def num_exponents(self,idx=None):
+        if idx is None:
+            return list(self.num_exponents(i)
+                        for i in range(self.size()))
+        else:
+            return self._poly_exponents(_lib.ffRatFunNumNTerms,
+                                        _lib.ffRatFunNumExponents, idx)
+
+    def den_exponents(self,idx=None):
+        if idx is None:
+            return list(self.den_exponents(i)
+                        for i in range(self.size()))
+        else:
+            return self._poly_exponents(_lib.ffRatFunDenNTerms,
+                                        _lib.ffRatFunDenExponents, idx)
+
+    def exponents(self,idx=None):
+        if idx is None:
+            return list(self.exponents(i) for i in range(self.size()))
+        else:
+            return (self.num_exponents(idx), self.den_exponents(idx))
+
+    def num_monomials(self,idx=None):
+        if idx is None:
+            return list(self.num_monomials(i) for i in range(self.size()))
+        else:
+            return list(zip(self.num_exponents(idx), self.num_coeffs(idx)))
+
+    def den_monomials(self,idx=None):
+        if idx is None:
+            return list(self.den_monomials(i) for i in range(self.size()))
+        else:
+            return list(zip(self.den_exponents(idx), self.den_coeffs(idx)))
+
+    def monomials(self,idx=None):
+        if idx is None:
+            return list(self.monomials(i) for i in range(self.size()))
+        else:
+            return (self.num_monomials(idx), self.den_monomials(idx))
+
+    def to_string(self,svars,idx=None):
+        if idx is None:
+            return list(self.to_string(svars,i) for i in range(self.size()))
+        else:
+            cvars = [_ffi.new("char[]", x.encode('utf8')) for x in svars]
+            cstr = _lib.ffRatFunToStr(self._ptr,idx,cvars)
+            if cstr == _ffi.NULL:
+                raise ERROR
+            ret = _ffi.string(cstr).decode()
+            _lib.ffFreeCStr(cstr)
+            return ret
 
 class IdxRatFunList:
     '''\
