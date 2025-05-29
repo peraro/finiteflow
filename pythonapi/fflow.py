@@ -640,6 +640,12 @@ def EvaluateRatFunList(rf, z, prime_no):
 
 
 def ReconstructFunction(graph, **kwargs):
+    '''\
+ReconstructFunction(graph,**kwargs) reconstructs the rational function
+defined by the graph. The allowed keyword arguments kwargs are:
+start_mod, min_primes, max_primes, max_deg, dbginfo, polymethod,
+n_threads.  All of them must have integer values.
+'''
     recopt = _ffi.new("FFRecOptions *",kwargs)
     res = _ffi.new("FFRatFunList **")
     ret = _to_status[_lib.ffReconstructFunction(graph,recopt[0],res)]
