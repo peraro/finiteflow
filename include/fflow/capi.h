@@ -146,7 +146,7 @@ extern "C" {
    * dimensional matrix (A|b).  More precisely:
    * - n_non_zero[i] is the number of non-zero entries of row i
    * - n_zero_cols lists the columns with non-zero entries for each
-   *   row, stored in a contigous array (one row after the other)
+   *   row, stored in a contiguous array (one row after the other)
    * - non_zero_coeffs is a list of indexes in the array of rational
    *   functions rat_functions representing the non-vanishing
    *   coefficients in the matrix.
@@ -362,7 +362,7 @@ extern "C" {
   // This may also return valid rational functions for some invalid
   // inputs.
   //
-  // If these lmitations are too restrictive, consider using the
+  // If these limitations are too restrictive, consider using the
   // parser of a proper CAS and then pass the functions to fflow using
   // ffNewRatFunList instead.
   FFRatFunList * ffParseRatFun(FFCStr * vars, unsigned n_vars,
@@ -408,7 +408,7 @@ extern "C" {
   //
   // exponents is an array of tot_terms*n_nvars integers representing
   // exponents, namely it is a pointer to tot_terms arrays of n_nvars
-  // indexes, stored contigously in memory.  Each n_vars-dimensional
+  // indexes, stored contiguously in memory.  Each n_vars-dimensional
   // array represents the exponents of a single term.  These must be
   // sorted the same way as their respective coefficients.
   FFRatFunList * ffNewRatFunList(unsigned n_vars, size_t n_functions,

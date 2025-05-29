@@ -481,7 +481,7 @@ def ParseRatFun(variables, functions):
 This may also return valid rational functions for some invalid
 inputs.
 
-If these lmitations are too restrictive, consider using the parser of
+If these limitations are too restrictive, consider using the parser of
 a proper CAS and then pass the functions to fflow using
 ffNewRatFunList instead.
 '''
