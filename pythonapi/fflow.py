@@ -142,13 +142,13 @@ class RatFunList:
         if idx is None:
             return list(self.num_monomials(i) for i in range(self.size()))
         else:
-            return list(zip(self.num_exponents(idx), self.num_coeffs(idx)))
+            return list(zip(self.num_coeffs(idx), self.num_exponents(idx)))
 
     def den_monomials(self,idx=None):
         if idx is None:
             return list(self.den_monomials(i) for i in range(self.size()))
         else:
-            return list(zip(self.den_exponents(idx), self.den_coeffs(idx)))
+            return list(zip(self.den_coeffs(idx), self.den_exponents(idx)))
 
     def monomials(self,idx=None):
         if idx is None:
