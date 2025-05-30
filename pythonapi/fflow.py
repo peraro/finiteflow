@@ -157,6 +157,9 @@ class RatFunList:
             return (self.num_monomials(idx), self.den_monomials(idx))
 
     def to_string(self,svars,idx=None):
+        if len(svars) != self.nvars():
+            raise ValueError("List svars must have the same length as the " +
+                             "number of variables self.nvars()")
         if idx is None:
             return list(self.to_string(svars,i) for i in range(self.size()))
         else:
@@ -261,7 +264,7 @@ def MulInv(z, prime_no):
     return _ToUint(_lib.ffMulInv(z, prime_no))
 
 def PrimeNo(i):
-    return _ToUint(_lib.PrimeNo(i))
+    return _ToUint(_lib.ffPrimeNo(i))
 
 def DefaultNThreads():
     return _lib.ffDefaultNThreads()
@@ -467,8 +470,8 @@ def LSolveIndepVars(graph, node, i=0):
 def RatFunToJSON(rf, json_file):
     if not type(rf) is RatFunList:
         raise TypeError("First argument of RatFunToJSON() must be a RatFunList")
-    return _StatusCheck(_lib.ffEvaluateRatFunList(rf._ptr,
-                                                  json_file.encode('utf8')))
+    return _StatusCheck(_lib.ffRatFunToJSON(rf._ptr,
+                                            json_file.encode('utf8')))
 
 
 def ParseRatFun(variables, functions):
@@ -482,8 +485,8 @@ This may also return valid rational functions for some invalid
 inputs.
 
 If these limitations are too restrictive, consider using the parser of
-a proper CAS and then pass the functions to fflow using
-ffNewRatFunList instead.
+a proper CAS and then pass the functions to fflow using NewRatFunList
+instead.
 '''
     rf = [_ffi.new("char[]", x.encode('utf8')) for x in functions]
     rfl = [len(x) for x in functions]

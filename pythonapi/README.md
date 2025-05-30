@@ -25,7 +25,7 @@ cd /path/to/finiteflow/pythonapi
 python3 fflow_build.py
 ```
 
-After this, consider uptading your `$PYTHONPATH` by adding the following to your `~/.bashrc`, `~/.zshrc` or `~/.bash_profile`
+After this, consider updating your `$PYTHONPATH` by adding the following to your `~/.bashrc`, `~/.zshrc` or `~/.bash_profile`
 ```
 export PYTHONPATH=$PYTHONPATH:/path/to/finiteflow/pythonapi
 ```
