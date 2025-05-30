@@ -596,14 +596,14 @@ def NewRatFunList(nvars, allterms):
     for ratfun in allterms:
         if len(ratfun) != 2:
             raise TypeError("For each rational function, terms should be listed"
-                            + "for both the numerator and the denominator.")
+                            + " for both the numerator and the denominator.")
         n_num_terms.append(len(ratfun[0]))
         n_den_terms.append(len(ratfun[1]))
         for poly in ratfun:
             for t in poly:
                 coeffs.append(_ffi.new("char[]", t[0].encode('utf8')))
                 if len(t[1]) != nvars:
-                    raise TypeError("The list of exponents the length is not "
+                    raise TypeError("The length of the exponents' list is not "
                                     + str(nvars))
                 exponents.extend(t[1])
     resc = _lib.ffNewRatFunList(nvars, len(allterms), n_num_terms, n_den_terms,
