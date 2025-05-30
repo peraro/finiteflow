@@ -322,6 +322,9 @@ namespace fflow {
       }
       m.degree() = tot_deg;
 
+      if (!got_coeff && first_var)
+        return FAILED;
+
       // Check if there's an integer denominator, which we absorb in
       // the coefficient
       if (curr_token.type != RatFunToken::DIV)
