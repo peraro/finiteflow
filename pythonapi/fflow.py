@@ -657,6 +657,87 @@ n_threads.  All of them must have integer values.
         ret._ptr = res[0]
     return ret
 
+def ReconstructFunctionMod(graph, **kwargs):
+    '''\
+ReconstructFunctionMod(graph,**kwargs) reconstructs the rational
+function defined by the graph modulo the prime PrimeNo(start_mod),
+with start_mod=0 by default. The allowed keyword arguments kwargs are:
+start_mod, max_deg, dbginfo, polymethod, n_threads.  All of them must
+have integer values.
+'''
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    res = _ffi.new("FFRatFunList **")
+    ret = _to_status[_lib.ffReconstructFunctionMod(graph,recopt[0],res)]
+    if ret is SUCCESS:
+        ret = RatFunList()
+        ret._ptr = res[0]
+    return ret
+
+def ReconstructFromCurrentEvaluations(graph, **kwargs):
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    res = _ffi.new("FFRatFunList **")
+    ret = _to_status[_lib.ffReconstructFromCurrentEvaluations(graph,recopt[0],res)]
+    if ret is SUCCESS:
+        ret = RatFunList()
+        ret._ptr = res[0]
+    return ret
+
+def ReconstructFromCurrentEvaluationsMod(graph, **kwargs):
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    res = _ffi.new("FFRatFunList **")
+    ret = _to_status[_lib.ffReconstructFromCurrentEvaluationsMod(graph,recopt[0],res)]
+    if ret is SUCCESS:
+        ret = RatFunList()
+        ret._ptr = res[0]
+    return ret
+
+def AllDegrees(graph,**kwargs):
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    degptr = _lib.ffAllDegrees(graph,recopt[0])
+    if degptr == _ffi.NULL:
+        raise ERROR
+    nout = GraphNParsOut(graph)
+    ret = iter(_ffi.unpack(degptr, 2*nout))
+    _lib.ffFreeMemoryU32(degptr)
+    return [(next(ret),next(ret)) for i in range(nout)]
+
+def DumpDegrees(graph,filename):
+    cfile = _ffi.new("char[]", filename.encode('utf8'))
+    return _StatusCheck(_lib.ffDumpDegrees(graph,cfile))
+
+def NParsFromDegreeFile(filename):
+    nparsin = _ffi.new('unsigned[1]')
+    nparsout = _ffi.new('unsigned[1]')
+    cfile = _ffi.new("char[]", filename.encode('utf8'))
+    ret = _StatusCheck(_lib.ffNParsFromDegreeFile(cfile,nparsin,nparsout))
+    return (nparsin[0],nparsout[0])
+
+def LoadDegrees(graph,filename):
+    cfile = _ffi.new("char[]", filename.encode('utf8'))
+    return _StatusCheck(_lib.ffLoadDegrees(graph,cfile))
+
+def LoadEvaluations(graph,files):
+    cfiles = [_ffi.new("char[]", f.encode('utf8')) for f in files]
+    return _StatusCheck(_lib.ffLoadEvaluations(graph,cfiles,len(files)))
+
+def DumpSamplePoints(graph,filename,**kwargs):
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    cfile = _ffi.new("char[]", filename.encode('utf8'))
+    return _StatusCheck(_lib.ffDumpSamplePoints(graph,cfile,recopt[0]))
+
+def NSamplePointsInFile(filename):
+    cfile = _ffi.new("char[]", filename.encode('utf8'))
+    return _Check(_lib.ffNSamplePointsInFile(cfile))
+
+def EvaluatePointsInFile(graph,filename,start,n_points,n_threads=0):
+    cfile = _ffi.new("char[]", filename.encode('utf8'))
+    return _StatusCheck(_lib.ffEvaluatePointsInFile(graph,cfile,
+                                                    start,n_points,n_threads))
+
+def DumpEvaluations(graph,filename):
+    cfile = _ffi.new("char[]", filename.encode('utf8'))
+    return _StatusCheck(_lib.ffDumpEvaluations(graph,cfile))
+
 
 def TakeUnique(graph, nodein, nevals=3):
     '''\

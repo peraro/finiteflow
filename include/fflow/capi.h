@@ -437,6 +437,38 @@ extern "C" {
   // which can be cleared with ffFreeRatFun
   FFStatus ffReconstructFunction(FFGraph graph, FFRecOptions options,
                                  FFRatFunList ** results);
+  FFStatus ffReconstructFunctionMod(FFGraph graph, FFRecOptions options,
+                                    FFRatFunList ** results);
+
+
+  // Routines to split evaluations and reconstruction into several
+  // jobs. Note that:
+  // - "sample points" are numerical inputs for a graph
+  // - "evaluations" are points that have been evaluated
+  // - "nthreads=0" picks a default value
+  // - ffAllDegrees, on success, returns the array
+  //     [numdeg[0],dendeg[0],...,numdeg[n-1],dendeg[n-1]]
+  //   with n == ffGraphNParsOut(graph).  The array must be freed with
+  //   ffFreeMemoryU32. On failure it returns null.
+  unsigned * ffAllDegrees(FFGraph graph, FFRecOptions options);
+  FFStatus ffDumpDegrees(FFGraph graph, FFCStr filename);
+  FFStatus ffNParsFromDegreeFile(FFCStr filename,
+                                 unsigned * nparsin, unsigned * nparsout);
+  FFStatus ffLoadDegrees(FFGraph graph, FFCStr filename);
+  FFStatus ffLoadEvaluations(FFGraph graph, FFCStr * files, unsigned n_files);
+  FFStatus ffDumpSamplePoints(FFGraph graph, FFCStr filename,
+                              FFRecOptions options);
+  FFUInt ffNSamplePointsInFile(FFCStr filename);
+  FFStatus ffEvaluatePointsInFile(FFGraph graph, FFCStr file,
+                                  unsigned start, unsigned npoints,
+                                  unsigned nthreads);
+  FFStatus ffDumpEvaluations(FFGraph graph, FFCStr filename);
+  FFStatus ffReconstructFromCurrentEvaluations(FFGraph graph,
+                                               FFRecOptions options,
+                                               FFRatFunList ** results);
+  FFStatus ffReconstructFromCurrentEvaluationsMod(FFGraph graph,
+                                                  FFRecOptions options,
+                                                  FFRatFunList ** results);
 
   /* API end */
 

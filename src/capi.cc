@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <stdlib.h>
+#include <stdio.h>
 #include <fflow/common.hh>
 #include <fflow/primes.hh>
 #include <fflow/capi.h>
@@ -50,8 +51,17 @@ static char * toCStr(std::string str)
 }
 #endif
 
-static ReconstructionOptions toRecOpt(FFRecOptions options)
+static ReconstructionOptions toRecOpt(FFRecOptions & options)
 {
+  if (!options.min_primes)
+    options.min_primes = 1;
+
+  if (!options.max_primes)
+    options.max_primes = 1;
+
+  if (!options.max_deg)
+    options.max_deg = RatFunReconstruction::DEFAULT_MAX_DEG;
+
   ReconstructionOptions opt;
   opt.n_checks = RatFunReconstruction::DEFAULT_N_CHECKS;
   opt.n_uchecks = RatFunReconstruction::DEFAULT_N_UCHECKS;
@@ -151,6 +161,15 @@ static char * cstr_to_cstr(const char * str, size_t n)
   char * ret = (char*)malloc(n + 1);
   strcpy(ret, str);
   return ret;
+}
+
+static bool file_exists(FFCStr filename)
+{
+  FILE *file = fopen(filename, "r");
+  if (!file)
+    return false;
+  fclose(file);
+  return true;
 }
 
 
@@ -1710,18 +1729,17 @@ extern "C" {
 
   // Reconstruction
 
-  FFStatus ffReconstructFunction(FFGraph graph, FFRecOptions options,
-                                 FFRatFunList ** results)
+  typedef enum {
+    REC_FULL,
+    REC_MOD,
+    REC_FULL_FROM_CURRENT_EVALS,
+    REC_MOD_FROM_CURRENT_EVALS
+  } RecMode_;
+
+  static FFStatus reconstruct_fun(FFGraph graph, FFRecOptions options,
+                                  FFRatFunList ** results,
+                                  RecMode_ rec_mode)
   {
-    if (!options.min_primes)
-      options.min_primes = 1;
-
-    if (!options.max_primes)
-      options.max_primes = 1;
-
-    if (!options.max_deg)
-      options.max_deg = RatFunReconstruction::DEFAULT_MAX_DEG;
-
     ReconstructionOptions opt = toRecOpt(options);
 
     Graph * g = session.graph(graph);
@@ -1733,8 +1751,29 @@ extern "C" {
     const unsigned nparsout = g->nparsout;
     std::unique_ptr<ResT[]> res (new ResT[nparsout]);
 
-    Ret ret = session.full_reconstruction(graph, res.get(),
-                                          options.n_threads, opt);
+    Ret ret = 0;
+
+    switch (rec_mode) {
+    case REC_FULL:
+      ret = session.full_reconstruction(graph, res.get(),
+                                        options.n_threads, opt);
+      break;
+
+    case REC_MOD:
+      ret = session.full_reconstruction_mod(graph, res.get(),
+                                            options.n_threads, opt);
+      break;
+
+    case REC_FULL_FROM_CURRENT_EVALS:
+      ret = session.parallel_reconstruct(graph, res.get(),
+                                         options.n_threads, opt);
+      break;
+
+    case REC_MOD_FROM_CURRENT_EVALS:
+      ret = session.parallel_reconstruct_mod(graph, res.get(),
+                                             options.n_threads, opt);
+      break;
+    }
 
     // check success
     switch (ret) {
@@ -1759,6 +1798,131 @@ extern "C" {
       return FF_ERROR;
 
     }
+  }
+
+  FFStatus ffReconstructFunction(FFGraph graph, FFRecOptions options,
+                                 FFRatFunList ** results)
+  {
+    return reconstruct_fun(graph, options, results, REC_FULL);
+  }
+
+  FFStatus ffReconstructFunctionMod(FFGraph graph, FFRecOptions options,
+                                    FFRatFunList ** results)
+  {
+    return reconstruct_fun(graph, options, results, REC_MOD);
+  }
+
+  FFStatus ffReconstructFromCurrentEvaluations(FFGraph graph,
+                                               FFRecOptions options,
+                                               FFRatFunList ** results)
+  {
+    return reconstruct_fun(graph, options, results, REC_FULL_FROM_CURRENT_EVALS);
+  }
+
+  FFStatus ffReconstructFromCurrentEvaluationsMod(FFGraph graph,
+                                                  FFRecOptions options,
+                                                  FFRatFunList ** results)
+  {
+    return reconstruct_fun(graph, options, results, REC_MOD_FROM_CURRENT_EVALS);
+  }
+
+  unsigned * ffAllDegrees(FFGraph graph, FFRecOptions options)
+  {
+    ReconstructionOptions opt = toRecOpt(options);
+
+    Ret ret = session.parallel_all_degrees(graph, options.n_threads, opt);
+    if (ret != SUCCESS)
+      return 0;
+
+    // If it hasn't failed the graph is valid and degrees are available
+    const Graph * g = session.graph(graph);
+
+    const unsigned * numdeg = g->degs_data().numdeg.get();
+    const unsigned * dendeg = g->degs_data().dendeg.get();
+    unsigned nparsout = g->nparsout;
+
+    unsigned * degs = (unsigned*)malloc(2*nparsout*sizeof(unsigned));
+    for (unsigned j=0; j<nparsout; ++j) {
+      degs[2*j] = numdeg[j];
+      degs[2*j+1] = dendeg[j];
+    }
+
+    return degs;
+  }
+
+  FFStatus ffDumpDegrees(FFGraph graph, FFCStr filename)
+  {
+    Ret ret = session.dump_degrees(graph, filename);
+
+    if (ret != SUCCESS)
+      return FF_ERROR;
+
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffNParsFromDegreeFile(FFCStr filename,
+                                 unsigned * nparsin, unsigned * nparsout)
+  {
+    Ret ret = algorithm_npars_from_degree_info(filename, *nparsin, *nparsout);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffLoadDegrees(FFGraph graph, FFCStr filename)
+  {
+    Ret ret = session.load_degrees(graph, filename);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffLoadEvaluations(FFGraph graph, FFCStr * files, unsigned n_files)
+  {
+    Ret ret = session.load_evaluations(graph, files, n_files);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffDumpSamplePoints(FFGraph graph, FFCStr filename,
+                              FFRecOptions options)
+  {
+    ReconstructionOptions opt = toRecOpt(options);
+    Ret ret = session.dump_sample_points(graph, opt, filename);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+    return FF_SUCCESS;
+  }
+
+  FFUInt ffNSamplePointsInFile(FFCStr filename)
+  {
+    return samples_file_size(filename);
+  }
+
+  FFStatus ffEvaluatePointsInFile(FFGraph graph, FFCStr file,
+                                  unsigned start, unsigned npoints,
+                                  unsigned nthreads)
+  {
+    // NOTE: unfortunately parallel_sample fails silently on error.
+    // To mitigate the chance of that, we check at least that the
+    // input file can be read.
+
+    if (!file_exists(file))
+      return FF_ERROR;
+
+    SamplePointsFromFile pts(file, start, npoints);
+    session.parallel_sample(graph, nthreads, ReconstructionOptions(), &pts);
+
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffDumpEvaluations(FFGraph graph, FFCStr filename)
+  {
+    Ret ret = session.dump_evaluations(graph, filename);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+    return FF_SUCCESS;
   }
 
 } // extern "C"
