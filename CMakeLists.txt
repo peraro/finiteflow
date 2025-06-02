@@ -19,10 +19,10 @@ set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-set(AMFF_ENABLE_EXCEPTIONS OFF CACHE BOOL
+set(FFLOW_ENABLE_EXCEPTIONS OFF CACHE BOOL
     "Do not add compiler flags disabling exceptions")
 
-if(NOT(AMFF_ENABLE_EXCEPTIONS))
+if(NOT(FFLOW_ENABLE_EXCEPTIONS))
     if(MSVC)
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/EHs-c->)
     else()
@@ -30,9 +30,14 @@ if(NOT(AMFF_ENABLE_EXCEPTIONS))
     endif()
 endif()
 
-set(FFLOW_THREAD_POOL OFF CACHE BOOL
-    "Use thread pools for parallel tasks")
-
+# Thread pool, enabled by default except on MacOS
+if(APPLE)
+    set(FFLOW_THREAD_POOL OFF CACHE BOOL
+        "Use thread pools for parallel tasks")
+else()
+    set(FFLOW_THREAD_POOL ON CACHE BOOL
+        "Use thread pools for parallel tasks")
+endif()
 
 # rpaths (see https://cmake.org/Wiki/CMake_RPATH_handling#Always_full_RPATH)
 
