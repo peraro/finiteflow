@@ -202,6 +202,8 @@ FF::nograph = "No graph with identifier `1`."
 FF::badalgvars = "The algorithm `1` depends on `2` variables, but `3` are required."
 FF::badneededvars = "Needed variables should be a subset of the unknowns."
 
+FF::badinputdim = "The input has invalid dimensions."
+
 FF::nonratsub = "Found invalid subexpression `1`"
 
 
@@ -1220,17 +1222,29 @@ SparseSolWSparseOut[sol_,depv_,indepv_]:=Module[{psol,rhs},
 
 FFDenseSolverSol[sol_,learninfo_]:=Module[{depv,indepv,zero},
   {depv,indepv,zero}={"DepVars","IndepVars","ZeroVars"}/.learninfo;
-  If[!TrueQ[Length[depv]==0],
+  Which[
+    TrueQ[Length[depv]==0],
+    (#->0)&/@zero,
+    Length[depv]*(Length[indepv]+1)==Length[sol],
     Join[Inner[Rule,depv,((#) . Join[indepv,{1}])&/@ArrayReshape[sol,{Length[depv],Length[indepv]+1}],List],(#->0)&/@zero],
-    (#->0)&/@zero
+    Length[depv]*Length[indepv]==Length[sol],
+    Join[Inner[Rule,depv,((#) . indepv)&/@ArrayReshape[sol,{Length[depv],Length[indepv]}],List],(#->0)&/@zero],
+    True,
+    Message[FF::badinputdim]; $Failed
   ]
 ];
 FFSparseSolverSol[sol_,learninfo_]:=Module[{depv,indepv,sparseout},
   {depv,indepv,sparseout}={"DepVars","IndepVars","SparseOutput"}/.learninfo;
   If[TrueQ[sparseout],Return[SparseSolWSparseOut[sol,depv,indepv]]];
-  If[!TrueQ[Length[depv]==0],
+  Which[
+    TrueQ[Length[depv]==0],
+    {},
+    Length[depv]*(Length[indepv]+1)==Length[sol],
     Inner[Rule,depv,((#) . Join[indepv,{1}])&/@ArrayReshape[sol,{Length[depv],Length[indepv]+1}],List],
-    {}
+    Length[depv]*Length[indepv]==Length[sol],
+    Inner[Rule,depv,((#) . indepv)&/@ArrayReshape[sol,{Length[depv],Length[indepv]}],List],
+    True,
+    Message[FF::badinputdim]; $Failed
   ]
 ];
 FFNonZeroesSol[sol_,learninfo_]:=Module[{tot,nonzero,ret},
