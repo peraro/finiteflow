@@ -2774,7 +2774,7 @@ extern "C" {
     int id;
     MLGetInteger32(mlp, &id);
     ReconstructionOptions opt;
-    opt.max_primes = 20;
+    opt.max_primes = DEFAULT_MAX_REC_PRIMES;
     opt = get_rec_opt(mlp, opt);
     MLNewPacket(mlp);
 
@@ -4102,6 +4102,19 @@ extern "C" {
     MLTestHead( mlp, "List", &zero);
     MLNewPacket(mlp);
     MLPutInteger32(mlp, RatFunReconstruction::DEFAULT_MAX_DEG);
+
+    return LIBRARY_NO_ERROR;
+  }
+
+  int fflowml_default_max_rec_primes(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int zero;
+    MLTestHead( mlp, "List", &zero);
+    MLNewPacket(mlp);
+    MLPutInteger32(mlp, DEFAULT_MAX_REC_PRIMES);
 
     return LIBRARY_NO_ERROR;
   }

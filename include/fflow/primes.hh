@@ -16,6 +16,7 @@ namespace fflow {
   // The Mod argument in the routines of these library is assumed to
   // be initialized with one of these integers.
   const unsigned BIG_UINT_PRIMES_SIZE = 201;
+  const unsigned DEFAULT_MAX_REC_PRIMES = BIG_UINT_PRIMES_SIZE - 1;
   const UInt BIG_UINT_PRIMES[BIG_UINT_PRIMES_SIZE] =
     {9223372036854775783ULL,
      9223372036854775643ULL,

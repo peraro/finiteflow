@@ -1740,6 +1740,8 @@ extern "C" {
                                   FFRatFunList ** results,
                                   RecMode_ rec_mode)
   {
+    if (!options.max_primes)
+      options.max_primes = DEFAULT_MAX_REC_PRIMES;
     ReconstructionOptions opt = toRecOpt(options);
 
     Graph * g = session.graph(graph);

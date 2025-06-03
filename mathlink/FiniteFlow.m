@@ -1077,7 +1077,7 @@ FFReconstructFunction[id_,vars_,OptionsPattern[]] := Module[
   {np,maxnp,opt,res,nthreads,tmp,thisopt},
   opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFReconstructFunction];
   maxnp = OptionValue["MaxPrimes"];
-  If[TrueQ[maxnp==Automatic], maxnp = 5];
+  If[TrueQ[maxnp==Automatic], maxnp = FFDefaultMaxRecPrimesImplem[]];
   nthreads = OptionValue["NThreads"];
   If[TrueQ[nthreads==Automatic], nthreads = If[TrueQ[Length[vars]==1],1,FFAutomaticNThreads[]]];
   If[Length[vars]==1,
@@ -1808,6 +1808,7 @@ FFLoadLibObjects[] := Module[
     FFAlgLinearFitImplemN = LibraryFunctionLoad[fflowlib, "fflowml_alg_numeric_fit", LinkObject, LinkObject];
     FFAlgLaurentImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_laurent", LinkObject, LinkObject];
     FFDefaultMaxDegImplem = LibraryFunctionLoad[fflowlib, "fflowml_default_maxdeg", LinkObject, LinkObject];
+    FFDefaultMaxRecPrimesImplem = LibraryFunctionLoad[fflowlib, "fflowml_default_max_rec_primes", LinkObject, LinkObject];
     FFDumpDegreesImplem=LibraryFunctionLoad[fflowlib, "fflowml_dump_degrees", LinkObject, LinkObject];
     FFLoadDegreesImplem=LibraryFunctionLoad[fflowlib, "fflowml_load_degrees", LinkObject, LinkObject];
     FFDumpSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_dump_sample_points", LinkObject, LinkObject];
