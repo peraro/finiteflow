@@ -317,6 +317,7 @@ namespace fflow {
     unsigned delete_node(unsigned graphid, unsigned nodeid);
 
     unsigned set_output_node(unsigned graphid, unsigned nodeid);
+    unsigned get_output_node(unsigned graphid) const;
 
     // Nodes and graphs which are not currently being used by other
     // algorithms, e.g. as inputs, can be made mutable again, even if

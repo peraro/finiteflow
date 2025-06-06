@@ -286,6 +286,9 @@ def DeleteGraph(graph):
 def DeleteNode(graph, node):
     return _StatusCheck(_lib.ffDeleteNode(graph,node))
 
+def GetOutputNode(graph):
+    return _Check(_lib.ffGetOutputNode(graph))
+
 def SetOutputNode(graph, node):
     return _StatusCheck(_lib.ffSetOutputNode(graph,node))
 
@@ -439,6 +442,11 @@ def LSolveMarkAndSweepEqs(graph, node):
 
 def LSolveDeleteUnneededEqs(graph, node):
     return _StatusCheck(_lib.ffLSolveDeleteUnneededEqs(graph, node))
+
+
+def LSolveIsImpossible(graph,node):
+    ret = _Check(_lib.ffLSolveIsImpossible(graph, node))
+    return ret == 1
 
 
 def LSolveNDepVars(graph, node):

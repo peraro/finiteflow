@@ -105,6 +105,7 @@ extern "C" {
   FFStatus ffDeleteGraph(FFGraph graph);
   FFStatus ffDeleteNode(FFGraph graph, FFNode node);
 
+  FFNode ffGetOutputNode(FFGraph graph);
   FFStatus ffSetOutputNode(FFGraph graph, FFNode node);
 
   FFNode ffSetGraphInput(FFGraph graph, unsigned n_vars);
@@ -294,6 +295,11 @@ extern "C" {
 
   // Only for Analytic and Numeric solvers (fails for Node solvers)
   FFStatus ffLSolveDeleteUnneededEqs(FFGraph graph, FFNode node);
+
+  // Check if system is impossible (the system needs to have completed
+  // learning before this call).  Returns 1 is system is impossible, 0
+  // if it is not and FF_ERROR is an error occurred.
+  unsigned ffLSolveIsImpossible(FFGraph graph, FFNode node);
 
   // no. of dependent unknowns
   unsigned ffLSolveNDepVars(FFGraph graph, FFNode node);

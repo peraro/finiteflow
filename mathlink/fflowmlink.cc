@@ -1995,6 +1995,54 @@ extern "C" {
   }
 
 
+  int fflowml_alg_system_is_impossible(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int id, nodeid, nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &id);
+    if (nargs > 1)
+      MLGetInteger32(mlp, &nodeid);
+    else
+      nodeid = session.get_output_node(id);
+    bool okay = true, ret = false;
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+    if (!alg)
+      okay = false;
+
+    if (okay) {
+      if (dynamic_cast<DenseLinearSolver *>(alg)) {
+          DenseLinearSolver & ls = *static_cast<DenseLinearSolver *>(alg);
+          ret = ls.is_impossible();
+
+      } else if (dynamic_cast<SparseLinearSolver *>(alg)) {
+          SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+          ret = ls.is_impossible();
+
+      } else {
+        okay = false;
+      }
+    }
+    MLNewPacket(mlp);
+
+    if (okay) {
+      if (ret)
+        MLPutSymbol(mlp, "True");
+      else
+        MLPutSymbol(mlp, "False");
+    } else {
+      MLPutSymbol(mlp, "$Failed");
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_system_only_homogeneous(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);

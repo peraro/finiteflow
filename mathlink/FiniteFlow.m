@@ -54,7 +54,7 @@ FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, nee
 FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
 FFSolverOnlyNonHomogeneous::usage =  "FFSolverOnlyNonHomogeneous[graph, node] makes a linear solver return only the non-homogeneous part of its solution and sets to zero all the independent variables (useful if only one solution of the system is needed, rather than the full space of solutions)."
 FFSolverSparseOutput::usage = "FFSolverSparseOutput[graph, node] makes a sparse linear solver return a sparse representation of the solution matrix."
-FFSolverSparseOutputWithMaxCol::usage = ""
+FFSolverSparseOutputWithMaxCol::usage = "FFSolverSparseOutputWithMaxCol[graph, node, maxcol] is equivalent to FFSolverSparseOutput[graph, node] but also specifies that only the first `maxcol` unknowns of the system (corresponding to the first `maxcol` columns of its matrix representation) are substituted during Gauss elimination.  See also the available Options to further control its behaviour."
 FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
 FFSetLearningOptions::usage = "FFLearn[graph,node,options...] sets the learning options of the specified node in the graph."
 FFLaurentLearn::usage = "FFLaurentLearn[graph] executes the learning phase on a Laurent expansion node, which must be the output node of graph.  It returns a list of two lists.  The first contains the starting power of the Laurent expansion of each element.  The second contains the order of the expansion requested for each element."
@@ -888,8 +888,8 @@ FFDenseSolverLearn[gid_,vars_]:=Module[
   Catch[
     learn = FFLearnImplem[GetGraphId[gid]];
     If[!TrueQ[learn[[0]]==List], Throw[learn]];
+    If[FFSolverIsImpossibleImplem[GetGraphId[gid]], Return[FFImpossible]];
     {depv,indepv,zerov} = learn;
-    If[Length[depv]==0 && Length[indepv]==0  && Length[zerov]==0, Return[FFImpossible]];
     {"DepVars"->vars[[depv+1]],"IndepVars"->vars[[indepv+1]],"ZeroVars"->vars[[zerov+1]]}
   ]
 ];
@@ -900,8 +900,8 @@ FFSparseSolverLearn[gid_,vars_]:=Module[
   Catch[
     learn = FFLearnImplem[GetGraphId[gid]];
     If[!TrueQ[learn[[0]]==List], Throw[learn]];
+    If[FFSolverIsImpossibleImplem[GetGraphId[gid]], Return[FFImpossible]];
     {depv,indepv,sparseout} = learn;
-    If[Length[depv]==0 && Length[indepv]==0, Return[FFImpossible]];
     If[!TrueQ[sparseout==1],
       {"DepVars"->vars[[depv+1]],"IndepVars"->vars[[indepv+1]],"SparseOutput"->False},
       varswc=Join[vars,{1}];
@@ -930,7 +930,7 @@ FFDenseSolverGetInfo[gid_,id_,vars_]:=Module[
   {depv,indepv,zerov},
   Catch[
     {depv,indepv,zerov} = FFAlgorithmGetInfoImplem[GetGraphId[gid],GetAlgId[gid,id]];
-    If[Length[depv]==0 && Length[indepv]==0  && Length[zerov]==0, Return[FFImpossible]];
+    If[FFSolverIsImpossibleImplem[GetGraphId[gid]], Return[FFImpossible]];
     {"DepVars"->vars[[depv+1]],"IndepVars"->vars[[indepv+1]],"ZeroVars"->vars[[zerov+1]]}
   ]
 ];
@@ -940,7 +940,7 @@ FFSparseSolverGetInfo[gid_,id_,vars_]:=Module[
   {depv,indepv,sparseout,varswc},
   Catch[
     {depv,indepv,sparseout} = FFAlgorithmGetInfoImplem[GetGraphId[gid],GetAlgId[gid,id]];
-    If[Length[depv]==0 && Length[indepv]==0, Return[FFImpossible]];
+    If[FFSolverIsImpossibleImplem[GetGraphId[gid]], Return[FFImpossible]];
     If[!TrueQ[sparseout==1],
       {"DepVars"->vars[[depv+1]],"IndepVars"->vars[[indepv+1]],"SparseOutput"->False},
       varswc=Join[vars,{1}];
@@ -1767,6 +1767,7 @@ FFLoadLibObjects[] := Module[
     FFSparseSolverMarkAndSweepEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_mark_and_sweep_eqs", LinkObject, LinkObject];
     FFSparseSolverDeleteUnneededEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_delete_unneeded_eqs", LinkObject, LinkObject];
     FFAlgorithmGetInfoImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_get_info", LinkObject, LinkObject];
+    FFSolverIsImpossibleImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_is_impossible", LinkObject, LinkObject];
     FFTotalDegreesImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_degrees", LinkObject, LinkObject];
     FFVarsDegreesImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_vars_degrees", LinkObject, LinkObject];
     FFAllDegreesImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_all_degrees", LinkObject, LinkObject];

@@ -184,7 +184,9 @@ namespace fflow {
       for (; cols<cols_end; ++cols, ++idx) {
         unsigned col = *cols;
         if (info[col] & LSVar::IS_NON_ZERO) {
-          UInt res = c[*idx].eval(nin, ww, xi, xp, mod);
+          UInt & res = data.evals_[*idx];
+          if (res == MISSING_SAMPLES)
+            res = c[*idx].eval(nin, ww, xi, xp, mod);
           if (res == FAILED || res == 0)
             return FAILED;
           r.el(oj).col = col;

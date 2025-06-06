@@ -601,6 +601,13 @@ namespace fflow {
     return graphs_[graphid]->set_output_node(nodeid);
   }
 
+  unsigned Session::get_output_node(unsigned graphid) const
+  {
+    if (!graph_exists(graphid))
+      return ALG_NO_ID;
+    return graphs_[graphid]->out_node_;
+  }
+
   unsigned Session::set_node_mutable(unsigned graphid, unsigned nodeid)
   {
     if (!node_exists(graphid, nodeid))

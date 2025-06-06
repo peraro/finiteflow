@@ -221,6 +221,7 @@ namespace fflow {
 
     mv.toReducedRowEcholon(mod);
     if (mv.isImpossibleSystem()) {
+      impossible_ = true;
       stage_ = SECOND_;
       return SUCCESS;
     }
@@ -258,7 +259,7 @@ namespace fflow {
     mv.toReducedRowEcholon(mod);
 
     if (mv.isImpossibleSystem()) {
-      if (is_learning_impossible_(data))
+      if (is_learning_impossible_())
         return SUCCESS;
       invalidate();
       return FAILED;
@@ -554,20 +555,20 @@ namespace fflow {
   {
     std::fill(xinfo_.get(), xinfo_.get()+nvars()+1, LSVar::IS_NON_ZERO);
     for (unsigned j=0; j<needed_size; ++j)
-      xinfo_[needed_vars[j]] |= (LSVar::IS_NEEDED | LSVar::IS_NEEDED_EXT);
+      xinfo_[needed_vars[j]] |= LSVar::IS_NEEDED;
   }
 
   void SparseLinearSolver::get_needed_indep_()
   {
     nnindeps_ = 0;
     for (unsigned j=0; j<nvars(); ++j)
-      if ((xinfo_[j] & LSVar::IS_NEEDED) && !(xinfo_[j] & LSVar::IS_DEP))
+      if ((xinfo_[j] & LSVar::IS_NEEDED_ANY) && !(xinfo_[j] & LSVar::IS_DEP))
         ++nnindeps_;
 
     unsigned nic=0;
     needed_indep_.reset(new unsigned[nnindeps_]);
     for (unsigned j=0; j<nvars(); ++j)
-      if (xinfo_[j] & LSVar::IS_NEEDED && !(xinfo_[j] & LSVar::IS_DEP))
+      if (xinfo_[j] & LSVar::IS_NEEDED_ANY && !(xinfo_[j] & LSVar::IS_DEP))
         needed_indep_[nic++] = j;
   }
 
@@ -587,8 +588,8 @@ namespace fflow {
       const unsigned depv = row.first_nonzero_column();
       if (xinfo_[depv] & LSVar::IS_NEEDED) {
         const unsigned rsize = row.size();
-        for (unsigned k=0; k<rsize; ++k)
-          xinfo_[row.el(k).col] |= LSVar::IS_NEEDED;
+        for (unsigned k=1; k<rsize; ++k)
+          xinfo_[row.el(k).col] |= LSVar::IS_NEEDED_RHS;
         outeq_pos_[ieq] = eqpos;
         needed_dep_[ieq+nz] = depv;
         ++ieq;
@@ -604,7 +605,7 @@ namespace fflow {
   {
     // Optimization: remove non-needed independent variables
     for (unsigned j=0; j<nvars_; ++j)
-      if (!(xinfo_[j] & LSVar::IS_DEP) && !(xinfo_[j] & LSVar::IS_NEEDED))
+      if (!(xinfo_[j] & LSVar::IS_DEP) && !(xinfo_[j] & LSVar::IS_NEEDED_ANY))
         xinfo_[j] &= ~flag_t(LSVar::IS_NON_ZERO);
   }
 
@@ -622,9 +623,9 @@ namespace fflow {
     eqdeps_.clear();
 
     for (unsigned i=0; i<nv; ++i)
-      xinfo_[i] &= ~flag_t(LSVar::IS_NEEDED | LSVar::IS_NEEDED_EXT);
+      xinfo_[i] &= ~flag_t(LSVar::IS_NEEDED_ANY);
     for (unsigned i=0; i<needed_size; ++i)
-      xinfo_[needed_vars[i]] |= (LSVar::IS_NEEDED | LSVar::IS_NEEDED_EXT);
+      xinfo_[needed_vars[i]] |= LSVar::IS_NEEDED;
 
     if (stage_ >= SECOND_) {
       relearn_needed_(data);
@@ -830,7 +831,7 @@ namespace fflow {
 
           const unsigned rsize = row.size();
           for (unsigned k=1; k<rsize; ++k)
-            xinfo_[row.el(k).col] |= LSVar::IS_NEEDED;
+            xinfo_[row.el(k).col] |= LSVar::IS_NEEDED_RHS;
 
           ++nndeps_;
         }
@@ -888,7 +889,8 @@ namespace fflow {
                                    xinfo_.get(), eqdeps_.data());
 
     if (mat_(data).isImpossibleSystem()) {
-      if (is_learning_impossible_(data))
+      eqdeps_.clear();
+      if (is_learning_impossible_())
         return SUCCESS;
       invalidate();
       return FAILED;

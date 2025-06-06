@@ -121,6 +121,8 @@ namespace fflow {
     Ret only_homogeneous(bool flag = true);
     Ret only_non_homogeneous(bool flag = true);
 
+    bool is_impossible() const;
+
   private:
 
     static DenseLinearSolverData & adata_(AlgorithmData * data)
@@ -147,9 +149,9 @@ namespace fflow {
     Ret check_dependent_variables_(AlgorithmData * data,
                                    MatrixView & mv) const;
 
-    bool is_learning_impossible_(AlgorithmData * data) const
+    bool is_learning_impossible_() const
     {
-      return adata_(data).depv_.empty() && indepv_.empty();
+      return impossible_;
     }
 
     void learn_zeroes_(AlgorithmData * data, MatrixView & mv);
@@ -190,7 +192,7 @@ namespace fflow {
     std::size_t nneeded_ext_;
     std::size_t zero_vars_ = 0, nndeps_ = 0, nnindeps_ = 0, nnindepeqs_ = 0;
     flag_t stage_ = FIRST_;
-    bool homog_ = false, only_non_homog_ = false;
+    bool homog_ = false, only_non_homog_ = false, impossible_ = false;
   };
 
 
@@ -328,6 +330,8 @@ namespace fflow {
       return sparseout_data_.get();
     }
 
+    bool is_impossible() const;
+
   private:
 
     static SparseLinearSolverData & adata_(AlgorithmData * data)
@@ -352,9 +356,8 @@ namespace fflow {
 
     Ret check_dependent_variables_(AlgorithmData * data) const;
 
-    bool is_learning_impossible_(const AlgorithmData * data) const
+    bool is_learning_impossible_() const
     {
-      (void)(data);
       return flag_ & IMPOSSIBLE_;
     }
 

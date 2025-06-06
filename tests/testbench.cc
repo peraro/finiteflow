@@ -3,10 +3,13 @@
 #include <random>
 #include <fflow/primes.hh>
 #include <fflow/common.hh>
+#include <fflow/matrix.hh>
 using namespace fflow;
 
 int main(int argc, char** argv)
 {
+  std::cout << sizeof(LSVar) << std::endl;
+
   const unsigned w_size = 10000000;
   unsigned t_size = 0;
 

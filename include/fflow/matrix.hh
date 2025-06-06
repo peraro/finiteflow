@@ -20,7 +20,8 @@ namespace fflow {
       IS_NEEDED = 1 << 2,
       IS_NON_ZERO = 1 << 3,
       IS_SWEEPED = 1 << 4,
-      IS_NEEDED_EXT = 1 << 5, // only for sparse systems
+      IS_NEEDED_RHS = 1 << 5, // only for sparse systems
+      IS_NEEDED_ANY = IS_NEEDED | IS_NEEDED_RHS, // only for sparse systems
       INIT = 0
     };
 

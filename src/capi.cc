@@ -349,6 +349,14 @@ extern "C" {
     return FF_SUCCESS;
   }
 
+  FFStatus ffGetOutputNode(FFGraph graph)
+  {
+    FFNode node = session.get_output_node(graph);
+    if (node == ALG_NO_ID)
+      return FF_ERROR;
+    return node;
+  }
+
   FFNode ffSetGraphInput(FFGraph graph, unsigned n_vars)
   {
     Graph * graphptr = session.graph(graph);
@@ -1225,6 +1233,24 @@ extern "C" {
     }
 
     return FF_SUCCESS;
+  }
+
+  unsigned ffLSolveIsImpossible(FFGraph graph, FFNode node)
+  {
+    if (!session.node_exists(graph,node))
+      return FF_ERROR;
+
+    Algorithm * alg = session.node(graph,node)->algorithm();
+
+    if (dynamic_cast<DenseLinearSolver*>(alg)) {
+      DenseLinearSolver & ls = *static_cast<DenseLinearSolver*>(alg);
+      return ls.is_impossible();
+    } else if(dynamic_cast<SparseLinearSolver*>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
+      return ls.is_impossible();
+    }
+
+    return FF_ERROR;
   }
 
   unsigned ffLSolveNDepVars(FFGraph graph, FFNode node)
