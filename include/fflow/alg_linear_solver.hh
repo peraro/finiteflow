@@ -121,7 +121,10 @@ namespace fflow {
     Ret only_homogeneous(bool flag = true);
     Ret only_non_homogeneous(bool flag = true);
 
-    bool is_impossible() const;
+    bool is_impossible() const
+    {
+      return is_learning_impossible_();
+    }
 
   private:
 
@@ -330,7 +333,10 @@ namespace fflow {
       return sparseout_data_.get();
     }
 
-    bool is_impossible() const;
+    bool is_impossible() const
+    {
+      return is_learning_impossible_();
+    }
 
   private:
 
