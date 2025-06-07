@@ -19,6 +19,20 @@ namespace fflow {
     virtual void print(const std::string & msg);
   };
 
+  // prints to stderr
+  class StdErrDBGPrint : public DBGPrint {
+  public:
+    StdErrDBGPrint() {}
+    virtual void print(const std::string & msg);
+  };
+
+  // does not print at all
+  class NullDBGPrint : public DBGPrint {
+  public:
+    NullDBGPrint() {}
+    virtual void print(const std::string & msg);
+  };
+
 
   // Create an instance of this, passing a DBGPrint object, in order
   // to set it for the current scope.  Call the static method
@@ -30,6 +44,17 @@ namespace fflow {
 
     ~DBGPrintSet();
 
+  private:
+    DBGPrint * previous;
+  };
+
+  class LogErrorSet {
+  public:
+
+    explicit LogErrorSet(DBGPrint & p);
+
+    ~LogErrorSet();
+
     static void global(DBGPrint & p);
 
   private:
@@ -39,6 +64,15 @@ namespace fflow {
 
   // Calls DBGPrint::print on the currently active DBGPrint object
   void dbgprint(const std::string & msg);
+
+  // Calls DBGPrint::print on the currently active DBGPrint object for
+  // error logs
+  void logerr(const std::string & msg);
+
+
+  extern StdOutDBGPrint stdout_dbgprint;
+  extern StdErrDBGPrint stderr_dbgprint;
+  extern NullDBGPrint null_dbgprint;
 
 } // namespace fflow
 

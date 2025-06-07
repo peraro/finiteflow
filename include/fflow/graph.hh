@@ -294,7 +294,7 @@ namespace fflow {
     Graph * graph(unsigned id);
     const Graph * graph(unsigned id) const;
     bool graph_exists(unsigned id) const;
-    bool graph_can_be_evaluated(unsigned id) const;
+    bool graph_can_be_evaluated(unsigned id, bool check_learned = true) const;
 
     Node * node(unsigned graphid, unsigned nodeid);
     const Node * node(unsigned graphid, unsigned nodeid) const;

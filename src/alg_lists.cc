@@ -40,8 +40,10 @@ namespace fflow {
     nparsout = elems.size();
 
     for (const auto & el : elems) {
-      if (!(el.list < nparsin.size() && el.el < nparsin[el.list]))
+      if (!(el.list < nparsin.size() && el.el < nparsin[el.list])) {
+        logerr("Indexes in take pattern out of bounds");
         return FAILED;
+      }
     }
 
     elems_ = std::move(elems);
@@ -227,8 +229,10 @@ namespace fflow {
 
     for (const auto & ellist : elems)
       for (const auto & el : ellist) {
-        if (!(el.list < nparsin.size() && el.el < nparsin[el.list]))
+        if (!(el.list < nparsin.size() && el.el < nparsin[el.list])) {
+          logerr("Indexes in take pattern out of bounds");
           return FAILED;
+        }
       }
 
     elems_ = std::move(elems);
@@ -264,8 +268,10 @@ namespace fflow {
     for (const auto & ellist : elems)
       for (const auto & el : ellist) {
         if (!(el.list1 < nparsin.size() && el.el1 < nparsin[el.list1] &&
-              el.list2 < nparsin.size() && el.el2 < nparsin[el.list2]))
+              el.list2 < nparsin.size() && el.el2 < nparsin[el.list2])) {
+          logerr("Indexes in take pattern out of bounds");
           return FAILED;
+        }
       }
 
     elems_ = std::move(elems);

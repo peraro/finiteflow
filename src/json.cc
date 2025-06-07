@@ -258,8 +258,10 @@ namespace fflow {
                                         bool has_info)
     {
       std::string json_data = read_file(filename);
-      if (json_data.size() == 0)
+      if (json_data.size() == 0) {
+        logerr("JSON file not found or empty");
         return FAILED;
+      }
 
       tokenizer = JSONTokenizer{json_data.c_str(),
                                 json_data.c_str() + json_data.size()};

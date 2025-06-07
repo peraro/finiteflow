@@ -38,6 +38,18 @@ namespace fflow {
       MLNewPacket(link);
   }
 
+  void fflowml_logerr(WolframLibraryData libData, const std::string & str)
+  {
+    MLINK link = libData->getWSLINK(libData);
+    MLPutFunction(link, "EvaluatePacket", 1);
+    MLPutFunction(link, "FiniteFlow`Private`LogErr", 1);
+    MLPutString(link, str.c_str());
+    libData->processWSLINK(link);
+
+    if (MLNextPacket(link) == RETURNPKT)
+      MLNewPacket(link);
+  }
+
   void fflowml_evaluate(WolframLibraryData libData, const std::string & str)
   {
     MLINK link = libData->getWSLINK(libData);
@@ -72,9 +84,26 @@ namespace  {
     WolframLibraryData libData_;
   };
 
+  class MathLogErr : public fflow::DBGPrint {
+  public:
+
+    explicit MathLogErr(WolframLibraryData libData)
+      : libData_(libData) {}
+
+    virtual void print(const std::string & msg)
+    {
+      fflowml_logerr(libData_, msg);
+    }
+
+  private:
+    WolframLibraryData libData_;
+  };
+
 #define FFLOWML_SET_DBGPRINT() \
   MathDbgPrint math_dbg_print_(libData); \
-  fflow::DBGPrintSet math_dbg_print_setter_(math_dbg_print_)
+  fflow::DBGPrintSet math_dbg_print_setter_(math_dbg_print_); \
+  MathLogErr math_log_err_(libData); \
+  fflow::LogErrorSet math_log_error_setter_(math_log_err_)
 
 } // namespace
 
@@ -1747,6 +1776,7 @@ extern "C" {
     MLCheckFunction(mlp, "List", &n_rows);
     sys.rinfo.resize(n_rows);
     unsigned ncoeffs = 0;
+    bool okcols = true;
     for (int i=0; i<n_rows; ++i) {
       {
         int * crinfo;
@@ -1755,19 +1785,36 @@ extern "C" {
         rinf.start = ncoeffs;
         rinf.size = csize;
         rinf.cols.reset(new unsigned[csize]);
-        std::copy(crinfo, crinfo+csize, rinf.cols.get());
+        {
+          // check and copy list of columns
+          int last_var = -1;
+          unsigned * dest = rinf.cols.get();
+          for (unsigned j=0; j<csize; ++j, ++dest) {
+            if (int(crinfo[j]) <= last_var)
+              okcols = false;
+            last_var = *dest = crinfo[j];
+          }
+        }
         ncoeffs += csize;
         MLReleaseInteger32List(mlp, crinfo, csize);
       }
     }
 
-    int * neededv;
-    int needed_size;
-    MLGetInteger32List(mlp, &neededv, &needed_size);
-    alg.init_node_solver(sys.rinfo.size(), nvars,
-                         (unsigned*)neededv, needed_size, *data);
-    MLReleaseInteger32List(mlp, neededv, needed_size);
+    if (okcols) {
+      int * neededv;
+      int needed_size;
+      MLGetInteger32List(mlp, &neededv, &needed_size);
+      alg.init_node_solver(sys.rinfo.size(), nvars,
+                           (unsigned*)neededv, needed_size, *data);
+      MLReleaseInteger32List(mlp, neededv, needed_size);
+    }
     MLNewPacket(mlp);
+
+    if (!okcols) {
+      logerr("Invalid list of columns in node sparse solver");
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
 
     if (!session.graph_exists(graphid)) {
       MLPutSymbol(mlp, "$Failed");
@@ -2757,7 +2804,10 @@ extern "C" {
     Ret ret = session.reconstruct_univariate(id, res.get(), opt);
 
     if (ret != SUCCESS) {
-      MLPutSymbol(mlp, "$Failed");
+      if (ret == MISSING_PRIMES)
+        MLPutSymbol(mlp, "FiniteFlow`FFMissingPrimes");
+      else
+        MLPutSymbol(mlp, "$Failed");
       return LIBRARY_NO_ERROR;
     }
 

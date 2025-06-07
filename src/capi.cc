@@ -83,8 +83,10 @@ static FFStatus CopyNonZeroColumnEls(unsigned n_vars,
 {
   int last_var = -1;
   for (unsigned j=0; j<n_elems; ++j, ++dest) {
-    if (int(elems[j]) <= last_var || elems[j] >= n_vars + 1)
+    if (int(elems[j]) <= last_var || elems[j] >= n_vars + 1) {
+      logerr("Invalid list of columns in node sparse solver");
       return FF_ERROR;
+    }
     last_var = elems[j];
     *dest = elems[j];
   }
@@ -96,8 +98,10 @@ static FFStatus CopyNonZeroIdxEls(std::size_t max_els,
                                   std::size_t * dest)
 {
   for (unsigned j=0; j<n_elems; ++j, ++dest) {
-    if (elems[j] >= max_els)
+    if (elems[j] >= max_els) {
+      logerr("Indexes of non-zero coefficients out of bounds");
       return FF_ERROR;
+    }
     *dest = elems[j];
   }
   return FF_SUCCESS;
@@ -109,8 +113,10 @@ static FFStatus CopyNonZeroColumnElsUnordered(unsigned n_cols,
                                               unsigned * dest)
 {
   for (unsigned j=0; j<n_elems; ++j, ++dest) {
-    if (elems[j] >= n_cols)
+    if (elems[j] >= n_cols) {
+      logerr("Indexes of non-zero coefficients out of bounds");
       return FF_ERROR;
+    }
     *dest = elems[j];
   }
   return FF_SUCCESS;
@@ -131,8 +137,10 @@ static FFStatus getPoly(unsigned n_vars,
 
   for (unsigned k=0; k<n_terms; ++k, ++coefficients) {
 
-    if (!(coeffs[k].set(*coefficients) == 0))
+    if (!(coeffs[k].set(*coefficients) == 0)) {
+      logerr("Could not convert string to rational");
       return FF_ERROR;
+    }
 
     auto & mon = mons[k];
     mon = Monomial(n_vars);
@@ -864,6 +872,26 @@ extern "C" {
     return id;
   }
 
+  static bool check_take_nodes_(FFGraph graph,
+                                const unsigned * elems,
+                                const FFNode * in_nodes,
+                                unsigned n_in_nodes)
+  {
+    if (elems[0] >= n_in_nodes) {
+      logerr("Input node in take pattern out of bounds");
+      return false;
+    }
+    Node * node = session.node(graph, in_nodes[elems[0]]);
+    if (!node || node->algorithm()->nparsout <= elems[1]) {
+      if (!node)
+        logerr("Non-existent input node");
+      else
+        logerr("Input element in take pattern out of bounds");
+      return false;
+    }
+    return true;
+  }
+
   FFNode ffAlgTake(FFGraph graph,
                    const FFNode * in_nodes, unsigned n_in_nodes,
                    const unsigned * elems, unsigned n_elems)
@@ -885,11 +913,7 @@ extern "C" {
       els[j].list = elems[0];
       els[j].el = elems[1];
 
-      // checks
-      if (elems[0] >= n_in_nodes)
-        return FF_ERROR;
-      Node * node = session.node(graph, in_nodes[elems[0]]);
-      if (!node || node->algorithm()->nparsout <= elems[1])
+      if (!check_take_nodes_(graph,elems,in_nodes,n_in_nodes))
         return FF_ERROR;
     }
 
@@ -1018,13 +1042,10 @@ extern "C" {
         els[j][k].list = elems[0];
         els[j][k].el = elems[1];
 
-        // checks
-        if (elems[0] >= n_in_nodes)
-          return FF_ERROR;
-        Node * node = session.node(graph, in_nodes[elems[0]]);
-        if (!node || node->algorithm()->nparsout <= elems[1])
+        if (!check_take_nodes_(graph,elems,in_nodes,n_in_nodes))
           return FF_ERROR;
       }
+
     }
 
     alg.init(nparsin.data(), nparsin.size(), std::move(els));

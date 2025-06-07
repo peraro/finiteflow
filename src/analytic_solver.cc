@@ -145,6 +145,17 @@ namespace fflow {
     // TODO: we could also shrink c and cmap, not doing it for now
   }
 
+  static UInt bad_sparse_ccs_(UInt res)
+  {
+    if (res == 0)
+      logerr("Sparse linear-system matrix of "
+             "coefficients contains zeroes");
+    else
+      logerr("Evaluation of linear system-matrix "
+             "of coefficients failed");
+    return FAILED;
+  }
+
   Ret AnalyticSparseSolver::fill_matrix(Context * ctxt,
                                         unsigned n_rows,
                                         const unsigned rows[],
@@ -185,10 +196,11 @@ namespace fflow {
         unsigned col = *cols;
         if (info[col] & LSVar::IS_NON_ZERO) {
           UInt & res = data.evals_[*idx];
-          if (res == MISSING_SAMPLES)
+          if (res == MISSING_SAMPLES) {
             res = c[*idx].eval(nin, ww, xi, xp, mod);
-          if (res == FAILED || res == 0)
-            return FAILED;
+            if (FF_ERRCOND(res == FAILED || res == 0))
+              return bad_sparse_ccs_(res);
+          }
           r.el(oj).col = col;
           r.el(oj).val.set(res);
           ++oj;

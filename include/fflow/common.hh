@@ -35,6 +35,14 @@
 # define FFLOW_THROW(exc) std::terminate()
 #endif
 
+// Use if(FF_ERRCOND(error_condition)) { ... }
+// to handle errors to hint that they are exceptional cases.
+#if defined(__GNUC__) || defined(__clang__)
+  #define FF_ERRCOND(cond) __builtin_expect(cond,0)
+#else
+  #define FF_ERRCOND(cond) (cond)
+#endif
+
 #define FFLOW_LOOP_UNROLL 1
 
 namespace fflow {

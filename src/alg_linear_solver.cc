@@ -37,8 +37,11 @@ namespace fflow {
   {
     for (unsigned i=0; i<needed_size; ++i)
       if (needed_vars[i] >= nvars() ||
-          !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED)))
+          !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED))) {
+        logerr("New set of needed variables is not a subset of "
+               "the previous one");
         return FAILED;
+      }
 
     nneeded_ext_ = needed_size;
     needed_ext_.reset(new std::size_t[needed_size]);
@@ -617,8 +620,11 @@ namespace fflow {
 
     for (unsigned i=0; i<needed_size; ++i)
       if (needed_vars[i] >= nv ||
-          !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED)))
+          !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED))) {
+        logerr("New set of needed variables is not a subset of "
+               "the previous one");
         return FAILED;
+      }
 
     eqdeps_.clear();
 

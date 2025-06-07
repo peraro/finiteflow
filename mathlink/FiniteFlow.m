@@ -196,6 +196,7 @@ FF::badvarule = "Invalid variable on l.h.s. of substitution rule."
 FF::noregfun = "No registered function with identifier `1`."
 FF::badregfunvars = "The registered expression `1` depends on `2` variables, but `3` are required."
 FF::badpattern = "Variables `1` match the variables pattern but they are not in the list of unknowns."
+FF::badtakepattern = "Invalid take pattern."
 
 FF::noalg = "No algorithm with identifier `1`."
 FF::nograph = "No graph with identifier `1`."
@@ -203,8 +204,11 @@ FF::badalgvars = "The algorithm `1` depends on `2` variables, but `3` are requir
 FF::badneededvars = "Needed variables should be a subset of the unknowns."
 
 FF::badinputdim = "The input has invalid dimensions."
+FF::coloutofcounds = "Column indexes are out of bounds"
 
 FF::nonratsub = "Found invalid subexpression `1`"
+
+FF::logerr = "`1`"
 
 
 Begin["`Private`"]
@@ -222,6 +226,10 @@ FFInt32Max = 2^31-1;
 FFInt64Max = 2^63-1;
 
 Protect[FFInt64Max];
+
+
+(* Called by error messages from the C++ side *)
+LogErr = Message[FF::logerr,#]&;
 
 
 FFRationalQ[x_Rational] := True;
@@ -248,7 +256,7 @@ CheckedInt64List[a_] := Int64ListError[a];
 CheckedInt64List[a_List] := If[TrueQ[And@@((IntegerQ[#] && Abs[#]<=FFInt64Max)&/@a)], a, Int64ListError[a]];
 
 CheckVariables[vars_]:=If[!TrueQ[(vars[[0]] == List) && (Length[vars] > 0)],
-                           Message[FF::badfun, vars]; Throw[$Failed]
+                           Message[FF::badvars, vars]; Throw[$Failed]
 	                   ];
 
 
@@ -685,7 +693,7 @@ RegisterNodeSparseSolver[gid_,inputs_,{columns_,vars_,neededvarsin_}]:=Module[
     CheckVariables[neededvars];
     If[!SubsetQ[vars,neededvars], Message[FF::badneededvars]; Throw[$Failed];];
     cols = (CheckedUInt32List/@columns);
-    If[!TrueQ[Max[Union@@cols]<=Length[vars]+1],Throw[$Failed];];
+    If[!TrueQ[Max[Union@@cols]<=Length[vars]+1], Message[FF::coloutofcounds]; Throw[$Failed];];
     FFRegisterNodeSparseSolverImplem[gid,inputs,Length[vars],cols-1,position/@neededvars]
   ]
 ];
@@ -1002,11 +1010,8 @@ RegisterAlgChain[gid_,inputs_,{}]:=Catch[FFAlgChainImplem[gid,inputs]];
 FFAlgChain[gid_,id_,inputs_List]:=FFRegisterAlgorithm[RegisterAlgChain,gid,id,inputs,{}];
 
 
-And@@(IntegerQ/@{1,2,3})
-
-
-ValidateTakeElemsList[a_List,False]:=If[AllTrue[a,#[[0]]==List && Length[#]==2 && And@@(IntegerQ/@#)&],a,Throw[$Failed]];
-ValidateTakeElemsList[a_List,True]:=If[AllTrue[a,#[[0]]==List && Length[#]==4 && And@@(IntegerQ/@#)&],a,Throw[$Failed]];
+ValidateTakeElemsList[a_List,False]:=If[AllTrue[a,#[[0]]==List && Length[#]==2 && And@@(IntegerQ/@#)&],a,(Message[FF::badtakepattern];Throw[$Failed])];
+ValidateTakeElemsList[a_List,True]:=If[AllTrue[a,#[[0]]==List && Length[#]==4 && And@@(IntegerQ/@#)&],a,(Message[FF::badtakepattern];Throw[$Failed])];
 TakeElemsToInternal[a_List,bl_:False]:=ValidateTakeElemsList[a,bl]-1;
 TakeElemsToInternal[full_List->subset_List,bl_:False]:=Module[{position,i,j,sublist,res},
   If[!AllTrue[full,#[[0]]==List&],Throw[$Failed]];
@@ -1019,21 +1024,24 @@ TakeElemsToInternal[full_List->subset_List,bl_:False]:=Module[{position,i,j,subl
     res=position/@subset;,
     res=Join[position[#[[1]]],position[#[[2]]]]&/@subset;
   ];
-  If[!FreeQ[res,Missing],Throw[$Failed]];
+  If[!FreeQ[res,Missing],(Message[FF::badtakepattern];Throw[$Failed])];
   res-1
 ];
+TakeElemsToInternal[___]:=(Message[FF::badtakepattern];Throw[$Failed]);
 RegisterAlgTake[gid_,inputs_,{elems_}]:=Catch[FFAlgTakeImplem[gid,inputs,Flatten[TakeElemsToInternal[elems]]]];
 FFAlgTake[gid_,id_,inputs_List,elems_]:=FFRegisterAlgorithm[RegisterAlgTake,gid,id,inputs,{elems}];
 
 
 MultiTakeElemsToInternal[a_List]:=Flatten[TakeElemsToInternal[#]]&/@a;
 MultiTakeElemsToInternal[full_List->subsets_List]:=Flatten[TakeElemsToInternal[full->#]]&/@subsets;
+MultiTakeElemsToInternal[___]:=(Message[FF::badtakepattern];Throw[$Failed]);
 RegisterAlgTakeAndAdd[gid_,inputs_,{elems_}]:=Catch[FFAlgTakeAndAddImplem[gid,inputs,MultiTakeElemsToInternal[elems]]];
 FFAlgTakeAndAdd[gid_,id_,inputs_List,elems_]:=FFRegisterAlgorithm[RegisterAlgTakeAndAdd,gid,id,inputs,{elems}];
 
 
 MultiTakeElemsToInternalBL[a_List]:=Flatten[TakeElemsToInternal[#,True]]&/@a;
 MultiTakeElemsToInternalBL[full_List->subsets_List]:=Flatten[TakeElemsToInternal[full->#,True]]&/@subsets;
+MultiTakeElemsToInternalBL[___]:=(Message[FF::badtakepattern];Throw[$Failed]);
 RegisterAlgTakeAndAddBL[gid_,inputs_,{elems_}]:=Catch[FFAlgTakeAndAddBLImplem[gid,inputs,MultiTakeElemsToInternalBL[elems]]];
 FFAlgTakeAndAddBL[gid_,id_,inputs_List,elems_]:=FFRegisterAlgorithm[RegisterAlgTakeAndAddBL,gid,id,inputs,{elems}];
 

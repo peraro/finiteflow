@@ -2,6 +2,14 @@
 #include <chrono>
 #include <fflow/graph.hh>
 
+#define ENSURE_G_MUTABLE(g)           \
+  do {                                \
+    if (!((g).is_mutable())) {        \
+      logerr("Graph is not mutable"); \
+      return ALG_NO_ID;               \
+    }                                 \
+  } while (0)
+
 namespace fflow {
 
   Node::~Node()
@@ -73,16 +81,20 @@ namespace fflow {
                            std::unique_ptr<AlgorithmData> && algdata,
                            const unsigned * inputs)
   {
-    if (!is_mutable())
-      return ALG_NO_ID;
+    ENSURE_G_MUTABLE(*this);
 
     // check number inputs is consistent
     unsigned ninputs = (*alg).nparsin.size();
-    for (unsigned j=0; j<ninputs; ++j)
-      if (!node_exists(inputs[j])
-          || nodes_[inputs[j]]->alg_->nparsout != alg->nparsin[j]) {
+    for (unsigned j=0; j<ninputs; ++j) {
+      if (!node_exists(inputs[j])) {
+        logerr("Input node does not exist");
         return ALG_NO_ID;
       }
+      if (nodes_[inputs[j]]->alg_->nparsout != alg->nparsin[j]) {
+        logerr(format("Input nodes do not have the expected length",j));
+        return ALG_NO_ID;
+      }
+    }
 
     // allocate new node
     unsigned id = get_free_node_id_();
@@ -129,8 +141,10 @@ namespace fflow {
   unsigned Graph::delete_node_(unsigned id, bool force)
   {
     Node * n = node(id);
-    if (!n || (!force && !n->alg_->is_mutable()))
+    if (!n || (!force && !n->alg_->is_mutable())) {
+      logerr("Deleting non-existing or immutable node");
       return ALG_NO_ID;
+    }
     if (id == out_node_)
       out_node_ = ALG_NO_ID;
     nodes_[id].reset();
@@ -221,18 +235,15 @@ namespace fflow {
 
   unsigned Graph::set_input_vars(unsigned nvars)
   {
-    if (!is_mutable())
-      return ALG_NO_ID;
+    ENSURE_G_MUTABLE(*this);
 
     if (nodes_.empty()) {
       nodes_.push_back(std::unique_ptr<Node>(new Node()));
       nodes_[0]->alg_.reset(new InputAlgorithm());
     } else if (!(nodes_[0]->alg_->is_mutable())) {
+      logerr("Input node is not mutable");
       return ALG_NO_ID;
     }
-
-    if (!(nodes_[0]->alg_->is_mutable()))
-      return ALG_NO_ID;
 
     nodes_[0]->alg_->nparsout = nvars;
     nodes_[0]->depth_ = 0;
@@ -261,11 +272,12 @@ namespace fflow {
 
   unsigned Graph::set_output_node(unsigned id)
   {
-    if (!is_mutable())
-      return ALG_NO_ID;
+    ENSURE_G_MUTABLE(*this);
 
-    if (!node_exists(id))
+    if (!node_exists(id)) {
+      logerr("Selected output node does not exist");
       return ALG_NO_ID;
+    }
 
     if (id != out_node_) {
 
@@ -274,8 +286,12 @@ namespace fflow {
       comput_seq_.clear();
       for (unsigned j=0; j<nodes_.size(); ++j)
         if (node_is_marked_(j)) {
-          if (j != id && !nodes_[j]->alg_->has_learned())
+          if (j != id && !nodes_[j]->alg_->has_learned()) {
+            logerr(format("Selected output node depends on node {} "
+                          "which has not completed its learning phase.",
+                          j));
             return ALG_NO_ID;
+          }
           comput_seq_.push_back(j);
         }
       const auto * nodes = nodes_.data();
@@ -478,12 +494,23 @@ namespace fflow {
     return graphs_.size() > id && graphs_[id].get() != nullptr;
   }
 
-  bool Session::graph_can_be_evaluated(unsigned id) const
+  bool Session::graph_can_be_evaluated(unsigned id,
+                                       bool check_learned) const
   {
     const Graph * g = graph(id);
-    if (!g)
+    if (!g) {
+      logerr("The graph does not exist");
       return false;
-    return g->out_node_id() != ALG_NO_ID;
+    }
+    if (g->out_node_id() == ALG_NO_ID) {
+      logerr("Output node not set");
+      return false;
+    }
+    if (check_learned && !(g->out_node()->alg_.get()->has_learned())) {
+      logerr("Output node has not learned");
+      return false;
+    }
+    return true;
   }
 
   Node * Session::node(unsigned graphid, unsigned nodeid)
@@ -615,8 +642,7 @@ namespace fflow {
 
     Graph * g = graph(graphid);
 
-    if (!g->is_mutable())
-      return ALG_NO_ID;
+    ENSURE_G_MUTABLE(*g);
 
     for (const auto & node : g->nodes_)
       if (node.get())
@@ -635,8 +661,7 @@ namespace fflow {
       return ALG_NO_ID;
 
     Graph * graph = graphs_[graphid].get();
-    if (!graph->is_mutable())
-      return ALG_NO_ID;
+    ENSURE_G_MUTABLE(*graph);
 
     for (auto & node : graph->nodes_) {
       if (!graph->mark_nodes_[node->id()])
@@ -726,7 +751,7 @@ namespace fflow {
 
   Ret Session::learn(unsigned graphid)
   {
-    if (!graph_can_be_evaluated(graphid))
+    if (!graph_can_be_evaluated(graphid,false))
       return FAILED;
 
     Graph & graph = *graphs_[graphid];
@@ -734,6 +759,12 @@ namespace fflow {
     Node * node = graph.out_node();
     if (!node)
       return FAILED;
+    if (!(node->alg_.get()->is_mutable())) {
+      logerr("Learning with an immutable output node "
+             "is not allowed");
+      return FAILED;
+    }
+
     const LearningOptions & opt = node->learn_opt;
 
     Ret ret = graph.learn_all(&ctxt_, Mod(BIG_UINT_PRIMES[opt.prime_no]),
@@ -1188,8 +1219,10 @@ namespace fflow {
       gen_sample_points_(graphid, samples, opt);
     } else {
       Ret dret = samplegen->load_samples(a.nparsin[0], a.nparsout, samples);
-      if (dret != SUCCESS)
+      if (dret != SUCCESS) {
+        logerr("Failed to load sample points");
         return;
+      }
     }
 
     const unsigned tot_samples = samples.size();

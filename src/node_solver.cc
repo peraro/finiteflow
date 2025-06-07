@@ -52,6 +52,13 @@ namespace fflow {
     init(neqs, nvars, needed_vars, needed_size, data);
   }
 
+  static UInt zero_ccs_err_()
+  {
+    logerr("Sparse linear-system matrix of "
+           "coefficients contains zeroes");
+    return FAILED;
+  }
+
   Ret NodeSparseSolver::fill_matrix(Context *,
                                     unsigned n_rows,
                                     const unsigned rows[],
@@ -79,8 +86,8 @@ namespace fflow {
         unsigned col = cols[j];
         if (info[col] & LSVar::IS_NON_ZERO) {
           UInt res = (*f);
-          if (res == FAILED || res == 0)
-            return FAILED;
+          if (FF_ERRCOND(res == 0))
+            return zero_ccs_err_();
           r.el(oj).col = col;
           r.el(oj).val.set(res);
           ++oj;
