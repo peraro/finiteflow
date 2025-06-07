@@ -124,6 +124,7 @@ set(FFLOW_SOURCES
     src/alg_laurent.cc
     src/subgraph_reconstruct.cc
     src/cached_subgraph.cc
+    src/eval_count.cc
     src/ffmod.c
     src/capi.cc
 
@@ -183,6 +184,7 @@ set(FFLOW_HEADERS
     include/fflow/alg_laurent.hh
     include/fflow/subgraph_reconstruct.hh
     include/fflow/cached_subgraph.hh
+    include/fflow/eval_count.hh
     include/fflow/ffmod.h
     include/fflow/capi.h
     )

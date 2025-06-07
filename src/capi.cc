@@ -22,6 +22,7 @@
 #include <fflow/mp_functions.hh>
 #include <fflow/json.hh>
 #include <fflow/ratfun_parser.hh>
+#include <fflow/eval_count.hh>
 #include <fflow/algorithm.hh>
 using namespace fflow;
 
@@ -1771,6 +1772,54 @@ extern "C" {
     }
 
     return output;
+  }
+
+  FFNode ffAlgEvalCount(FFGraph graph, FFNode input)
+  {
+    Node * node = nullptr;
+    if (!(node = session.node(graph, input))) {
+      logerr("Input node does not exist");
+      return FF_ERROR;
+    }
+
+    unsigned nparsin = node->algorithm()->nparsout;
+    std::unique_ptr<EvalCount> algptr(new EvalCount());
+    EvalCount & alg = *algptr;
+    alg.init(nparsin);
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, &input);
+
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
+  FFUInt ffEvalCountGet(FFGraph graph, FFNode node)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+
+    if (dynamic_cast<EvalCount*>(alg)) {
+      EvalCount & c = *static_cast<EvalCount*>(alg);
+      return c.getCount();
+    }
+
+    logerr("Algorithm is not of type EvalCount");
+    return FF_FAILED;
+  }
+
+  FFUInt ffEvalCountReset(FFGraph graph, FFNode node, FFUInt count)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+
+    if (dynamic_cast<EvalCount*>(alg)) {
+      EvalCount & c = *static_cast<EvalCount*>(alg);
+      return c.resetCount(count);
+    }
+
+    logerr("Algorithm is not of type EvalCount");
+    return FF_FAILED;
   }
 
 

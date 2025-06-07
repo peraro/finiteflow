@@ -98,6 +98,9 @@ FFAlgSparseMatMul::usage = "FFAlgSparseMatMul[graph,node,{input1,input2},r1,c1,c
 FFAlgNonZeroes::usage = "FFAlgNonZeroes[graph,node,{input}] returns the non-vanishing elements of its input."
 FFAlgTakeAndAdd::usage="FFAlgTakeAndAdd[graph,node,inputs,takeelements] is a TakeAndAdd algorithm which takes lists of selected elements from its inputs, according to the takeelements pattern, and adds all elements in each list."
 FFAlgTakeAndAddBL::usage="FFAlgTakeAndAddBL[graph,node,inputs,takeelements] is similar to FFAlgTakeAndAdd but is bilinear."
+FFAlgEvalCount::usage = "FFAlgEvalCount[graph,node,{input}] is an algorithm that simply returns its input but keeps a count of how many times it is evaluated (see also FFEvalCountGet and FFEvalCountReset)."
+FFEvalCountGet::usage = "FFEvalCountGet[graph,node], where node is an EvalCount algorithm, returns its current evaluation count."
+FFEvalCountReset::usage = "FFEvalCountReset[graph,node], where node is an EvalCount algorithm, returns its current evaluation count and resets it to zero. FFEvalCountReset[graph,node,count] is analogous but resets the counter to the value `count`."
 FFTotalDegrees::usage="FFTotalDegrees[graph] computes and returns the total degrees of each entry of the output of a graph."
 FFVarsDegrees::usage="FFVarsDegrees[graph] computes and internally stores the degrees with respect to each variable, for all the outputs of a graph."
 FFAllDegrees::usage="FFAllDegrees[graph] computes the total degrees, as well as the partial degrees with respect to each variable, for all the outputs of a graph.  The total degrees are also returned."
@@ -188,6 +191,7 @@ FF::noint32 = "`1` is not an integer in the 32-bit range."
 FF::noint32list = "`1` is not a list of integers in the 32-bit range."
 FF::nouint32list = "`1` is not a list of positive integers in the 32-bit range."
 FF::noint64 = "`1` is not an integer in the 64-bit range."
+FF::nouint64 = "`1` is not a positive integer in the 64-bit range."
 FF::noint64list = "`1` is not a list of integers in the 64-bit range."
 FF::nolib = "fflow library cannot be loaded: try setting your $LibraryPath, and then call FFLoadLib[]."
 FF::badsquaremat = "The input is not a square matrix."
@@ -241,6 +245,7 @@ CheckedInt[a_] := If[IntegerQ[a], a, Message[FF::noint, a]; Throw[$Failed]];
 CheckedInt32[a_] := If[IntegerQ[a] && (Abs[a]<=FFInt32Max), a, Message[FF::noint, a]; Throw[$Failed]];
 CheckedInt32Range[a_] := If[Abs[a]<=FFInt32Max, a, Message[FF::noint32, a]; Throw[$Failed]];
 CheckedInt64[a_] := If[IntegerQ[a] && (Abs[a]<=FFInt64Max), a, Message[FF::noint, a]; Throw[$Failed]];
+CheckedUInt64[a_] := If[IntegerQ[a] && (0<=a<=FFInt64Max), a, Message[FF::nouint64, a]; Throw[$Failed]];
 CheckedInt64Range[a_] := If[Abs[a]<=FFInt64Max, a, Message[FF::noint64, a]; Throw[$Failed]];
 
 Int32ListError[a_] := (Message[FF::noint32list, a]; Throw[$Failed]);
@@ -1077,6 +1082,12 @@ FFNonZeroesGetInfo[gid_,id_]:={"All"->#[[1]],"NonZero"->(#[[2]]+1)}&[FFAlgorithm
 FFNonZeroesLearn[gid_]:=If[Length[#]==0,#,{"All"->#[[1]],"NonZero"->(#[[2]]+1)}]&[FFLearnImplem[GetGraphId[gid]]];
 
 
+RegisterAlgEvalCount[gid_,inputs_,{}]:=FFAlgEvalCountImplem[gid,inputs];
+FFAlgEvalCount[gid_,id_,{input_}]:=FFRegisterAlgorithm[RegisterAlgEvalCount,gid,id,{input},{}];
+FFEvalCountGet[gid_,id_]:=FFAlgEvalCountGetSetImplem[GetGraphId[gid],GetAlgId[gid,id],-1];
+FFEvalCountReset[gid_,id_,count_:0]:=Catch[FFAlgEvalCountGetSetImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedUInt64[count]]];
+
+
 FFIndependentOf[id_, vars_List, var_]:=FFIndependentOfImplem[GetGraphId[id],Position[vars,var][[1,1]]-1];
 
 
@@ -1836,6 +1847,8 @@ FFLoadLibObjects[] := Module[
     FFCachedFromSubgraphImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_from_subgraph", LinkObject, LinkObject];
     FFCachedSubgraphMergeCachesImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph_merge", LinkObject, LinkObject];
     FFCachedSubgraphSetDefaultSubcacheSizeImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph_default_subcache_size", LinkObject, LinkObject];
+    FFAlgEvalCountImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_evalcount", LinkObject, LinkObject];
+    FFAlgEvalCountGetSetImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_evalcount_getset", LinkObject, LinkObject];
 ];
 
 

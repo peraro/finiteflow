@@ -265,6 +265,10 @@ extern "C" {
                            const unsigned * n_non_zero_b,
                            const unsigned * non_zero_els_b);
 
+  FFNode ffAlgEvalCount(FFGraph graph, FFNode input);
+  FFUInt ffEvalCountGet(FFGraph graph, FFNode node);
+  FFUInt ffEvalCountReset(FFGraph graph, FFNode node, FFUInt count);
+
 
   /////////////////////////////
   // Info about learned algs //

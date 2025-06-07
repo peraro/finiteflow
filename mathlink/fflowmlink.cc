@@ -19,6 +19,7 @@
 #include <fflow/subgraph_fit.hh>
 #include <fflow/subgraph_reconstruct.hh>
 #include <fflow/node_solver.hh>
+#include <fflow/eval_count.hh>
 #include <fflow/cached_subgraph.hh>
 #include <mathlink.h>
 #include <WolframLibrary.h>
@@ -4944,6 +4945,91 @@ extern "C" {
 
       MLPutSymbol(mlp, "$Failed");
 
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+  int fflowml_alg_evalcount(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int n_args;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &n_args);
+
+    int graphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+
+    MLNewPacket(mlp);
+
+    Node * node = nullptr;
+    if (inputnodes.size() != 1 ||
+        !(node = session.node(graphid, inputnodes[0]))) {
+      if (inputnodes.size() != 1)
+        logerr("EvalCount must take exactly one node as input");
+      else
+        logerr("Input node does not exist");
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    unsigned nparsin = node->algorithm()->nparsout;
+    std::unique_ptr<EvalCount> algptr(new EvalCount());
+    EvalCount & alg = *algptr;
+    alg.init(nparsin);
+
+    Graph * graph = session.graph(graphid);
+    unsigned id = graph->new_node(std::move(algptr), nullptr,
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+  int fflowml_alg_evalcount_getset(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &nargs);
+
+    int id, nodeid;
+    mlint64 reset;
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    MLGetInteger64(mlp, &reset);
+    MLNewPacket(mlp);
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+
+    if (!session.graph_exists(id)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    if (dynamic_cast<EvalCount*>(alg)) {
+      EvalCount & c = *static_cast<EvalCount*>(alg);
+      std::size_t res;
+      if (reset < 0)
+        res = c.getCount();
+      else
+        res = c.resetCount(reset);
+      MLPutInteger64(mlp, res);
+
+    } else {
+      logerr("Algorithm is not of type EvalCount");
+      MLPutSymbol(mlp, "$Failed");
     }
 
     return LIBRARY_NO_ERROR;

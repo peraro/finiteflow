@@ -402,6 +402,15 @@ def AlgSparseMatMul(graph, in_node_a, in_node_b, n_rows_a, n_cols_a, n_cols_b,
                                          [len(x) for x in non_zeroes_b],
                                          [x for x in _chain(*non_zeroes_b)]))
 
+def AlgEvalCount(graph, in_node):
+    return _Check(_lib.ffAlgEvalCount(graph, in_node))
+
+def EvalCountGet(graph, node):
+    return _ToUint(_lib.ffEvalCountGet(graph, node))
+
+def EvalCountReset(graph, node, count=0):
+    return _ToUint(_lib.ffEvalCountReset(graph, node, count))
+
 
 def LaurentMaxOrders(graph, node):
     retc = _lib.ffLaurentMaxOrders(graph, node)
