@@ -873,26 +873,6 @@ extern "C" {
     return id;
   }
 
-  static bool check_take_nodes_(FFGraph graph,
-                                const unsigned * elems,
-                                const FFNode * in_nodes,
-                                unsigned n_in_nodes)
-  {
-    if (elems[0] >= n_in_nodes) {
-      logerr("Input node in take pattern out of bounds");
-      return false;
-    }
-    Node * node = session.node(graph, in_nodes[elems[0]]);
-    if (!node || node->algorithm()->nparsout <= elems[1]) {
-      if (!node)
-        logerr("Non-existent input node");
-      else
-        logerr("Input element in take pattern out of bounds");
-      return false;
-    }
-    return true;
-  }
-
   FFNode ffAlgTake(FFGraph graph,
                    const FFNode * in_nodes, unsigned n_in_nodes,
                    const unsigned * elems, unsigned n_elems)
@@ -910,17 +890,13 @@ extern "C" {
     std::vector<Take::InputEl> els;
     els.resize(n_elems);
     for (int j=0; j<n_elems; ++j, elems += 2) {
-
       els[j].list = elems[0];
       els[j].el = elems[1];
-
-      if (!check_take_nodes_(graph,elems,in_nodes,n_in_nodes))
-        return FF_ERROR;
     }
 
-    alg.init(nparsin.data(), nparsin.size(), std::move(els));
+    Ret ret = alg.init(nparsin.data(), nparsin.size(), std::move(els));
 
-    if (!session.graph_exists(graph))
+    if (!session.graph_exists(graph) || ret != SUCCESS)
       return FF_ERROR;
 
     Graph * g = session.graph(graph);
@@ -1039,19 +1015,15 @@ extern "C" {
       els[j].resize(this_len);
 
       for (int k=0; k<this_len; ++k, elems += 2) {
-
         els[j][k].list = elems[0];
         els[j][k].el = elems[1];
-
-        if (!check_take_nodes_(graph,elems,in_nodes,n_in_nodes))
-          return FF_ERROR;
       }
 
     }
 
-    alg.init(nparsin.data(), nparsin.size(), std::move(els));
+    Ret ret = alg.init(nparsin.data(), nparsin.size(), std::move(els));
 
-    if (!session.graph_exists(graph))
+    if (!session.graph_exists(graph) || ret != SUCCESS)
       return FF_ERROR;
 
     Graph * g = session.graph(graph);
@@ -1096,9 +1068,9 @@ extern "C" {
       non_zero_els_b += len;
     }
 
-    alg.init(n_rows_a, n_cols_a, n_cols_b);
+    Ret ret = alg.init(n_rows_a, n_cols_a, n_cols_b);
 
-    if (!session.graph_exists(graph))
+    if (!session.graph_exists(graph) || ret != SUCCESS)
       return FF_ERROR;
 
     Graph * g = session.graph(graph);

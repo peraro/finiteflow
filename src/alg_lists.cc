@@ -306,16 +306,20 @@ namespace fflow {
     nparsin.resize(2);
     nparsout = nrows1*ncols2;
 
-    if (!(row1.size() == nrows1  && row2.size() == ncols1))
+    if (!(row1.size() == nrows1  && row2.size() == ncols1)) {
+      logerr("Wrong number of rows in matrix multiplication");
       return FAILED;
+    }
 
     std::size_t r1size = 0;
     for (auto & r : row1) {
       r.start = r1size;
       r1size += r.size;
       for (unsigned j=0; j<r.size; ++j)
-        if (!(r.cols[j] < ncols1))
+        if (!(r.cols[j] < ncols1)) {
+          logerr("Index out of bounds in matrix multiplication");
           return FAILED;
+        }
     }
     nparsin[0] = r1size;
 
@@ -324,8 +328,10 @@ namespace fflow {
       r.start = r2size;
       r2size += r.size;
       for (unsigned j=0; j<r.size; ++j)
-        if (!(r.cols[j] < ncols2))
+        if (!(r.cols[j] < ncols2)) {
+          logerr("Index out of bounds in matrix multiplication");
           return FAILED;
+        }
     }
     nparsin[1] = r2size;
 

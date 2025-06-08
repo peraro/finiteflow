@@ -4592,9 +4592,9 @@ extern "C" {
 
     MLNewPacket(mlp);
 
-    alg.init(nrows1, ncols1, ncols2);
+    bool ok = alg.init(nrows1, ncols1, ncols2) == SUCCESS;
 
-    if (!session.graph_exists(graphid) || inputnodes.size() != 2) {
+    if (!ok || !session.graph_exists(graphid) || inputnodes.size() != 2) {
       MLPutSymbol(mlp, "$Failed");
       return LIBRARY_NO_ERROR;
     }
