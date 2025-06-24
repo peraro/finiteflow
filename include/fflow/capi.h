@@ -126,6 +126,19 @@ extern "C" {
   // it or FF_ERROR if this is not a subgraph node
   unsigned ffSubgraphNParsout(FFGraph graph, FFNode node);
 
+  // The array `input` must be a flattened `(nparsin+1)*n_points`
+  // matrix of integers, with `nparsin` being the number of input
+  // parameters of the graph (which can be obtained as
+  // ffNodeNParsOut(graph,0)).  Each row of the matrix corresponding
+  // to a point. The first `nparsin` entries of each row are the
+  // values of the input parameters while the last is the index of the
+  // prime.
+  // The output is a flattened `nparsout*n_points` array, whose memory
+  // must be freed using ffFreeMemoryU64.
+  FFUInt * ffEvaluatePoints(FFGraph graph,
+                            const FFUInt * input, unsigned n_points,
+                            unsigned n_threads);
+
 
   ////////////////
   // Algorithms //
@@ -256,6 +269,10 @@ extern "C" {
                          const FFNode * in_nodes, unsigned n_in_nodes,
                          unsigned n_elems, const unsigned * elems_len,
                          const unsigned * elems);
+  FFNode ffAlgTakeAndAddBL(FFGraph graph,
+                           const FFNode * in_nodes, unsigned n_in_nodes,
+                           unsigned n_elems, const unsigned * elems_len,
+                           const unsigned * elems);
 
   FFNode ffAlgSparseMatMul(FFGraph graph, FFNode in_node_a, FFNode in_node_b,
                            unsigned n_rows_a, unsigned n_cols_a,
@@ -295,6 +312,10 @@ extern "C" {
   FFStatus ffLSolveOnlyHomogeneous(FFGraph graph, FFNode node);
   FFStatus ffLSolveOnlyNonHomogeneous(FFGraph graph, FFNode node);
   FFStatus ffLSolveSparseOutput(FFGraph graph, FFNode node, bool sparse);
+  FFStatus ffLSolveSparseOutputWithMaxCol(FFGraph graph, FFNode node,
+                                          unsigned max_col,
+                                          bool back_substitution,
+                                          bool keep_full_output);
   FFStatus ffLSolveMarkAndSweepEqs(FFGraph graph, FFNode node);
 
   // Only for Analytic and Numeric solvers (fails for Node solvers)

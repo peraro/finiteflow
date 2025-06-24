@@ -348,8 +348,36 @@ def testLists():
         print("- Check failed for TakeUnique!")
         exit(1)
 
+    taddbl = AlgTakeAndAddBL(g, [node_amat, node_bmat, mat_mul],
+                             [
+                                 [(0,0,0,0),(0,4,1,2)],
+                                 [(0,1,0,2),(2,1,0,0),(0,1,0,1)],
+                                 [(0,3,2,0)]
+                            ])
+    SetOutputNode(g, taddbl)
+    if EvaluateGraph(g, [], 0) != [2*2 + 4*24, 2*4 + 158*2 + 2*2, 2*78]:
+        print("- Check failed!")
+        exit(1)
+
     print("- Test passed!")
 
+
+def testEvaluate():
+    print("Testing EvaluatePoints")
+
+    from random import randint
+    rand = lambda : randint(123456789123456789, PrimeNo(0)-1)
+
+    funcs = testTutorial2AnalyticCheck()
+    g,inp = NewGraphWithInput(3)
+    node = AlgRatFunEval(g,inp,ParseRatFun(("x1","x2","x3"),funcs))
+    SetOutputNode(g,node)
+
+    points = list(tuple(rand() for _ in range(3)) for _ in range(7))
+    EvaluatePoints(g,points)
+
+    DeleteGraph(g)
+    print("- Test passed!")
 
 
 if __name__ == '__main__':
@@ -362,3 +390,4 @@ if __name__ == '__main__':
     testLSolver("numeric")
     testLaurent()
     testLists()
+    testEvaluate()

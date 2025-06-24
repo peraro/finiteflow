@@ -435,6 +435,43 @@ extern "C" {
     return output;
   }
 
+  FFUInt * ffEvaluatePoints(FFGraph graph,
+                            const FFUInt * input, unsigned n_points,
+                            unsigned n_threads)
+  {
+    Graph * g = session.graph(graph);
+    if (!session.graph_can_be_evaluated(graph))
+      return 0;
+
+    unsigned nparsin = g->nparsin[0];
+    unsigned nparsout = g->nparsout;
+
+    SamplePointsVector xin(n_points);
+    SamplePointsVector xout;
+
+    for (unsigned j=0; j<n_points; ++j, input+=nparsin+1) {
+      xin[j].reset(new UInt[nparsin+1]);
+      std::copy(input, input+nparsin, xin[j].get());
+      UInt prime_no = input[nparsin];
+      if (prime_no >= BIG_UINT_PRIMES_SIZE) {
+        logerr("Prime index out of bounds");
+        return 0;
+      }
+      xin[j][nparsin] = BIG_UINT_PRIMES[prime_no];
+    }
+
+    Ret ret = session.evaluate_list(graph, xin, xout, n_threads);
+    if (ret != SUCCESS)
+      return 0;
+
+    FFUInt * output = (FFUInt*)malloc(sizeof(FFUInt)*nparsout*n_points);
+    FFUInt * dest = output;
+    for (unsigned j=0; j<n_points; ++j, dest += nparsout)
+      std::copy(xout[j].get(), xout[j].get()+nparsout, dest);
+
+    return output;
+  }
+
   unsigned ffSubgraphNParsout(FFGraph graph, FFNode node)
   {
     Algorithm * alg = session.algorithm(graph, node);
@@ -1032,6 +1069,49 @@ extern "C" {
     return id;
   }
 
+  FFNode ffAlgTakeAndAddBL(FFGraph graph,
+                           const FFNode * in_nodes, unsigned n_in_nodes,
+                           unsigned n_elems,
+                           const unsigned * elems_len,
+                           const unsigned * elems)
+  {
+    std::unique_ptr<TakeAndAddBL> algptr(new TakeAndAddBL());
+    TakeAndAddBL & alg = *algptr;
+    std::vector<unsigned> nparsin(n_in_nodes);
+    for (unsigned i=0; i<n_in_nodes; ++i) {
+      Node * node = session.node(graph, in_nodes[i]);
+      if (!node)
+        return FF_ERROR;
+      nparsin[i] = node->algorithm()->nparsout;
+    }
+
+    std::vector<std::vector<TakeAndAddBL::InputEl>> els;
+    els.resize(n_elems);
+    for (int j=0; j<n_elems; ++j) {
+
+      const unsigned this_len = elems_len[j];
+      els[j].resize(this_len);
+
+      for (int k=0; k<this_len; ++k, elems += 4) {
+        els[j][k].list1 = elems[0];
+        els[j][k].el1 = elems[1];
+        els[j][k].list2 = elems[2];
+        els[j][k].el2 = elems[3];
+      }
+
+    }
+
+    Ret ret = alg.init(nparsin.data(), nparsin.size(), std::move(els));
+
+    if (!session.graph_exists(graph) || ret != SUCCESS)
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), nullptr, in_nodes);
+
+    return id;
+  }
+
   FFNode ffAlgSparseMatMul(FFGraph graph, FFNode in_node_a, FFNode in_node_b,
                            unsigned n_rows_a, unsigned n_cols_a,
                            unsigned n_cols_b,
@@ -1179,6 +1259,27 @@ extern "C" {
     if (dynamic_cast<SparseLinearSolver *>(alg)) {
       SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
       ls.sparse_output(sparse);
+      session.invalidate_subctxt_alg_data(graph, node);
+    } else {
+      return FF_ERROR;
+    }
+
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffLSolveSparseOutputWithMaxCol(FFGraph graph, FFNode node,
+                                          unsigned max_col,
+                                          bool back_substitution,
+                                          bool keep_full_output)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    if (!alg || !alg->is_mutable())
+      return FF_ERROR;
+
+    if (dynamic_cast<SparseLinearSolver *>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+      ls.sparse_output_with_maxcol(max_col, back_substitution,
+                                   keep_full_output);
       session.invalidate_subctxt_alg_data(graph, node);
     } else {
       return FF_ERROR;

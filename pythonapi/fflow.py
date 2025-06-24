@@ -391,6 +391,18 @@ def AlgTakeAndAdd(graph, in_nodes, elems):
                                         [len(x) for x in elems],
                                         [y for y in nested(_chain(*elems))]))
 
+def AlgTakeAndAddBL(graph, in_nodes, elems):
+    def nested(chain_list):
+        for x in chain_list:
+            yield x[0]
+            yield x[1]
+            yield x[2]
+            yield x[3]
+    return  _Check(_lib.ffAlgTakeAndAddBL(graph, in_nodes, len(in_nodes),
+                                          len(elems),
+                                          [len(x) for x in elems],
+                                          [y for y in nested(_chain(*elems))]))
+
 def AlgSparseMatMul(graph, in_node_a, in_node_b, n_rows_a, n_cols_a, n_cols_b,
                     non_zeroes_a, non_zeroes_b):
     if len(non_zeroes_a) != n_rows_a or len(non_zeroes_b) != n_cols_a:
@@ -443,6 +455,13 @@ def LSolveOnlyNonHomogeneous(graph, node):
 
 def LSolveSparseOutput(graph, node, sparse : True):
     return _StatusCheck(_lib.ffLSolveSparseOutput(graph, node, sparse))
+
+
+def LSolveSparseOutputWithMaxCol(graph, node, maxcol,
+                                 backsubst=True, keepfullout=False):
+    return _StatusCheck(_lib.ffLSolveSparseOutputWithMaxCol(graph, node,
+                                                            maxcol, backsubst,
+                                                            keepfullout))
 
 
 def LSolveMarkAndSweepEqs(graph, node):
@@ -552,7 +571,7 @@ def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
         needed = _ffi.NULL
         neededlen = 0
     else:
-        needelen = len(needed)
+        neededlen = len(needed)
     if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
         raise ERROR
     retc = _lib.ffAlgAnalyticSparseLSolveIdx(graph, in_node,
@@ -573,7 +592,7 @@ def AlgNumericSparseLSolve(graph, n_vars,
         needed = _ffi.NULL
         neededlen = 0
     else:
-        needelen = len(needed)
+        neededlen = len(needed)
     if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
         raise ERROR
     (uniqueccs, indexes) = _getUniqueAndIdx(non_zero_coeffs)
@@ -595,7 +614,7 @@ def AlgNodeSparseLSolve(graph, in_node, n_vars,
         needed = _ffi.NULL
         neededlen = 0
     else:
-        needelen = len(needed)
+        neededlen = len(needed)
     retc = _lib.ffAlgNodeSparseLSolve(graph, in_node,
                                       len(non_zero_els), n_vars,
                                       [len(x) for x in non_zero_els],
@@ -754,6 +773,28 @@ def EvaluatePointsInFile(graph,filename,start,n_points,n_threads=0):
 def DumpEvaluations(graph,filename):
     cfile = _ffi.new("char[]", filename.encode('utf8'))
     return _StatusCheck(_lib.ffDumpEvaluations(graph,cfile))
+
+def EvaluatePoints(graph,points,prime_no=0,n_threads=0):
+
+    nparsin = NodeNParsOut(graph,0)
+
+    def append_tuple(x, el):
+        return x + (el,)
+    def append_list(x, el):
+        return x + [el]
+    app_ = {list : append_list, tuple : append_tuple}
+    appto = lambda x : x if len(x) == nparsin+1 else app_[type(x)](x,prime_no)
+
+    full_pts = list(_chain(*map(appto,points)))
+    ret = _lib.ffEvaluatePoints(graph,full_pts,len(points),n_threads)
+    if ret == _ffi.NULL:
+        raise ERROR
+
+    nparsout = GraphNParsOut(graph)
+    res = list(tuple(ret[i:i+nparsout]) for i in range(len(points)))
+    _lib.ffFreeMemoryU64(ret)
+
+    return res
 
 
 def TakeUnique(graph, nodein, nevals=3):
