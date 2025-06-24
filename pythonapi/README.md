@@ -34,6 +34,4 @@ export PYTHONPATH=$PYTHONPATH:/path/to/finiteflow/pythonapi
 ## Usage
 The installation process described above, creates and installs the `fflow` package, which can be imported and used as any Python program.
 
-The file `tests.py` contains several examples of usage of FiniteFlow from Python 3.
-
-More examples will be added, once the API stabilizes.
+Tutorials using this interface can be found in the [tutorials/](tutorials/README.md) subdirectory.  Additional applications can be found in [`tests.py`](tests.py) and  [`test_solver.py`](test_solver.py).
