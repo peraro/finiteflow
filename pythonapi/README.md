@@ -11,11 +11,7 @@ The Python API uses the [CFFI](https://cffi.readthedocs.io/en/stable/) package, 
 ```
 pip3 install cffi --user
 ```
-where the option `--user` can be omitted for a global installation, if you have root privileges.  On MacOS `libffi` needs to be installed first, as explained [here](https://cffi.readthedocs.io/en/stable/installation.html#macos-x).  When using the `python3` executable provided by Homebrew, CFFI can be installed with
-```
-brew install python-setuptools
-brew install cffi
-```
+where the option `--user` can be omitted for a global installation, if you have root privileges.  On MacOS[^1] `libffi` needs to be installed first, as explained [here](https://cffi.readthedocs.io/en/stable/installation.html#macos-x).
 
 Moreover, FiniteFlow should also be installed before moving to the next step.
 
@@ -35,3 +31,5 @@ export PYTHONPATH=$PYTHONPATH:/path/to/finiteflow/pythonapi
 The installation process described above, creates and installs the `fflow` package, which can be imported and used as any Python program.
 
 Tutorials using this interface can be found in the [tutorials/](tutorials/README.md) subdirectory.  Additional applications can be found in [`tests.py`](tests.py) and  [`test_solver.py`](test_solver.py).
+
+[^1]: When using the `python3` executable provided by Homebrew, CFFI can be installed with `brew install python-setuptools && brew install cffi`
