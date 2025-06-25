@@ -29,6 +29,7 @@ FFFunDeg::usage = "FFFunDeg[numdeg,dendeg] represents a generic rational functio
 FFNewGraph::usage = "FFNewGraph[graphname] defines a new graph with name graphname.
 FFNewGraph[graphname,inputnode,vars] is equivalent to FFNewGraph[graphname] followed by FFGraphInputVars[graphname,inputnode,vars]."
 FFNewDummyGraph::usage = "FFNewDummyGraph[graphname,nparsin,nparsout] defines a dummy graph with nparsin input variables and nparsout output elements.  This graph cannot be evaluated but it can be used for functional reconstruction from stored evalutions."
+FFGraphInputNode::usage = "FFGraphInputNode[graph] returns the id of the input node of the specified graph."
 FFDeleteGraph::usage = "FFDeleteGraph[graphname] deletes the graph with name graphname."
 FFDeleteNode::usage = "FFDeleteNode[graph,node] deletes the specified node from a graph."
 FFGraphInputVars::usage = "FFGraphInputVars[graph,nodename,vars] creates an input node representing the list of input variables vars.  Only the length of vars is relevant, and the names of the variables are not stored."
@@ -212,6 +213,8 @@ FF::badinputdim = "The input has invalid dimensions."
 FF::coloutofcounds = "Column indexes are out of bounds"
 
 FF::nonratsub = "Found invalid subexpression `1`"
+
+FF::noinputnode = "Graph `1` has no input node."
 
 FF::logerr = "`1`"
 
@@ -449,6 +452,13 @@ FFRegisterAlgorithm[algregfun_, gid_, id_, inputs_, args_List]:=Module[
 ];
 
 FFGraphOutput[graphid_,nodeid_]:=Catch[FFGraphSetOutputImplem[GetGraphId[graphid],GetAlgId[graphid,nodeid]]];
+
+
+FFGraphInputNode[graphid_]:=Catch[
+  If[!FFGraphQ[graphid], Message[FF::nograph,graphid]; Throw[$Failed];];
+  If[!KeyExistsQ[FFGraphInputs,graphid], Message[FF::noinputnode,graphid]; Throw[$Failed];];
+  FFGraphInputs[graphid]
+];
 
 
 FFNParsOut[gid_]:=Catch[FFGraphNParsOutImplem[GetGraphId[gid]]];
