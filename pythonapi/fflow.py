@@ -266,6 +266,9 @@ def MulInv(z, prime_no):
 def PrimeNo(i):
     return _ToUint(_lib.ffPrimeNo(i))
 
+def NAvailablePrimes():
+    return _lib.ffNAvailablePrimes()
+
 def DefaultNThreads():
     return _lib.ffDefaultNThreads()
 

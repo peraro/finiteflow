@@ -171,6 +171,7 @@ FFGraphEvaluate::usage="FFGraphEvaluate[graph,point] evaluates graph at point, w
 FFGraphEvaluateMany::usage="FFGraphEvaluateMany[graph,points] evaluates graph at the specified list of points.  The prime field may be changed globally using the option \"PrimeNo\", or individually for each point by appending an additional entry with the index of the prime to be used.  By default, evaluations are performed in parallel."
 FFPrimeNo::usage="FFPrimeNo[i] with i>=0 returns the i-th hardcoded prime used by finiteflow."
 FFMulInv::usage="FFMulInv[z,p] returns the multiplicative inverse of the integer z module a prime p."
+FFNAvailablePrimes::usage = "FFNAvailablePrimes[] returns the number of primes available in FiniteFlow, i.e. the maximum allowed argument for FFPrimeNo."
 FFRatMod::usage="FFRatMod[z,p] returns z mod p, where z is a rational number and p is a prime."
 
 FFRatRec::usage="FFRatRec[a,n], where a and n are integers, returns a rational q such that q mod n = a, computed using Wang's rational reconstruction algorithm.
@@ -1431,6 +1432,9 @@ FFGraphEvaluateMany[g_,x_List,OptionsPattern[]]:=FFGraphEvaluateListImplem[GetGr
 FFPrimeNo[i_]:=FFPrimeNoImplem[CheckedInt32[i]];
 
 
+FFNAvailablePrimes[]:=FFNAvailablePrimesImplem[];
+
+
 NoEmptyList[a_]:=a;
 NoEmptyList[{}]={1};
 
@@ -1839,6 +1843,7 @@ FFLoadLibObjects[] := Module[
     FFGraphEvaluateImplem=LibraryFunctionLoad[fflowlib, "fflowml_graph_evaluate", LinkObject, LinkObject];
     FFGraphEvaluateListImplem=LibraryFunctionLoad[fflowlib, "fflowml_graph_evaluate_list", LinkObject, LinkObject];
     FFPrimeNoImplem=LibraryFunctionLoad[fflowlib, "fflowml_prime_no", LinkObject, LinkObject];
+    FFNAvailablePrimesImplem=LibraryFunctionLoad[fflowlib, "fflowml_n_available_primes", LinkObject, LinkObject];
     FFNSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_count_sample_points", LinkObject, LinkObject];
     FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
     FFAlgRatExprEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratexpr_eval", LinkObject, LinkObject];

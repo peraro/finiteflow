@@ -264,6 +264,11 @@ extern "C" {
     return FFLOW_VERSION_MINOR;
   }
 
+  unsigned ffNAvailablePrimes(void)
+  {
+    return BIG_UINT_PRIMES_SIZE;
+  }
+
   FFUInt ffMulInv(FFUInt z, unsigned prime_no)
   {
     if (prime_no >= BIG_UINT_PRIMES_SIZE)

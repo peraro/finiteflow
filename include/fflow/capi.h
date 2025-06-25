@@ -83,6 +83,7 @@ extern "C" {
 
   FFUInt ffMulInv(FFUInt z, unsigned prime_no);
   FFUInt ffPrimeNo(unsigned i);
+  unsigned ffNAvailablePrimes(void);
 
   unsigned ffDefaultNThreads(void);
 
