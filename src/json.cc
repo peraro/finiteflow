@@ -215,17 +215,25 @@ namespace fflow {
         }
       }
 
-#define DO_NEXT_TOKEN()                             \
+#define DO_NEXT_TOKEN()                                         \
+      do {                                                      \
+        next_token();                                           \
+        if (FF_ERRCOND(curr_token.type == JSONToken::INVALID))  \
+          return FAILED;                                        \
+      } while (0)
+#define EXPECT_TOKEN(etype)                       \
+      do {                                        \
+        next_token();                             \
+        if (FF_ERRCOND(curr_token.type != etype)) \
+          return FAILED;                          \
+      } while (0)
+#define EXPECT_TOKEN_EX(etype,logmsg)               \
       do {                                          \
         next_token();                               \
-        if (curr_token.type == JSONToken::INVALID)  \
+        if (FF_ERRCOND(curr_token.type != etype)) { \
+          logerr(logmsg);                           \
           return FAILED;                            \
-      } while (0)
-#define EXPECT_TOKEN(type)                      \
-      do {                                      \
-        next_token();                           \
-        if (curr_token.type != type)            \
-          return FAILED;                        \
+        }                                           \
       } while (0)
 
       JSONTokenizer tokenizer;
@@ -259,7 +267,7 @@ namespace fflow {
     {
       std::string json_data = read_file(filename);
       if (json_data.size() == 0) {
-        logerr("JSON file not found or empty");
+        logerr(format("JSON: file '{}' not found or empty", filename));
         return FAILED;
       }
 
@@ -368,8 +376,10 @@ namespace fflow {
                                              bool has_info)
     {
       std::string json_data = read_file(filename);
-      if (json_data.size() == 0)
+      if (json_data.size() == 0) {
+        logerr(format("JSON: file '{}' not found or empty", filename));
         return FAILED;
+      }
 
       tokenizer = JSONTokenizer{json_data.c_str(),
                                 json_data.c_str() + json_data.size()};
@@ -445,6 +455,10 @@ namespace fflow {
         if (j)
           EXPECT_TOKEN(JSONToken::COMMA);
         EXPECT_TOKEN(JSONToken::INTEGER);
+        if (curr_token.val > nvars+1) {
+          logerr("JSON: Column index of sparse equation is out of bounds");
+          return FAILED;
+        }
         rinfptr[j] = curr_token.val;
       }
       EXPECT_TOKEN(JSONToken::CLOSE_SQUARE_PAR);
@@ -534,8 +548,10 @@ namespace fflow {
                                       AnalyticFunctionData & data)
     {
       std::string json_data = read_file(filename);
-      if (json_data.size() == 0)
+      if (json_data.size() == 0) {
+        logerr(format("JSON: file '{}' not found or empty", filename));
         return FAILED;
+      }
 
       tokenizer = JSONTokenizer{json_data.c_str(),
                                 json_data.c_str() + json_data.size()};
@@ -660,13 +676,15 @@ namespace fflow {
         EXPECT_TOKEN(JSONToken::OPEN_SQUARE_PAR);
         for (unsigned ex=0; ex<npars; ++ex) {
           if (ex)
-            EXPECT_TOKEN(JSONToken::COMMA);
+            EXPECT_TOKEN_EX(JSONToken::COMMA,
+                            "JSON: unexpected number of free parameters");
           EXPECT_TOKEN(JSONToken::INTEGER);
           m.exponent(ex) = curr_token.val;
           tot_deg += curr_token.val;
         }
         m.degree() = tot_deg;
-        EXPECT_TOKEN(JSONToken::CLOSE_SQUARE_PAR);
+        EXPECT_TOKEN_EX(JSONToken::CLOSE_SQUARE_PAR,
+                        "JSON: unexpected number of free parameters");
         EXPECT_TOKEN(JSONToken::CLOSE_SQUARE_PAR);
       }
 
@@ -684,8 +702,10 @@ namespace fflow {
                                        std::vector<unsigned> & out)
     {
       std::string json_data = read_file(filename);
-      if (json_data.size() == 0)
+      if (json_data.size() == 0) {
+        logerr(format("JSON: file '{}' not found or empty", filename));
         return FAILED;
+      }
 
       tokenizer = JSONTokenizer{json_data.c_str(),
                                 json_data.c_str() + json_data.size()};
