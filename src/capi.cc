@@ -1501,8 +1501,10 @@ extern "C" {
 
     const size_t max_idx = rf->n_functions;
     for (size_t j=0; j<n_indexes; ++j) {
-      if (idx[j] >= max_idx)
+      if (idx[j] >= max_idx) {
+        logerr("Index of IdxRatFun out of bounds");
         goto fail;
+      }
       ret->idx[j] = idx[j];
     }
 

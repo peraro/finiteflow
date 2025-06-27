@@ -663,7 +663,7 @@ def NewIdxRatFunList(nvars, allterms, indexes = None):
     retc = _lib.ffMoveRatFunToIdx(ret0._ptr, indexes, len(indexes))
     if retc == _ffi.NULL:
         raise ERROR
-    res = IdxRatFunList()
+    ret = IdxRatFunList()
     ret._ptr = retc
     return ret
 
