@@ -1143,7 +1143,6 @@ FFReconstructFunctionMod[id_,vars_,OptionsPattern[]] := Module[
   {np,maxnp,opt,res,nthreads,tmp,thisopt},
   opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFReconstructFunctionMod];
   maxnp = 1;
-  If[TrueQ[maxnp==Automatic], maxnp = 5];
   nthreads = OptionValue["NThreads"];
   If[TrueQ[nthreads==Automatic], nthreads = If[TrueQ[Length[vars]==1],1,FFAutomaticNThreads[]]];
   If[Length[vars]==1,
@@ -1174,7 +1173,7 @@ FFParallelReconstructUnivariate[id_,{z_},OptionsPattern[]]:=Module[
   maxsp = OptionValue["MaxSingularPoints"];
   If[TrueQ[maxsp==Automatic], maxsp = 1];
   maxnp = OptionValue["MaxPrimes"];
-  If[TrueQ[maxnp==Automatic], maxnp = 5];
+  If[TrueQ[maxnp==Automatic], maxnp = FFDefaultMaxRecPrimesImplem[]];
   nthreads = OptionValue["NThreads"];
   If[TrueQ[nthreads==Automatic], nthreads = FFAutomaticNThreads[]];
   mindeg = OptionValue["MinDegree"];
