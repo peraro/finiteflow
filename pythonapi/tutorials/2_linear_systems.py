@@ -32,7 +32,7 @@ m1 = ff.AlgRatFunEval(graph,innode,ff.ParseRatFun(xs,mat1))
 # with respect to the unknowns (sorted by weight) {z_1, z_2, t_1,
 # t_2}.  Notice that the ordering is important.
 #
-# We define the system of equation as a sparse system from its matrix
+# We define the system of equations as a sparse system from its matrix
 # of coefficients.  The system
 #
 #    A.x == b,

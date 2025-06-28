@@ -14,7 +14,7 @@ import fflow as ff
 # integer identifiers (id) for the graph and the its input node.
 graph,innode = ff.NewGraphWithInput(3)
 
-# NOTE: Tha previous call is a shortcut for:
+# NOTE: The previous call is a shortcut for:
 #         graph = ff.NewGraph()
 #         innode = ff.SetGraphInput(graph,3)
 # NOTE: The input node always has id=0, but we still save it to a
@@ -85,7 +85,7 @@ ff.SetOutputNode(graph,matmul)
 # checked using `ff.PrimeNo(0)`):
 evaluation = ff.EvaluateGraph(graph,[123,345,567],0)
 
-# The output is a list of length 4.  In this case it represent the
+# The output is a list of length 4.  In this case it represents the
 # elements of the 2*2 matrix computed via the matrix multiplication
 # algorithm.
 
