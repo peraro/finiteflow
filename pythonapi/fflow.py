@@ -712,6 +712,25 @@ have integer values.
         ret._ptr = res[0]
     return ret
 
+def ParallelReconstructUnivariate(graph, **kwargs):
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    res = _ffi.new("FFRatFunList **")
+    ret = _to_status[_lib.ffParallelReconstructUnivariate(graph,recopt[0],res)]
+    if ret is SUCCESS:
+        ret = RatFunList()
+        ret._ptr = res[0]
+    return ret
+
+def ParallelReconstructUnivariateMod(graph, **kwargs):
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    res = _ffi.new("FFRatFunList **")
+    ret = _to_status[_lib.ffParallelReconstructUnivariateMod(graph,recopt[0],
+                                                             res)]
+    if ret is SUCCESS:
+        ret = RatFunList()
+        ret._ptr = res[0]
+    return ret
+
 def ReconstructFromCurrentEvaluations(graph, **kwargs):
     recopt = _ffi.new("FFRecOptions *",kwargs)
     res = _ffi.new("FFRatFunList **")

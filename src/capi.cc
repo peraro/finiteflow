@@ -2091,4 +2091,92 @@ extern "C" {
     return FF_SUCCESS;
   }
 
+  FFStatus ffSample(FFGraph graph, FFRecOptions options)
+  {
+    unsigned n_threads = options.n_threads;
+    ReconstructionOptions opt = toRecOpt(options);
+
+    Ret ret = session.parallel_sample(graph, n_threads, opt);
+
+    if (ret == SUCCESS)
+      return FF_SUCCESS;
+    else
+      return FF_ERROR;
+  }
+
+  static FFStatus ffParallelReconstructUnivariate_(FFGraph graph,
+                                                   FFRecOptions options,
+                                                   FFRatFunList ** results,
+                                                   bool mod)
+  {
+    if (!options.max_primes)
+      options.max_primes = DEFAULT_MAX_REC_PRIMES;
+    if (mod)
+      options.max_primes = 1;
+    if (!options.n_threads)
+      options.n_threads = Session::default_nthreads();
+    if (!options.min_deg)
+      options.min_deg = std::max<int>(int(options.n_threads/2)-3,2);
+    if (!options.max_deg)
+      options.max_deg = std::max<int>(RatFunReconstruction::DEFAULT_MAX_DEG,
+                                      options.min_deg);
+    if (!options.deg_step)
+      options.deg_step = std::max<int>(options.n_threads/2,1);
+
+    unsigned np = options.min_primes;
+    unsigned ret = FF_MISSING_POINTS;
+    unsigned deg = options.min_deg;
+
+    unsigned max_primes = options.max_primes;
+    unsigned max_degree = options.max_deg;
+
+    while (true) {
+
+      if (np > max_primes || deg > max_degree)
+        break;
+
+      options.max_deg = deg;
+      options.max_primes = np;
+
+      if (ffSample(graph, options) != FF_SUCCESS) {
+        ret = FF_ERROR;
+        break;
+      }
+
+      if (!mod)
+        ret = ffReconstructFromCurrentEvaluations(graph, options, results);
+      else
+        ret = ffReconstructFromCurrentEvaluationsMod(graph, options, results);
+
+      if (ret == FF_SUCCESS) {
+        break;
+      } else if (!mod && ret == FF_MISSING_PRIMES) {
+        ++np;
+      } else if (deg < max_degree) {
+        deg += options.deg_step;
+        if (deg > max_degree)
+          deg = max_degree;
+      } else {
+        deg += options.deg_step;
+      }
+
+    }
+
+    return ret;
+  }
+
+  FFStatus ffParallelReconstructUnivariate(FFGraph graph,
+                                           FFRecOptions options,
+                                           FFRatFunList ** results)
+  {
+    return ffParallelReconstructUnivariate_(graph, options, results, false);
+  }
+
+  FFStatus ffParallelReconstructUnivariateMod(FFGraph graph,
+                                              FFRecOptions options,
+                                              FFRatFunList ** results)
+  {
+    return ffParallelReconstructUnivariate_(graph, options, results, true);
+  }
+
 } // extern "C"

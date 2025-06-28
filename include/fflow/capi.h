@@ -64,6 +64,8 @@ extern "C" {
     unsigned min_primes;
     unsigned max_primes;
     unsigned max_deg;
+    unsigned min_deg;
+    unsigned deg_step;
     unsigned dbginfo;
     unsigned polymethod;
     unsigned n_threads;
@@ -471,6 +473,12 @@ extern "C" {
                                  FFRatFunList ** results);
   FFStatus ffReconstructFunctionMod(FFGraph graph, FFRecOptions options,
                                     FFRatFunList ** results);
+  FFStatus ffParallelReconstructUnivariate(FFGraph graph,
+                                           FFRecOptions options,
+                                           FFRatFunList ** results);
+  FFStatus ffParallelReconstructUnivariateMod(FFGraph graph,
+                                              FFRecOptions options,
+                                              FFRatFunList ** results);
 
 
   // Routines to split evaluations and reconstruction into several
