@@ -336,8 +336,10 @@ namespace fflow {
   {
     std::ifstream file;
     file.open(filename, std::ios::binary);
-    if (file.fail())
+    if (file.fail()) {
+      logerr(format("File '{}' cannot be opened",filename));
       return FAILED;
+    }
 
     auto load = [&file](UInt & z)
       {
@@ -382,8 +384,10 @@ namespace fflow {
   {
     std::ofstream file;
     file.open(filename, std::ios::binary);
-    if (file.fail())
+    if (file.fail()) {
+      logerr(format("File '{}' cannot opened for writing",filename));
       return FAILED;
+    }
 
     auto dump = [&file](UInt z)
       {

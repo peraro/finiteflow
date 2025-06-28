@@ -2637,9 +2637,12 @@ extern "C" {
     ReconstructionOptions opt = get_rec_opt(mlp);
     MLNewPacket(mlp);
 
-    session.parallel_sample(id, nthreads, opt);
+    Ret ret = session.parallel_sample(id, nthreads, opt);
 
-    MLPutSymbol(mlp, "Null");
+    if (ret == SUCCESS)
+      MLPutSymbol(mlp, "Null");
+    else
+      MLPutSymbol(mlp, "$Failed");
 
     return LIBRARY_NO_ERROR;
   }
@@ -2674,9 +2677,12 @@ extern "C" {
     MLNewPacket(mlp);
 
     SamplePointsFromFile pts(file.c_str(), samples_start, samples_size);
-    session.parallel_sample(id, nthreads, opt, &pts);
+    Ret ret = session.parallel_sample(id, nthreads, opt, &pts);
 
-    MLPutSymbol(mlp, "Null");
+    if (ret == SUCCESS)
+      MLPutSymbol(mlp, "Null");
+    else
+      MLPutSymbol(mlp, "$Failed");
 
     return LIBRARY_NO_ERROR;
   }

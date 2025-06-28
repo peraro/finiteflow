@@ -172,15 +172,6 @@ static char * cstr_to_cstr(const char * str, size_t n)
   return ret;
 }
 
-static bool file_exists(FFCStr filename)
-{
-  FILE *file = fopen(filename, "r");
-  if (!file)
-    return false;
-  fclose(file);
-  return true;
-}
-
 
 extern "C" {
 
@@ -2082,17 +2073,14 @@ extern "C" {
                                   unsigned start, unsigned npoints,
                                   unsigned nthreads)
   {
-    // NOTE: unfortunately parallel_sample fails silently on error.
-    // To mitigate the chance of that, we check at least that the
-    // input file can be read.
-
-    if (!file_exists(file))
-      return FF_ERROR;
-
     SamplePointsFromFile pts(file, start, npoints);
-    session.parallel_sample(graph, nthreads, ReconstructionOptions(), &pts);
+    Ret ret = session.parallel_sample(graph, nthreads,
+                                      ReconstructionOptions(), &pts);
 
-    return FF_SUCCESS;
+    if (ret == SUCCESS)
+      return FF_SUCCESS;
+    else
+      return FF_ERROR;
   }
 
   FFStatus ffDumpEvaluations(FFGraph graph, FFCStr filename)

@@ -585,8 +585,8 @@ FFReconstructFromCurrentEvaluationsMod[gid_,vars_, opt:OptionsPattern[]]:=FFReco
 
 
 Options[FFReconstructUnivariate]:=Options[FFAlgorithmSetReconstructionOptions];
-FFReconstructUnivariate[gid_,vars_, opt:OptionsPattern[]]:=Module[
-  {res},
+FFReconstructUnivariate[gid_,{z_}, opt:OptionsPattern[]]:=Module[
+  {res,vars={z}},
   res = FFReconstructUnivariateImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
   If[!TrueQ[res[[0]]==List], Return[res]];
   fromFFInternalRatFun[#,vars]&/@res
@@ -594,8 +594,8 @@ FFReconstructUnivariate[gid_,vars_, opt:OptionsPattern[]]:=Module[
 
 
 Options[FFReconstructUnivariateMod]:=Options[FFAlgorithmSetReconstructionOptions];
-FFReconstructUnivariateMod[gid_,vars_, opt:OptionsPattern[]]:=Module[
-  {res},
+FFReconstructUnivariateMod[gid_,{z_} opt:OptionsPattern[]]:=Module[
+  {res,vars={z}},
   res = FFReconstructUnivariateModImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
   If[!TrueQ[res[[0]]==List], Return[res]];
   fromFFInternalRatFun[#,vars]&/@res
@@ -1168,8 +1168,8 @@ FFReconstructFunctionMod[id_,vars_,OptionsPattern[]] := Module[
 
 
 Options[FFParallelReconstructUnivariate]=Join[Options[FFReconstructFunction],{"MinDegree"->Automatic,"DegreeStep"->Automatic}];
-FFParallelReconstructUnivariate[id_,vars_,OptionsPattern[]]:=Module[
-  {opt,mindeg,maxdeg,degstep,deg,maxsp,maxnp,nthreads,sp,np,tmp,res,thisopt},
+FFParallelReconstructUnivariate[id_,{z_},OptionsPattern[]]:=Module[
+  {vars={z},opt,mindeg,maxdeg,degstep,deg,maxsp,maxnp,nthreads,sp,np,tmp,res,thisopt},
   opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFParallelReconstructUnivariate];
   maxsp = OptionValue["MaxSingularPoints"];
   If[TrueQ[maxsp==Automatic], maxsp = 1];
@@ -1207,8 +1207,8 @@ FFParallelReconstructUnivariate[id_,vars_,OptionsPattern[]]:=Module[
 
 
 Options[FFParallelReconstructUnivariateMod]=Join[Options[FFReconstructFunction],{"MinDegree"->Automatic,"DegreeStep"->Automatic}];
-FFParallelReconstructUnivariateMod[id_,vars_,OptionsPattern[]]:=Module[
-  {opt,mindeg,maxdeg,degstep,deg,maxsp,maxnp,nthreads,sp,np,tmp,res,thisopt},
+FFParallelReconstructUnivariateMod[id_,{z_},OptionsPattern[]]:=Module[
+  {vars={z},opt,mindeg,maxdeg,degstep,deg,maxsp,maxnp,nthreads,sp,np,tmp,res,thisopt},
   opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFParallelReconstructUnivariate];
   maxsp = OptionValue["MaxSingularPoints"];
   If[TrueQ[maxsp==Automatic], maxsp = 1];

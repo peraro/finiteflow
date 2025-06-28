@@ -1123,30 +1123,42 @@ namespace fflow {
     }
   }
 
-  void Session::sample(unsigned graphid, const ReconstructionOptions & opt,
-                       SamplePointsGenerator * samplegen)
+  Ret Session::sample(unsigned graphid, const ReconstructionOptions & opt,
+                      SamplePointsGenerator * samplegen)
   {
     if (!graph_can_be_evaluated(graphid))
-      return;
+      return FAILED;
     Graph & a = *graphs_[graphid];
 
     if (!a.nparsin[0])
-      return;
+      return FAILED;
 
     if (!a.rec_data_.get()) {
-      if (a.nparsin[0] == 1)
+      if (a.nparsin[0] == 1) {
         make_reconstructible_(a.id_);
-      else
-        return;
+      } else {
+        logerr("Degrees must be available before generating sample points.");
+        return FAILED;
+      }
     }
 
     SamplePointsVector samples;
     if (samplegen == nullptr) {
+
+      if (a.nparsin[0] != 1 && !a.rec_data_->degs_avail()) {
+        logerr("Degrees must be available before generating sample points.");
+        return FAILED;
+      }
       gen_sample_points_(graphid, samples, opt);
+
     } else {
+
       Ret dret = samplegen->load_samples(a.nparsin[0], a.nparsout, samples);
-      if (dret != SUCCESS)
-        return;
+      if (dret != SUCCESS) {
+        logerr("Failed to load sample points");
+        return dret;
+      }
+
     }
 
     Graph::AlgRecData & arec = a.rec_data();
@@ -1167,6 +1179,8 @@ namespace fflow {
                                       samples.data(),
                                       samples.data() + samples.size(),
                                       cache);
+
+    return SUCCESS;
   }
 
   struct GraphParallelEvaluate {
@@ -1186,43 +1200,51 @@ namespace fflow {
   };
 
 
-  void Session::parallel_sample(unsigned graphid, unsigned nthreads,
-                                const ReconstructionOptions & opt,
-                                SamplePointsGenerator * samplegen)
+  Ret Session::parallel_sample(unsigned graphid, unsigned nthreads,
+                               const ReconstructionOptions & opt,
+                               SamplePointsGenerator * samplegen)
   {
-    if (nthreads == 1) {
-      sample(graphid, opt, samplegen);
-      return;
-    }
+    if (nthreads == 1)
+      return sample(graphid, opt, samplegen);
 
     if (nthreads == 0)
       nthreads = std::thread::hardware_concurrency();
 
     if (!graph_can_be_evaluated(graphid))
-      return;
+      return FAILED;
     Graph & a = *graphs_[graphid];
 
     if (!a.nparsin[0])
-      return;
+      return FAILED;
 
     if (!a.rec_data_.get()) {
-      if (a.nparsin[0] == 1)
+      if (a.nparsin[0] == 1) {
         make_reconstructible_(a.id_);
-      else
-        return;
+      } else {
+        logerr("Degrees must be available before generating sample points.");
+        return FAILED;
+      }
     }
 
     Graph::AlgRecData & arec = a.rec_data();
 
     SamplePointsVector samples;
     if (samplegen == nullptr) {
+
+      if (a.nparsin[0] != 1 && !a.rec_data_->degs_avail()) {
+        logerr("Degrees must be available before generating sample points.");
+        return FAILED;
+      }
       gen_sample_points_(graphid, samples, opt);
+
     } else {
+
       Ret dret = samplegen->load_samples(a.nparsin[0], a.nparsout, samples);
       if (dret != SUCCESS) {
         logerr("Failed to load sample points");
-        return;
+        return dret;
       }
+
     }
 
     const unsigned tot_samples = samples.size();
@@ -1262,6 +1284,8 @@ namespace fflow {
 
     UIntCache  & cache = *arec.cache;
     merge_function_caches(caches.data(), nthreads, cache);
+
+    return SUCCESS;
   }
 
   Ret Session::dump_sample_points(unsigned graphid,
@@ -1275,11 +1299,14 @@ namespace fflow {
     if (!a.nparsin[0])
       return FAILED;
 
-    if (!a.rec_data_.get()) {
-      if (a.nparsin[0] == 1)
+    if (a.nparsin[0] == 1) {
+      if (!a.rec_data_.get())
         make_reconstructible_(a.id_);
-      else
+    } else {
+      if (!a.rec_data_.get() || !a.rec_data_->degs_avail()) {
+        logerr("Degrees must be available before generating sample points.");
         return FAILED;
+      }
     }
 
     SamplePointsVector samples;
@@ -1565,13 +1592,15 @@ namespace fflow {
     return final_ret;
   }
 
-  void Session::set_up_to_rec_(unsigned id, std::vector<unsigned> & to_rec)
+  Ret Session::set_up_to_rec_(unsigned id, std::vector<unsigned> & to_rec)
   {
     if (!graph_can_be_evaluated(id))
-      return;
+      return FAILED;
     Graph & a = *graphs_[id];
-    if (!a.rec_data_.get())
-      return;
+    if (!a.rec_data_.get()) {
+      logerr("Info on degrees and evaluations are missing.");
+      return FAILED;
+    }
     Graph::AlgRecData & arec = a.rec_data();
 
     if (!arec.completed_.get()) {
@@ -1585,6 +1614,7 @@ namespace fflow {
         if (!arec.completed_[j])
           to_rec.push_back(j);
     }
+    return SUCCESS;
   }
 
   void Session::move_rec_(unsigned id, MPReconstructedRatFun res[])
@@ -1602,7 +1632,8 @@ namespace fflow {
                            const ReconstructionOptions & opt)
   {
     std::vector<unsigned> to_rec;
-    set_up_to_rec_(id, to_rec);
+    if (set_up_to_rec_(id, to_rec) != SUCCESS)
+      return FAILED;
     Ret ret = reconstruct_(id, 0, 1, to_rec, opt);
     if (ret == SUCCESS)
       move_rec_(id, res);
@@ -1614,7 +1645,8 @@ namespace fflow {
   {
     Mod mod(prime_no(opt.start_mod));
     std::vector<unsigned> to_rec;
-    set_up_to_rec_(id, to_rec);
+    if (set_up_to_rec_(id, to_rec) != SUCCESS)
+      return FAILED;
     Ret ret = reconstruct_mod_(id, 0, 1, to_rec, opt, mod);
     if (ret == SUCCESS)
       move_rec_(id, res);
@@ -1664,7 +1696,8 @@ namespace fflow {
       return FAILED;
 
     std::vector<unsigned> to_rec;
-    set_up_to_rec_(graphid, to_rec);
+    if (set_up_to_rec_(graphid, to_rec) != SUCCESS)
+      return FAILED;
 
     nthreads = std::min(nthreads, unsigned(to_rec.size()));
     alloc_threads_(nthreads);
@@ -1707,7 +1740,8 @@ namespace fflow {
       return FAILED;
 
     std::vector<unsigned> to_rec;
-    set_up_to_rec_(graphid, to_rec);
+    if (set_up_to_rec_(graphid, to_rec) != SUCCESS)
+      return FAILED;
 
     nthreads = std::min(nthreads, unsigned(to_rec.size()));
     alloc_threads_(nthreads);
@@ -1740,8 +1774,10 @@ namespace fflow {
     if (!graph_can_be_evaluated(graphid))
       return FAILED;
     Graph & a = *graphs_[graphid];
-    if (a.nparsin[0] != 1)
+    if (a.nparsin[0] != 1) {
+      logerr("Univariate reconstruction called on multivariate graph.");
       return FAILED;
+    }
     make_reconstructible_(graphid);
     Graph::AlgRecData & arec = a.rec_data();
 
@@ -1757,8 +1793,10 @@ namespace fflow {
     if (!graph_can_be_evaluated(graphid))
       return FAILED;
     Graph & a = *graphs_[graphid];
-    if (a.nparsin[0] != 1)
+    if (a.nparsin[0] != 1) {
+      logerr("Univariate reconstruction called on multivariate graph.");
       return FAILED;
+    }
     make_reconstructible_(graphid);
     Graph::AlgRecData & arec = a.rec_data();
 
@@ -1775,8 +1813,10 @@ namespace fflow {
     if (!graph_can_be_evaluated(graphid))
       return FAILED;
     Graph & a = *graphs_[graphid];
-    if (a.nparsin[0] != 0)
+    if (a.nparsin[0] != 0) {
+      logerr("Numeric function called on graph with input node.");
       return FAILED;
+    }
     make_reconstructible_(graphid);
     return algorithm_reconstruct_numeric(a, ctxt_.graph_data(graphid), &ctxt_,
                                          opt, res);

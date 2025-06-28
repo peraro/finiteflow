@@ -227,6 +227,11 @@ namespace fflow {
       AlgDegs degs;
       std::unique_ptr<bool[]> completed_;
       std::unique_ptr<MPReconstructedRatFun[]> recratfun_;
+
+      bool degs_avail() const
+      {
+        return degs.numdeg.get();
+      }
     };
 
     AlgRecData & rec_data();
@@ -335,11 +340,11 @@ namespace fflow {
     Ret parallel_all_degrees(unsigned graphid, unsigned nthreads,
                              const ReconstructionOptions & opt);
 
-    void sample(unsigned graphid, const ReconstructionOptions & opt,
-                SamplePointsGenerator * samplegen = nullptr);
-    void parallel_sample(unsigned graphid, unsigned nthreads,
-                         const ReconstructionOptions & opt,
-                         SamplePointsGenerator * samplegen = nullptr);
+    Ret sample(unsigned graphid, const ReconstructionOptions & opt,
+               SamplePointsGenerator * samplegen = nullptr);
+    Ret parallel_sample(unsigned graphid, unsigned nthreads,
+                        const ReconstructionOptions & opt,
+                        SamplePointsGenerator * samplegen = nullptr);
 
     Ret reconstruct(unsigned graphid, MPReconstructedRatFun res[],
                     const ReconstructionOptions & opt);
@@ -456,7 +461,7 @@ namespace fflow {
     void gen_sample_points_(unsigned graphid, SamplePointsVector & samples,
                             const ReconstructionOptions & opt);
 
-    void set_up_to_rec_(unsigned id, std::vector<unsigned> & to_rec);
+    Ret set_up_to_rec_(unsigned id, std::vector<unsigned> & to_rec);
     void move_rec_(unsigned id, MPReconstructedRatFun res[]);
 
     Ret reconstruct_(unsigned graphid,
