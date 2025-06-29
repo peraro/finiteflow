@@ -539,6 +539,18 @@ instead.
     return ret
 
 
+def MoveRatFunToIdx(ratfunlist, indexes):
+    funl = ratfunlist
+    if not type(funl) is RatFunList:
+        raise TypeError("Expected a RatFunList as input")
+    retc = _lib.ffMoveRatFunToIdx(funl._ptr, indexes, len(indexes))
+    if retc == _ffi.NULL:
+        raise ERROR
+    ret = IdxRatFunList()
+    ret._ptr = retc
+    return ret
+
+
 def _getUniqueAndIdx(somelist):
     uni = dict()
     ret = list()
@@ -558,12 +570,7 @@ def ParseIdxRatFun(variables, functions, indexes = None):
     else:
         unique = functions
     ret0 = ParseRatFun(variables, unique)
-    retc = _lib.ffMoveRatFunToIdx(ret0._ptr, indexes, len(indexes))
-    if retc == _ffi.NULL:
-        raise ERROR
-    ret = IdxRatFunList()
-    ret._ptr = retc
-    return ret
+    return MoveRatFunToIdx(ret0, indexes)
 
 
 def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
@@ -660,12 +667,7 @@ def NewIdxRatFunList(nvars, allterms, indexes = None):
     else:
         unique = allterms
     ret0 = NewRatFunList(nvars, unique)
-    retc = _lib.ffMoveRatFunToIdx(ret0._ptr, indexes, len(indexes))
-    if retc == _ffi.NULL:
-        raise ERROR
-    ret = IdxRatFunList()
-    ret._ptr = retc
-    return ret
+    return MoveRatFunToIdx(ret0, indexes)
 
 
 def EvaluateRatFunList(rf, z, prime_no):
