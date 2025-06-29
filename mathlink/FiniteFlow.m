@@ -594,7 +594,7 @@ FFReconstructUnivariate[gid_,{z_}, opt:OptionsPattern[]]:=Module[
 
 
 Options[FFReconstructUnivariateMod]:=Options[FFAlgorithmSetReconstructionOptions];
-FFReconstructUnivariateMod[gid_,{z_} opt:OptionsPattern[]]:=Module[
+FFReconstructUnivariateMod[gid_,{z_}, opt:OptionsPattern[]]:=Module[
   {res,vars={z}},
   res = FFReconstructUnivariateModImplem[GetGraphId[gid], FFAlgorithmSetReconstructionOptions[opt]];
   If[!TrueQ[res[[0]]==List], Return[res]];
