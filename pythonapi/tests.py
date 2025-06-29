@@ -380,6 +380,53 @@ def testEvaluate():
     print("- Test passed!")
 
 
+def testUnivariate_(parallel,mod):
+    nfuns = 100
+    fun = list("1+x^{}".format(i) for i in range(1,nfuns+1))
+
+    g,inp = NewGraphWithInput(1)
+    rf = AlgRatFunEval(g,inp,ParseRatFun(["x"],fun))
+    SetOutputNode(g,rf)
+
+    if (parallel):
+        if (mod):
+            res = ParallelReconstructUnivariateMod(g)
+        else:
+            res = ParallelReconstructUnivariate(g)
+    else:
+        if (mod):
+            res = ReconstructFunctionMod(g)
+        else:
+            res = ReconstructFunction(g)
+
+    if (mod):
+        prime_no = 0
+    else:
+        prime_no = 10
+    pp = PrimeNo(prime_no)
+    evals = EvaluateRatFunList(res,[2],prime_no)
+    check = list((1+2**i) % pp for i in range(1,nfuns+1))
+
+    if evals == check:
+        return SUCCESS
+    else:
+        print("- Check failed with parallel = {}, mod = {}"
+              .format(parallel,mod))
+        return ERROR
+
+def testUnivariate():
+    print("Testing univariate reconstruction")
+    if testUnivariate_(False,False) != SUCCESS:
+        exit(1)
+    if testUnivariate_(False,True) != SUCCESS:
+        exit(1)
+    if testUnivariate_(True,False) != SUCCESS:
+        exit(1)
+    if testUnivariate_(True,True) != SUCCESS:
+        exit(1)
+    print("- Test passed")
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -391,3 +438,4 @@ if __name__ == '__main__':
     testLaurent()
     testLists()
     testEvaluate()
+    testUnivariate()

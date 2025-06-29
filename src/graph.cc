@@ -1133,14 +1133,8 @@ namespace fflow {
     if (!a.nparsin[0])
       return FAILED;
 
-    if (!a.rec_data_.get()) {
-      if (a.nparsin[0] == 1) {
-        make_reconstructible_(a.id_);
-      } else {
-        logerr("Degrees must be available before generating sample points.");
-        return FAILED;
-      }
-    }
+    if (!a.rec_data_.get())
+      make_reconstructible_(a.id_);
 
     SamplePointsVector samples;
     if (samplegen == nullptr) {
@@ -1217,14 +1211,8 @@ namespace fflow {
     if (!a.nparsin[0])
       return FAILED;
 
-    if (!a.rec_data_.get()) {
-      if (a.nparsin[0] == 1) {
-        make_reconstructible_(a.id_);
-      } else {
-        logerr("Degrees must be available before generating sample points.");
-        return FAILED;
-      }
-    }
+    if (!a.rec_data_.get())
+      make_reconstructible_(a.id_);
 
     Graph::AlgRecData & arec = a.rec_data();
 
@@ -1415,11 +1403,14 @@ namespace fflow {
     if (!a.nparsin[0])
       return FAILED;
 
-    if (!a.rec_data_.get()) {
-      if (a.nparsin[0] == 1)
+    if (a.nparsin[0] == 1) {
+      if (!a.rec_data_.get())
         make_reconstructible_(a.id_);
-      else
+    } else {
+      if (!a.rec_data_.get() || !a.rec_data_->degs_avail()) {
+        logerr("Degrees must be loaded before evaluations.");
         return FAILED;
+      }
     }
 
     Graph::AlgRecData & arec = a.rec_data();
@@ -1597,7 +1588,8 @@ namespace fflow {
     if (!graph_can_be_evaluated(id))
       return FAILED;
     Graph & a = *graphs_[id];
-    if (!a.rec_data_.get()) {
+    if (!a.rec_data_.get() ||
+        (a.nparsin[0] != 1 && !a.rec_data_->degs_avail())) {
       logerr("Info on degrees and evaluations are missing.");
       return FAILED;
     }
@@ -1699,6 +1691,11 @@ namespace fflow {
     if (set_up_to_rec_(graphid, to_rec) != SUCCESS)
       return FAILED;
 
+    if (!graphs_[graphid]->rec_data_->cache.get()) {
+      logerr("Evaluations are not available");
+      return FAILED;
+    }
+
     nthreads = std::min(nthreads, unsigned(to_rec.size()));
     alloc_threads_(nthreads);
 
@@ -1742,6 +1739,11 @@ namespace fflow {
     std::vector<unsigned> to_rec;
     if (set_up_to_rec_(graphid, to_rec) != SUCCESS)
       return FAILED;
+
+    if (!graphs_[graphid]->rec_data_->cache.get()) {
+      logerr("Evaluations are not available");
+      return FAILED;
+    }
 
     nthreads = std::min(nthreads, unsigned(to_rec.size()));
     alloc_threads_(nthreads);
