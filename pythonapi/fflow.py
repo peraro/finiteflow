@@ -821,6 +821,56 @@ def EvaluatePoints(graph,points,prime_no=0,n_threads=0):
     return res
 
 
+def ReconstructNumeric(graph, **kwargs):
+    nparsout = GraphNParsOut(graph)
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    retc = _lib.ffReconstructNumeric(graph,recopt[0])
+    if retc == _ffi.NULL:
+        raise FAILED
+    ret = list(_ffi.string(retc[i]).decode() for i in range(nparsout))
+    _lib.ffFreeCStrArray(retc)
+    return ret
+
+def ChineseRemainder(z1, mod1, z2, mod2):
+    length = len(z1)
+
+    if length != len(z2):
+        raise ValueError("Inputs z1 and z2 must have the same length");
+
+    z1c = list(_ffi.new("char[]", str(zz).encode('utf8')) for zz in z1)
+    mod1c = str(mod1).encode('utf8')
+
+    retc = _lib.ffChineseRemainder(z1c,mod1c,z2,mod2,length)
+    if retc == _ffi.NULL:
+        raise FAILED
+    ret = list(_ffi.string(retc[i]).decode() for i in range(length))
+    mod = _ffi.string(retc[length]).decode()
+    _lib.ffFreeCStrArray(retc)
+
+    return (ret,mod)
+
+def RatRec(z, mod):
+    length = len(z)
+    zc = list(_ffi.new("char[]", str(zz).encode('utf8')) for zz in z)
+    modc = str(mod).encode('utf8')
+
+    retc = _lib.ffRatRec(zc,modc,length)
+    if retc == _ffi.NULL:
+        raise FAILED
+    ret = list(_ffi.string(retc[i]).decode() for i in range(length))
+    _lib.ffFreeCStrArray(retc)
+
+    return ret
+
+def RatMod(rationals, prime_no):
+    g = NewGraph()
+    try:
+        neval = AlgRatNumEval(g,rationals)
+        SetOutputNode(g,neval)
+        return EvaluateGraph(g, [], prime_no)
+    finally:
+        DeleteGraph(g)
+
 def TakeUnique(graph, nodein, nevals=3):
     '''\
 TakeUnique(graph, nodein, nevals=3) returns a tuple

@@ -480,6 +480,17 @@ extern "C" {
                                               FFRecOptions options,
                                               FFRatFunList ** results);
 
+  // On success, it returns a null-terminated list of null-terminated
+  // strings representing the reconstructed rational numbers.  The
+  // returned list can be freed using ffFreeCStrArray.
+  char ** ffReconstructNumeric(FFGraph graph, FFRecOptions options);
+
+  // Tools for custom reconstruction algorithms
+  char ** ffChineseRemainder(const FFCStr * z1, FFCStr mod1,
+                             const FFUInt * z2, FFUInt mod2,
+                             unsigned len);
+  char ** ffRatRec(const FFCStr * z1, FFCStr mod, unsigned len);
+
 
   // Routines to split evaluations and reconstruction into several
   // jobs. Note that:

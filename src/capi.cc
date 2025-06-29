@@ -24,6 +24,7 @@
 #include <fflow/ratfun_parser.hh>
 #include <fflow/eval_count.hh>
 #include <fflow/algorithm.hh>
+#include <fflow/mp_gcd.hh>
 using namespace fflow;
 
 #define FF_MIN_ERROR (FF_ERROR - 10)
@@ -2177,6 +2178,88 @@ extern "C" {
                                               FFRatFunList ** results)
   {
     return ffParallelReconstructUnivariate_(graph, options, results, true);
+  }
+
+  char ** ffReconstructNumeric(FFGraph graph, FFRecOptions options)
+  {
+    if (!options.max_primes)
+      options.max_primes = DEFAULT_MAX_REC_PRIMES;
+    ReconstructionOptions opt = toRecOpt(options);
+
+    Graph * g = session.graph(graph);
+
+    if (!g)
+      return 0;
+
+    typedef MPRational ResT;
+    const unsigned nparsout = g->nparsout;
+    std::unique_ptr<ResT[]> res(new ResT[nparsout]);
+
+    Ret ret = session.reconstruct_numeric(graph, res.get(), opt);
+
+    if (ret != SUCCESS)
+      return 0;
+
+    char ** ccs = (char **)malloc((nparsout+1) * sizeof(char*));
+    std::string strbuff;
+
+    MemoryWriter w;
+    for (unsigned j=0; j<nparsout; ++j) {
+      w.clear();
+      res[j].print(w);
+      ccs[j] = writer_to_cstr(w);
+    }
+    ccs[nparsout] = 0;
+
+    return ccs;
+  }
+
+  char ** ffChineseRemainder(const FFCStr * z1, FFCStr mod1,
+                             const FFUInt * z2, FFUInt mod2,
+                             unsigned len)
+  {
+    MPInt p1(mod1);
+    MPInt c1, c2, p12;
+    chinese_remainder_coeffs(p1, mod2, c1, c2, p12);
+
+    char ** out = (char**)malloc(sizeof(char*)*(len+2));
+
+    MemoryWriter w;
+    for (unsigned j=0; j<len; ++j) {
+      MPInt zout(z1[j]);
+      chinese_remainder_from_coeffs(zout, z2[j], c1, c2, p12, zout);
+      w.clear();
+      zout.print(w);
+      out[j] = writer_to_cstr(w);
+    }
+
+    // write total mod in last element
+    w.clear();
+    p12.print(w);
+    out[len] = writer_to_cstr(w);
+
+    out[len+1] = 0;
+
+    return out;
+  }
+
+  char ** ffRatRec(const FFCStr * z1, FFCStr mod, unsigned len)
+  {
+    MPInt p(mod);
+    char ** out = (char**)malloc(sizeof(char*)*(len+1));
+
+    MemoryWriter w;
+    for (unsigned j=0; j<len; ++j) {
+      MPInt z(z1[j]);
+      MPRational q;
+      rat_rec(z, p, q);
+      w.clear();
+      q.print(w);
+      out[j] = writer_to_cstr(w);
+    }
+    out[len] = 0;
+
+    return out;
   }
 
 } // extern "C"

@@ -426,6 +426,42 @@ def testUnivariate():
         exit(1)
     print("- Test passed")
 
+def testNumeric():
+    print("Numerical tests")
+
+    # Reconstruction
+    length = 10
+    ratnums = list('{}/{}'.format(i,i+1) for i in range(1,length))
+    g = NewGraph()
+    nev = AlgRatNumEval(g, ratnums)
+    SetOutputNode(g,nev)
+    rec = ReconstructNumeric(g)
+    if rec != ratnums:
+        print("- Numerical reconstruction failed!")
+        exit(1)
+    DeleteGraph(g)
+
+    # Chinese remainder
+    x = "100000000000000/99999999999"
+    y = "100000000000003/99999999998"
+    x0 = 8084042683842557234
+    x1 = 2691542216189571617
+    y0 = 5820300346345761690
+    y1 = 4643407741435786205
+    cr,ptot = ChineseRemainder([x0,y0],PrimeNo(0),[x1,y1],PrimeNo(1))
+
+    # Rational reconstruction
+    rec = RatRec(cr,ptot)
+    if rec != [x,y]:
+        print("- Test of Chinese remainder + rational reconstruction failed!")
+        exit(1)
+
+    # RatMod utility
+    if RatMod([x,y], 1) != [x1,y1]:
+        print("- Test of RatMod failed!")
+        exit(1)
+
+    print("- Test passed")
 
 if __name__ == '__main__':
     testRatFun()
@@ -439,3 +475,4 @@ if __name__ == '__main__':
     testLists()
     testEvaluate()
     testUnivariate()
+    testNumeric()
