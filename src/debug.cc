@@ -1,7 +1,7 @@
 #ifndef FFLOW_NO_DBG
 
 #include <cstdio>
-#include <thread>
+#include <mutex>
 #include <fflow/debug.hh>
 
 namespace {
