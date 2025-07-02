@@ -9,6 +9,7 @@ WARNING: This is a w.i.p. and the API is not stable yet.
 from _cffi_fflow import lib as _lib, ffi as _ffi
 from itertools import chain as _chain
 from random import randint as _randint
+from contextlib import contextmanager as _contextmanager
 
 
 _FF_SUCCESS = 0
@@ -286,6 +287,47 @@ def NewGraphWithInput(nvars):
     innode = _ffi.new('FFStatus[1]')
     graph = _lib.ffNewGraphWithInput(nvars, innode)
     return _CheckIter((graph, innode[0]))
+
+@_contextmanager
+def GraphContext():
+    '''GraphContext() defines a context that creates a graph using
+    NewGraph() and automatically deletes it at the end of the block
+    (even if an error occurs or an exception is raised).
+
+    Usage:
+
+        with GraphContext() as g:
+            <block using graph g>
+
+    See also GraphContextWithInput.
+
+    '''
+    g = NewGraph()
+    try:
+        yield g
+    finally:
+        DeleteGraph(g)
+
+@_contextmanager
+def GraphContextWithInput(n):
+    '''GraphContext() defines a context that creates a graph with an
+    input node using NewGraphWithInput() and automatically deletes it
+    at the end of the block (even if an error occurs or an exception
+    is raised).
+
+    Usage:
+
+        with GraphContextWithInput(n) as (g,inp):
+            <block using graph g and inputnode inp>
+
+    See also GraphContext.
+
+    '''
+    g,inp = NewGraphWithInput(n)
+    try:
+        yield g,inp
+    finally:
+        DeleteGraph(g)
 
 def NewGraphDummy(n_in, n_out):
     return _lib.ffNewGraphDummy(n_in, n_out)
@@ -858,13 +900,10 @@ def RatRec(z, mod):
     return ret
 
 def RatMod(rationals, prime_no):
-    g = NewGraph()
-    try:
+    with GraphContext() as g:
         neval = AlgRatNumEval(g,rationals)
         SetOutputNode(g,neval)
         return EvaluateGraph(g, [], prime_no)
-    finally:
-        DeleteGraph(g)
 
 
 def ReconstructFunctionWithDegrees(graph, degdata, **kwargs):
@@ -902,8 +941,7 @@ def ParallelReconstructDegreeData(graph,**kwargs):
     )
 
     # total degrees
-    g,inp = NewGraphWithInput(1)
-    try:
+    with GraphContextWithInput(1) as (g,inp):
         lin = AlgRatFunEval(g,inp,NewRatFunList(1,linfuns))
         sub = AlgSimpleSubgraph(g,[lin],graph)
         SetOutputNode(g,sub)
@@ -916,13 +954,10 @@ def ParallelReconstructDegreeData(graph,**kwargs):
                 continue
             degdata[j][0] = numexp[0][0]
             degdata[j][1] = res.den_exponents(j)[0][0]
-    finally:
-        DeleteGraph(g)
 
     # partial degrees
     for i in range(nparsin):
-        g,inp = NewGraphWithInput(1)
-        try:
+        with GraphContextWithInput(1) as (g,inp):
             funs = list(constfuns)
             funs[i] = ([('1', (1,))],[('1', (0,))])
             lin = AlgRatFunEval(g,inp,NewRatFunList(1,funs))
@@ -940,8 +975,6 @@ def ParallelReconstructDegreeData(graph,**kwargs):
                 degdata[j][2 + 4*i + 1] = numexp[-1][0]
                 degdata[j][2 + 4*i + 2] = denexp[0][0]
                 degdata[j][2 + 4*i + 3] = denexp[-1][0]
-        finally:
-            DeleteGraph(g)
 
     return degdata
 
