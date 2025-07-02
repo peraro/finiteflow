@@ -1630,7 +1630,7 @@ FFRatRec[a_,p_]:=Catch[ToExpression[FFRatRecImplem[{ToString[CheckedInt[a]]},ToS
 
 Options[FFTakeUnique]:={"NEvals"->3};
 FFTakeUnique[g_,node_,{in_},OptionsPattern[]]:=Module[
-{nparsin,nevals,evals,check,asso,ii,jj,nout,outs, outn, fromouts},
+{nparsin,nevals,evals,check,asso,ii,jj,nout,outs, outn, fromouts, minp},
 fromouts = Catch[
 check[a_]:=a;
 check[$Failed]:=Throw[$Failed];
@@ -1638,7 +1638,8 @@ FFGraphOutput[g,in];
 nout = check[FFNParsOut[g,in]];
 nparsin = FFNodeNParsOutImplem[GetGraphId[g],0];
 nevals = OptionValue["NEvals"];
-evals = Transpose[check[FFGraphEvaluate[g,#]]&/@ArrayReshape[RandomInteger[{123456789123456789,FFPrimeNo[200]},nparsin*nevals],{nevals,nparsin}]];
+minp = FFPrimeNo[FFNAvailablePrimes[]-1];
+evals = Transpose[check[FFGraphEvaluate[g,#]]&/@ArrayReshape[RandomInteger[{123456789123456789,minp},nparsin*nevals],{nevals,nparsin}]];
 asso = Association[{}];
 outn = 0;
 outs = {};

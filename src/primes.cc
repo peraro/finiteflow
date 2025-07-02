@@ -61,3 +61,12 @@ namespace fflow {
 
 
 } // namespace fflow
+
+
+namespace fflow {
+
+  const UInt BIG_UINT_PRIMES[BIG_UINT_PRIMES_SIZE] = {
+#include "ff_prime_list.hh"
+  };
+
+} // namespace fflow
