@@ -2317,6 +2317,51 @@ extern "C" {
     return out;
   }
 
+  char ** ffChineseRemainderCoeffs(FFCStr mod1, FFUInt mod2)
+  {
+    MPInt p1(mod1);
+    MPInt c1, c2, p12;
+    chinese_remainder_coeffs(p1, mod2, c1, c2, p12);
+
+    char ** out = (char**)malloc(sizeof(char*)*(3+1));
+
+    MemoryWriter w;
+    c1.print(w);
+    out[0] = writer_to_cstr(w);
+    w.clear();
+    c2.print(w);
+    out[1] = writer_to_cstr(w);
+    w.clear();
+    p12.print(w);
+    out[2] = writer_to_cstr(w);
+
+    out[3] = 0;
+
+    return out;
+  }
+
+  char ** ffChineseRemainderFromCoeffs(const FFCStr * z1, const FFUInt * z2,
+                                       unsigned len,
+                                       FFCStr c1in, FFCStr c2in, FFCStr mod12)
+  {
+    MPInt c1(c1in), c2(c2in), p12(mod12);
+
+    char ** out = (char**)malloc(sizeof(char*)*(len+1));
+
+    MemoryWriter w;
+    for (unsigned j=0; j<len; ++j) {
+      MPInt zout(z1[j]);
+      chinese_remainder_from_coeffs(zout, z2[j], c1, c2, p12, zout);
+      w.clear();
+      zout.print(w);
+      out[j] = writer_to_cstr(w);
+    }
+
+    out[len] = 0;
+
+    return out;
+  }
+
   char ** ffRatRec(const FFCStr * z1, FFCStr mod, unsigned len)
   {
     MPInt p(mod);
@@ -2329,6 +2374,34 @@ extern "C" {
       rat_rec(z, p, q);
       w.clear();
       q.print(w);
+      out[j] = writer_to_cstr(w);
+    }
+    out[len] = 0;
+
+    return out;
+  }
+
+  char ** ffParallelRatRec(const FFCStr * z1, FFCStr mod, unsigned len,
+                           unsigned n_threads)
+  {
+    MPInt p(mod);
+    std::vector<MPRational> q;
+
+    {
+      std::vector<MPInt> z(len);
+      for (unsigned j=0; j<len; ++j)
+        z[j] = MPInt(z1[j]);
+
+      q.resize(len);
+      session.parallel_rat_rec(z.data(), len, p, q.data(), n_threads);
+    }
+
+    char ** out = (char**)malloc(sizeof(char*)*(len+1));
+
+    MemoryWriter w;
+    for (unsigned j=0; j<len; ++j) {
+      w.clear();
+      q[j].print(w);
       out[j] = writer_to_cstr(w);
     }
     out[len] = 0;

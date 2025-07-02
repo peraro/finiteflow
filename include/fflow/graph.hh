@@ -438,6 +438,13 @@ namespace fflow {
 
     static unsigned default_nthreads();
 
+    // utilities
+
+    // rat_rec the array z modulo mod, parallelizing the calculation
+    void parallel_rat_rec(const MPInt z[], unsigned n,
+                          const MPInt & mod, MPRational q[],
+                          unsigned n_threads=0);
+
   private:
 
     void delete_node_(unsigned graphid, unsigned nodeid);

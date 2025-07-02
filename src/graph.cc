@@ -1,6 +1,7 @@
 #include <thread>
 #include <chrono>
 #include <fflow/graph.hh>
+#include <fflow/mp_gcd.hh>
 
 #define ENSURE_G_MUTABLE(g)           \
   do {                                \
@@ -2026,6 +2027,49 @@ namespace fflow {
 
     return nsamples;
   }
+
+
+  // Additional utilities
+
+  struct ParallelRatRec {
+
+    void operator() (const MPInt z[], unsigned n,
+                     const MPInt & mod, MPRational q[])
+    {
+      for (unsigned j=0; j<n; ++j)
+        rat_rec(z[j], mod, q[j]);
+    }
+  };
+
+  void Session::parallel_rat_rec(const MPInt z[], unsigned n,
+                                 const MPInt & mod,
+                                 MPRational q[], unsigned nthreads)
+  {
+    if (nthreads == 1) {
+      auto task = ParallelRatRec();
+      task(z, n, mod, q);
+      return;
+    }
+
+    if (nthreads == 0)
+      nthreads = std::thread::hardware_concurrency();
+
+    nthreads = std::min(nthreads, n);
+    std::vector<ParallelRatRec> task(nthreads);
+    std::vector<std::future<void>> ret(nthreads);
+
+    alloc_threads_(nthreads);
+    unsigned start = 0;
+    for (unsigned i=0; i<nthreads; ++i) {
+      const unsigned nt = n/nthreads + (i < (n % nthreads));
+      ret[i] = enqueue_(task[i], z+start, nt, mod, q+start);
+      start += nt;
+    }
+
+    for (unsigned i=0; i<nthreads; ++i)
+      ret[i].get();
+  }
+
 
   Session::~Session()
   {

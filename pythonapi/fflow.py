@@ -886,18 +886,26 @@ def ChineseRemainder(z1, mod1, z2, mod2):
 
     return (ret,mod)
 
-def RatRec(z, mod):
+def _RatRec(cfun, z, mod):
     length = len(z)
     zc = list(_ffi.new("char[]", str(zz).encode('utf8')) for zz in z)
     modc = str(mod).encode('utf8')
 
-    retc = _lib.ffRatRec(zc,modc,length)
+    retc = cfun(zc,modc,length)
     if retc == _ffi.NULL:
         raise FAILED
     ret = list(_ffi.string(retc[i]).decode() for i in range(length))
     _lib.ffFreeCStrArray(retc)
 
     return ret
+
+def RatRec(z, mod):
+    return _RatRec(_lib.ffRatRec, z, mod)
+
+def ParallelRatRec(z, mod, nthreads=0):
+    def cfun(zz,mmod,llen):
+        return _lib.ffParallelRatRec(zz,mmod,llen,nthreads)
+    return _RatRec(cfun, z, mod)
 
 def RatMod(rationals, prime_no):
     with GraphContext() as g:

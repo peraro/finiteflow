@@ -489,7 +489,13 @@ extern "C" {
   char ** ffChineseRemainder(const FFCStr * z1, FFCStr mod1,
                              const FFUInt * z2, FFUInt mod2,
                              unsigned len);
+  char ** ffChineseRemainderCoeffs(FFCStr mod1, FFUInt mod2);
+  char ** ffChineseRemainderFromCoeffs(const FFCStr * z1, const FFUInt * z2,
+                                       unsigned len,
+                                       FFCStr c1in, FFCStr c2in, FFCStr mod12);
   char ** ffRatRec(const FFCStr * z1, FFCStr mod, unsigned len);
+  char ** ffParallelRatRec(const FFCStr * z1, FFCStr mod, unsigned len,
+                           unsigned n_threads);
 
 
   // Routines to split evaluations and reconstruction into several

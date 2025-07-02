@@ -4715,6 +4715,45 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
+  int fflowml_parallel_rat_rec(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int two, nints;
+    MLNewPacket(mlp);
+    MLTestHead(mlp, "List", &two);
+
+    MLTestHead(mlp, "List", &nints);
+    std::vector<MPInt> vec;
+    vec.resize(nints);
+    for (int j=0; j<nints; ++j)
+      get_integer(mlp,vec[j]);
+
+    MPInt p;
+    get_integer(mlp,p);
+
+    int nthreads;
+    MLGetInteger32(mlp, &nthreads);
+    if (nthreads < 0)
+      nthreads = 0;
+
+    MLNewPacket(mlp);
+
+    std::vector<MPRational> qvec;
+    qvec.resize(nints);
+    session.parallel_rat_rec(vec.data(), nints, p, qvec.data());
+
+    void (*gmpfreefunc) (void *, size_t);
+    mp_get_memory_functions(0, 0, &gmpfreefunc);
+
+    MLPutFunction(mlp, "List", nints);
+    for (int i=0; i<nints; ++i)
+      put_mprat(mlp, qvec[i], gmpfreefunc);
+
+    return LIBRARY_NO_ERROR;
+  }
+
 
   int fflowml_alg_ratexpr_eval(WolframLibraryData libData, MLINK mlp)
   {

@@ -177,6 +177,7 @@ FFRatMod::usage="FFRatMod[z,p] returns z mod p, where z is a rational number and
 
 FFRatRec::usage="FFRatRec[a,n], where a and n are integers, returns a rational q such that q mod n = a, computed using Wang's rational reconstruction algorithm.
 FFRatRec[{a1,a2,...},n] is equivalent to {FFRatRec[a1],n],FFRatRec[a2],n],...}."
+FFParallelRatRec::usage = "FFParallelRatRec[{a1,a2,...},n] where a1,a2,... and n are integers, is equivalent to FFRatRec[{a1,a2,...},n] but performs the reconstructions in parallel."
 
 
 FF::badrational = "Argument `1` is not a rational number."
@@ -1628,6 +1629,10 @@ FFRatRec[a_List,p_]:=Catch[ToExpression/@FFRatRecImplem[ToString[CheckedInt[#]]&
 FFRatRec[a_,p_]:=Catch[ToExpression[FFRatRecImplem[{ToString[CheckedInt[a]]},ToString[CheckedInt[p]]][[1]]]];
 
 
+Options[FFParallelRatRec]:={"NThreads"->FFNThreads};
+FFParallelRatRec[a_List,p_,OptionsPattern[]]:=Catch[ToExpression/@FFParallelRatRecImplem[ToString[CheckedInt[#]]&/@a,ToString[CheckedInt[p]],toFFInternalUnsignedFlag["nthreads",OptionValue["NThreads"]]]];
+
+
 Options[FFTakeUnique]:={"NEvals"->3};
 FFTakeUnique[g_,node_,{in_},OptionsPattern[]]:=Module[
 {nparsin,nevals,evals,check,asso,ii,jj,nout,outs, outn, fromouts, minp},
@@ -1856,6 +1861,7 @@ FFLoadLibObjects[] := Module[
     FFNAvailablePrimesImplem=LibraryFunctionLoad[fflowlib, "fflowml_n_available_primes", LinkObject, LinkObject];
     FFNSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_count_sample_points", LinkObject, LinkObject];
     FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
+    FFParallelRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_parallel_rat_rec", LinkObject, LinkObject];
     FFAlgRatExprEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratexpr_eval", LinkObject, LinkObject];
     FFSetLearningOptionsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_set_learning_options", LinkObject, LinkObject];
     FFCachedSubgraphImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph", LinkObject, LinkObject];
