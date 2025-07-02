@@ -27,9 +27,9 @@ def testRatFun():
     output2 = EvaluateRatFunList(rec, x, prime_no)
 
     if output1 != output2:
-        print("- Test 1/2 failed :(")
+        print("- Test 1/3 failed :(")
         exit(1)
-    print("- Test 1/2 passed!!!")
+    print("- Test 1/3 passed!!!")
 
     # build another graph evaluating the reconstructed result
     graph2,innode2 = NewGraphWithInput(nvars)
@@ -39,9 +39,17 @@ def testRatFun():
 
     # compare again
     if output1 != output3:
-        print("- Test 2/2 failed :(")
+        print("- Test 2/3 failed :(")
         exit(1)
-    print("- Test 2/2 passed!!!")
+    print("- Test 2/3 passed!!!")
+
+
+    degdata = ParallelReconstructDegreeData(graph)
+    rec2 = ReconstructFunctionWithDegrees(graph,degdata)
+    if rec2.monomials() != rec.monomials():
+        print("- Test 3/3 failed :(")
+        exit(1)
+    print("- Test 3/3 passed!!!")
 
 
 def testParsing():

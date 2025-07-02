@@ -184,6 +184,36 @@ namespace fflow {
     return SUCCESS;
   }
 
+  Ret algorithm_set_degree_info(const unsigned * data,
+                                unsigned npars_in,
+                                unsigned npars_out,
+                                unsigned numdeg[],
+                                unsigned dendeg[],
+                                RatFunVarDegrees degs[])
+  {
+#define LOAD(z)                                 \
+    do {                                        \
+      z = *data;                                \
+      ++data;                                   \
+    } while (0)
+
+    for (unsigned j=0; j<npars_out; ++j) {
+      LOAD(numdeg[j]);
+      LOAD(dendeg[j]);
+      degs[j].resize(npars_in);
+      for (unsigned v=0; v<npars_in; ++v) {
+        LOAD(degs[j].num_maxdegs(npars_in)[v]);
+        LOAD(degs[j].num_mindegs(npars_in)[v]);
+        LOAD(degs[j].den_maxdegs(npars_in)[v]);
+        LOAD(degs[j].den_mindegs(npars_in)[v]);
+      }
+    }
+
+#undef LOAD
+
+    return SUCCESS;
+  }
+
 
   Ret algorithm_npars_from_degree_info(const char * filename,
                                        unsigned & npars_in,

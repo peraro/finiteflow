@@ -542,7 +542,7 @@ extern "C" {
     if (id == ALG_NO_ID)
       return FF_ERROR;
 
-    return FF_SUCCESS;
+    return id;
   }
 
   FFNode ffAlgMemoizedSubgraph(FFGraph graph,
@@ -573,7 +573,7 @@ extern "C" {
     if (id == ALG_NO_ID)
       return FF_ERROR;
 
-    return FF_SUCCESS;
+    return id;
   }
 
   FFNode ffAlgJSONSparseLSolve(FFGraph graph, FFNode in_node,
@@ -1904,9 +1904,59 @@ extern "C" {
     REC_MOD_FROM_CURRENT_EVALS
   } RecMode_;
 
+  static Ret funrec_implem(unsigned graphid, MPReconstructedRatFun res[],
+                           unsigned nthreads, ReconstructionOptions opt,
+                           const unsigned * deg_data, bool mod,
+                           unsigned min_primes=1)
+  {
+    if (!session.graph_can_be_evaluated(graphid))
+      return FAILED;
+    Graph & a = *session.graph(graphid);
+
+    if (a.nparsin[0] < 1)
+      return FAILED;
+
+    if (a.nparsin[0] == 1)
+      return session.reconstruct_univariate(graphid, res, opt);
+
+    const unsigned max_primes = mod ? 1 : opt.max_primes;
+
+    Ret ret = 0;
+    if (!deg_data)
+      ret = session.parallel_all_degrees(graphid, nthreads, opt);
+    else
+      ret = session.set_degrees(graphid, deg_data);
+
+    if (ret != SUCCESS)
+      return ret;
+
+    ret = MISSING_PRIMES;
+    if (mod)
+      min_primes = 1;
+
+    while (ret == MISSING_PRIMES && min_primes<=max_primes) {
+      opt.max_primes = min_primes;
+
+      session.parallel_sample(graphid, nthreads, opt);
+
+      if (mod)
+        ret = session.parallel_reconstruct_mod(graphid, res, nthreads, opt);
+      else
+        ret = session.parallel_reconstruct(graphid, res, nthreads, opt);
+
+      if (ret != SUCCESS && ret != MISSING_PRIMES)
+        return ret;
+
+      ++min_primes;
+    }
+
+    return ret;
+  }
+
   static FFStatus reconstruct_fun(FFGraph graph, FFRecOptions options,
                                   FFRatFunList ** results,
-                                  RecMode_ rec_mode)
+                                  RecMode_ rec_mode,
+                                  const unsigned * deg_data = nullptr)
   {
     if (!options.max_primes)
       options.max_primes = DEFAULT_MAX_REC_PRIMES;
@@ -1925,13 +1975,13 @@ extern "C" {
 
     switch (rec_mode) {
     case REC_FULL:
-      ret = session.full_reconstruction(graph, res.get(),
-                                        options.n_threads, opt);
+      ret = funrec_implem(graph, res.get(), options.n_threads, opt,
+                          deg_data, false);
       break;
 
     case REC_MOD:
-      ret = session.full_reconstruction_mod(graph, res.get(),
-                                            options.n_threads, opt);
+      ret = funrec_implem(graph, res.get(), options.n_threads, opt,
+                          deg_data, true);
       break;
 
     case REC_FULL_FROM_CURRENT_EVALS:
@@ -1996,6 +2046,22 @@ extern "C" {
     return reconstruct_fun(graph, options, results, REC_MOD_FROM_CURRENT_EVALS);
   }
 
+  FFStatus ffReconstructFunctionWithDegrees(FFGraph graph,
+                                            FFRecOptions options,
+                                            const unsigned * deg_data,
+                                            FFRatFunList ** results)
+  {
+    return reconstruct_fun(graph, options, results, REC_FULL, deg_data);
+  }
+
+  FFStatus ffReconstructFunctionWithDegreesMod(FFGraph graph,
+                                               FFRecOptions options,
+                                               const unsigned * deg_data,
+                                               FFRatFunList ** results)
+  {
+    return reconstruct_fun(graph, options, results, REC_MOD, deg_data);
+  }
+
   unsigned * ffAllDegrees(FFGraph graph, FFRecOptions options)
   {
     ReconstructionOptions opt = toRecOpt(options);
@@ -2042,6 +2108,14 @@ extern "C" {
   FFStatus ffLoadDegrees(FFGraph graph, FFCStr filename)
   {
     Ret ret = session.load_degrees(graph, filename);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffSetDegrees(FFGraph graph, const unsigned * degdata)
+  {
+    Ret ret = session.set_degrees(graph, degdata);
     if (ret != SUCCESS)
       return FF_ERROR;
     return FF_SUCCESS;

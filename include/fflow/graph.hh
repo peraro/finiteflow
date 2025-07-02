@@ -399,6 +399,7 @@ namespace fflow {
     unsigned new_dummy_graph(unsigned nparsin, unsigned nparsout);
     Ret dump_degrees(unsigned graphid, const char * file) const;
     Ret load_degrees(unsigned graphid, const char * file);
+    Ret set_degrees(unsigned graphid, const unsigned * data);
 
     // Returns the total number of evaluation points needed for the
     // reconstruction, using a number of primes, etc... specified in
@@ -484,6 +485,10 @@ namespace fflow {
 
     Ret var_degrees_(unsigned graphid, unsigned var,
                      const ReconstructionOptions & opt);
+
+    Ret load_or_set_degrees_(unsigned graphid,
+                             const char * file,
+                             const unsigned * data);
 
     void init_subcontexts_(unsigned n);
 

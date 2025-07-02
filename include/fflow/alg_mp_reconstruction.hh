@@ -84,6 +84,13 @@ namespace fflow {
                                  unsigned dendeg[],
                                  RatFunVarDegrees degs[]);
 
+  Ret algorithm_set_degree_info(const unsigned * data,
+                                unsigned npars_in,
+                                unsigned npars_out,
+                                unsigned numdeg[],
+                                unsigned dendeg[],
+                                RatFunVarDegrees degs[]);
+
   Ret algorithm_npars_from_degree_info(const char * filename,
                                        unsigned & npars_in,
                                        unsigned & npars_out);

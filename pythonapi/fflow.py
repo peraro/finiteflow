@@ -253,6 +253,13 @@ def _StatusCheck(arg):
         raise ERROR
     return _to_status[arg]
 
+def _Flattened(data):
+    for el in data:
+        if type(el) is list or type(el) is tuple:
+            yield from _Flattened(el)
+        else:
+            yield el
+
 
 _lib.ffInit()
 
@@ -683,6 +690,15 @@ def EvaluateRatFunList(rf, z, prime_no):
     return ret
 
 
+def _ReconstructFunction(cfun, graph, **kwargs):
+    recopt = _ffi.new("FFRecOptions *",kwargs)
+    res = _ffi.new("FFRatFunList **")
+    ret = _to_status[cfun(graph,recopt[0],res)]
+    if ret is SUCCESS:
+        ret = RatFunList()
+        ret._ptr = res[0]
+    return ret
+
 def ReconstructFunction(graph, **kwargs):
     '''\
 ReconstructFunction(graph,**kwargs) reconstructs the rational function
@@ -690,13 +706,7 @@ defined by the graph. The allowed keyword arguments kwargs are:
 start_mod, min_primes, max_primes, max_deg, dbginfo, polymethod,
 n_threads.  All of them must have integer values.
 '''
-    recopt = _ffi.new("FFRecOptions *",kwargs)
-    res = _ffi.new("FFRatFunList **")
-    ret = _to_status[_lib.ffReconstructFunction(graph,recopt[0],res)]
-    if ret is SUCCESS:
-        ret = RatFunList()
-        ret._ptr = res[0]
-    return ret
+    return _ReconstructFunction(_lib.ffReconstructFunction,graph,**kwargs)
 
 def ReconstructFunctionMod(graph, **kwargs):
     '''\
@@ -706,50 +716,23 @@ with start_mod=0 by default. The allowed keyword arguments kwargs are:
 start_mod, max_deg, dbginfo, polymethod, n_threads.  All of them must
 have integer values.
 '''
-    recopt = _ffi.new("FFRecOptions *",kwargs)
-    res = _ffi.new("FFRatFunList **")
-    ret = _to_status[_lib.ffReconstructFunctionMod(graph,recopt[0],res)]
-    if ret is SUCCESS:
-        ret = RatFunList()
-        ret._ptr = res[0]
-    return ret
+    return _ReconstructFunction(_lib.ffReconstructFunctionMod,graph,**kwargs)
 
 def ParallelReconstructUnivariate(graph, **kwargs):
-    recopt = _ffi.new("FFRecOptions *",kwargs)
-    res = _ffi.new("FFRatFunList **")
-    ret = _to_status[_lib.ffParallelReconstructUnivariate(graph,recopt[0],res)]
-    if ret is SUCCESS:
-        ret = RatFunList()
-        ret._ptr = res[0]
-    return ret
+    return _ReconstructFunction(_lib.ffParallelReconstructUnivariate,
+                                graph,**kwargs)
 
 def ParallelReconstructUnivariateMod(graph, **kwargs):
-    recopt = _ffi.new("FFRecOptions *",kwargs)
-    res = _ffi.new("FFRatFunList **")
-    ret = _to_status[_lib.ffParallelReconstructUnivariateMod(graph,recopt[0],
-                                                             res)]
-    if ret is SUCCESS:
-        ret = RatFunList()
-        ret._ptr = res[0]
-    return ret
+    return _ReconstructFunction(_lib.ffParallelReconstructUnivariateMod,
+                                graph,**kwargs)
 
 def ReconstructFromCurrentEvaluations(graph, **kwargs):
-    recopt = _ffi.new("FFRecOptions *",kwargs)
-    res = _ffi.new("FFRatFunList **")
-    ret = _to_status[_lib.ffReconstructFromCurrentEvaluations(graph,recopt[0],res)]
-    if ret is SUCCESS:
-        ret = RatFunList()
-        ret._ptr = res[0]
-    return ret
+    return _ReconstructFunction(_lib.ffReconstructFromCurrentEvaluations,
+                                graph,**kwargs)
 
 def ReconstructFromCurrentEvaluationsMod(graph, **kwargs):
-    recopt = _ffi.new("FFRecOptions *",kwargs)
-    res = _ffi.new("FFRatFunList **")
-    ret = _to_status[_lib.ffReconstructFromCurrentEvaluationsMod(graph,recopt[0],res)]
-    if ret is SUCCESS:
-        ret = RatFunList()
-        ret._ptr = res[0]
-    return ret
+    return _ReconstructFunction(_lib.ffReconstructFromCurrentEvaluationsMod,
+                                graph,**kwargs)
 
 def AllDegrees(graph,**kwargs):
     recopt = _ffi.new("FFRecOptions *",kwargs)
@@ -775,6 +758,18 @@ def NParsFromDegreeFile(filename):
 def LoadDegrees(graph,filename):
     cfile = _ffi.new("char[]", filename.encode('utf8'))
     return _StatusCheck(_lib.ffLoadDegrees(graph,cfile))
+
+def _GetDegData(graph,degdata):
+    data = list(el for el in _Flattened(degdata))
+    nparsin = NodeNParsOut(graph,0)
+    nparsout = GraphNParsOut(graph)
+    if len(data) != nparsout*(2 + 4*nparsin):
+        raise ValueError("Unexpected number of elements in degree data")
+    return data
+
+def SetDegrees(graph,degdata):
+    data = _GetDegData(graph,degdata)
+    return _StatusCheck(_lib.ffSetDegrees(graph,data))
 
 def LoadEvaluations(graph,files):
     cfiles = [_ffi.new("char[]", f.encode('utf8')) for f in files]
@@ -871,6 +866,86 @@ def RatMod(rationals, prime_no):
     finally:
         DeleteGraph(g)
 
+
+def ReconstructFunctionWithDegrees(graph, degdata, **kwargs):
+    degs = _GetDegData(graph,degdata)
+    def cfun(g,opt,res):
+        return _lib.ffReconstructFunctionWithDegrees(g,opt,degs,res)
+    return _ReconstructFunction(cfun,graph,**kwargs)
+
+def ReconstructFunctionWithDegreesMod(graph, degdata, **kwargs):
+    degs = _GetDegData(graph,degdata)
+    def cfun(g,opt,res):
+        return _lib.ffReconstructFunctionWithDegreesMod(g,opt,degs,res)
+    return _ReconstructFunction(cfun,graph,**kwargs)
+
+
+def ParallelReconstructDegreeData(graph,**kwargs):
+    '''Reconstruct degree data parallelizing univariate
+    reconstructions.'''
+
+    pmin = PrimeNo(NAvailablePrimes()-1)
+    rand = lambda : _randint(123456789123456789, pmin-1)
+
+    nparsin = NodeNParsOut(graph,0)
+    nparsout = GraphNParsOut(graph)
+
+    zerolist = list(0 for _ in range(2 + 4*nparsin))
+    degdata = list(list(zerolist) for _ in range(nparsout))
+
+    linfuns = list(
+        ([(str(rand()), (0,)), (str(rand()), (1,))],[('1', (0,))]) \
+        for _ in range(nparsin)
+    )
+    constfuns = list(
+        ([(str(rand()), (0,))],[('1', (0,))]) for _ in range(nparsin)
+    )
+
+    # total degrees
+    g,inp = NewGraphWithInput(1)
+    try:
+        lin = AlgRatFunEval(g,inp,NewRatFunList(1,linfuns))
+        sub = AlgSimpleSubgraph(g,[lin],graph)
+        SetOutputNode(g,sub)
+        res = ParallelReconstructUnivariateMod(g,**kwargs)
+        if not type(res) is RatFunList:
+            return res
+        for j in range(nparsout):
+            numexp = res.num_exponents(j)
+            if len(numexp) == 0:
+                continue
+            degdata[j][0] = numexp[0][0]
+            degdata[j][1] = res.den_exponents(j)[0][0]
+    finally:
+        DeleteGraph(g)
+
+    # partial degrees
+    for i in range(nparsin):
+        g,inp = NewGraphWithInput(1)
+        try:
+            funs = list(constfuns)
+            funs[i] = ([('1', (1,))],[('1', (0,))])
+            lin = AlgRatFunEval(g,inp,NewRatFunList(1,funs))
+            sub = AlgSimpleSubgraph(g,[lin],graph)
+            SetOutputNode(g,sub)
+            res = ParallelReconstructUnivariateMod(g,**kwargs)
+            if not type(res) is RatFunList:
+                return res
+            for j in range(nparsout):
+                numexp = res.num_exponents(j)
+                if len(numexp) == 0:
+                    continue
+                denexp = res.den_exponents(j)
+                degdata[j][2 + 4*i] = numexp[0][0]
+                degdata[j][2 + 4*i + 1] = numexp[-1][0]
+                degdata[j][2 + 4*i + 2] = denexp[0][0]
+                degdata[j][2 + 4*i + 3] = denexp[-1][0]
+        finally:
+            DeleteGraph(g)
+
+    return degdata
+
+
 def TakeUnique(graph, nodein, nevals=3):
     '''\
 TakeUnique(graph, nodein, nevals=3) returns a tuple
@@ -890,7 +965,8 @@ where input/output is the input/output of the new node.
     SetOutputNode(graph, nodein)
     nout = GraphNParsOut(graph)
     nin = NodeNParsOut(graph,0)
-    rand = lambda : _randint(123456789123456789, PrimeNo(200)-1)
+    pmin = PrimeNo(NAvailablePrimes()-1)
+    rand = lambda : _randint(123456789123456789, pmin-1)
     evals = list(EvaluateGraph(graph, list(rand() for _ in range(nin)), 0)
                  for _ in range(nevals))
     evals = list(map(tuple, zip(*evals))) # transpose

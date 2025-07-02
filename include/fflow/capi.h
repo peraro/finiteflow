@@ -506,6 +506,7 @@ extern "C" {
   FFStatus ffNParsFromDegreeFile(FFCStr filename,
                                  unsigned * nparsin, unsigned * nparsout);
   FFStatus ffLoadDegrees(FFGraph graph, FFCStr filename);
+  FFStatus ffSetDegrees(FFGraph graph, const unsigned * degdata); // see below
   FFStatus ffLoadEvaluations(FFGraph graph, FFCStr * files, unsigned n_files);
   FFStatus ffDumpSamplePoints(FFGraph graph, FFCStr filename,
                               FFRecOptions options);
@@ -520,6 +521,34 @@ extern "C" {
   FFStatus ffReconstructFromCurrentEvaluationsMod(FFGraph graph,
                                                   FFRecOptions options,
                                                   FFRatFunList ** results);
+
+  /*
+   * Reconstruct by setting the degrees manually (as if using
+   * ffSetDegrees) from `deg_data` which must contain, in row-major
+   * order, the entries of a
+   *
+   *   nparsout x (2+4*nparsin)
+   *
+   * matrix with the `j`-th row specifying the degrees of the j-th
+   * output element in the following form:
+   *
+   *   [numdeg, dendeg, nM1, nm1, dM1, dm1, nM2, nm2, dM2, dm2, ...]
+   *
+   * where `numdeg` and `dendeg` are the total degrees of numerator
+   * and denominator, while the other entries must be read according
+   * to:
+   * - n = numerator's, d = denominator's
+   * - M = maximum degree, m = minimum degree
+   * - `i` (integer) = with respect to the `i`-th input parameter
+   */
+  FFStatus ffReconstructFunctionWithDegrees(FFGraph graph,
+                                            FFRecOptions options,
+                                            const unsigned * deg_data,
+                                            FFRatFunList ** results);
+  FFStatus ffReconstructFunctionWithDegreesMod(FFGraph graph,
+                                               FFRecOptions options,
+                                               const unsigned * deg_data,
+                                               FFRatFunList ** results);
 
   /* API end */
 

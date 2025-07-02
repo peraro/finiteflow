@@ -1474,7 +1474,9 @@ namespace fflow {
                                       vdegs);
   }
 
-  Ret Session::load_degrees(unsigned graphid, const char * file)
+  Ret Session::load_or_set_degrees_(unsigned graphid,
+                                    const char * file,
+                                    const unsigned * data)
   {
     if (!graph_can_be_evaluated(graphid))
       return FAILED;
@@ -1499,10 +1501,27 @@ namespace fflow {
     for (unsigned i=0; i<nparsout; ++i)
       degs.vdegs[i].resize(nparsin);
 
-    return algorithm_load_degree_info(file, a.nparsin[0], a.nparsout,
-                                      degs.numdeg.get(),
-                                      degs.dendeg.get(),
-                                      degs.vdegs.get());
+    if (file)
+      return algorithm_load_degree_info(file, a.nparsin[0], a.nparsout,
+                                        degs.numdeg.get(),
+                                        degs.dendeg.get(),
+                                        degs.vdegs.get());
+    else if (data)
+      return algorithm_set_degree_info(data, a.nparsin[0], a.nparsout,
+                                       degs.numdeg.get(),
+                                       degs.dendeg.get(),
+                                       degs.vdegs.get());
+    else return FAILED;
+  }
+
+  Ret Session::load_degrees(unsigned graphid, const char * file)
+  {
+    return load_or_set_degrees_(graphid, file, 0);
+  }
+
+  Ret Session::set_degrees(unsigned graphid, const unsigned * data)
+  {
+    return load_or_set_degrees_(graphid, 0, data);
   }
 
   Ret Session::reconstruct_(unsigned graphid,
