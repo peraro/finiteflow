@@ -124,7 +124,7 @@ ff.DeleteGraph(graph)
 # needed for a short period of time, failing to delete it will cause a
 # memory leak.  For such cases, we offer the utilities GraphContext
 # and GraphContextWithInput which create a context in which the graph
-# lives and automatically delete the graph when the we exit the block
+# lives and automatically delete the graph when we exit the block
 # which defines it (even in case of an error or exception).
 #
 # Examples of usage are:
@@ -138,8 +138,8 @@ with ff.GraphContextWithInput(2) as (graph,inputnode):
                               ff.ParseRatFun(["x","y"],["x+y","x^2+1"]))
     ff.SetOutputNode(graph, ratfun)
     print("Graph evaluation yields: ", ff.EvaluateGraph(graph,[3,2],0))
-# In both cases the graph is delete as soon as the "with ..." block is
-# exited.
+# In both cases the graph is deleted as soon as the "with ..." block
+# is exited.
 
 
 # FINAL NOTES:

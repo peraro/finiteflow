@@ -310,10 +310,10 @@ def GraphContext():
 
 @_contextmanager
 def GraphContextWithInput(n):
-    '''GraphContext() defines a context that creates a graph with an
-    input node using NewGraphWithInput() and automatically deletes it
-    at the end of the block (even if an error occurs or an exception
-    is raised).
+    '''GraphContextWithInput() defines a context that creates a graph
+    with an input node using NewGraphWithInput() and automatically
+    deletes it at the end of the block (even if an error occurs or an
+    exception is raised).
 
     Usage:
 
