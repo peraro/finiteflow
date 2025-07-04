@@ -505,7 +505,7 @@ def LSolveOnlyNonHomogeneous(graph, node):
     return _StatusCheck(_lib.ffLSolveOnlyNonHomogeneous(graph, node))
 
 
-def LSolveSparseOutput(graph, node, sparse : True):
+def LSolveSparseOutput(graph, node, sparse=True):
     return _StatusCheck(_lib.ffLSolveSparseOutput(graph, node, sparse))
 
 
