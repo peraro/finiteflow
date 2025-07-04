@@ -362,6 +362,10 @@ def PruneGraph(graph):
 def Learn(graph):
     return _StatusCheck(_lib.ffLearn(graph))
 
+def LearnEx(graph,**kwargs):
+    opt = _ffi.new("FFLearnOptions *",kwargs)
+    return _StatusCheck(_lib.ffLearnEx(graph, opt[0]))
+
 def EvaluateGraph(graph,z,primeno):
     nparsin = _lib.ffNodeNParsOut(graph,0)
     if _lib.ffIsError(nparsin) or len(z) != nparsin:

@@ -71,6 +71,10 @@ extern "C" {
     unsigned n_threads;
   } FFRecOptions;
 
+  typedef struct {
+    unsigned prime_no;
+  } FFLearnOptions;
+
   void ffInit(void);
   void ffDeinit(void);
 
@@ -120,6 +124,7 @@ extern "C" {
   FFStatus ffPruneGraph(FFGraph graph);
 
   FFStatus ffLearn(FFGraph graph);
+  FFStatus ffLearnEx(FFGraph graph, FFLearnOptions opt);
 
   // output can be freed with ffFreeMemoryU64
   FFUInt * ffEvaluateGraph(FFGraph graph,

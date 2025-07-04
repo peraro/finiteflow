@@ -408,6 +408,18 @@ extern "C" {
     return FF_SUCCESS;
   }
 
+  FFStatus ffLearnEx(FFGraph graph, FFLearnOptions opt)
+  {
+    if (opt.prime_no) {
+      FFNode node = ffGetOutputNode(graph);
+      if (!session.node_exists(graph, node))
+        return FF_ERROR;
+      LearningOptions & lopt = session.node(graph, node)->learn_opt;
+      lopt.prime_no = opt.prime_no;
+    }
+    return ffLearn(graph);
+  }
+
   FFUInt * ffEvaluateGraph(FFGraph graph,
                            const FFUInt * input, unsigned prime_no)
   {
