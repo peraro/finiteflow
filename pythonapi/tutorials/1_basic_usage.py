@@ -11,7 +11,7 @@ import fflow as ff
 
 
 # We first define a new graph with 3 input variables. This returns
-# integer identifiers (id) for the graph and the its input node.
+# integer identifiers (id) for the graph and its input node.
 graph,innode = ff.NewGraphWithInput(3)
 
 # NOTE: The previous call is a shortcut for:

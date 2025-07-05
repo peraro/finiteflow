@@ -213,7 +213,7 @@ FF::badalgvars = "The algorithm `1` depends on `2` variables, but `3` are requir
 FF::badneededvars = "Needed variables should be a subset of the unknowns."
 
 FF::badinputdim = "The input has invalid dimensions."
-FF::coloutofcounds = "Column indexes are out of bounds"
+FF::coloutofbounds = "Column indexes are out of bounds"
 
 FF::baddegdata = "Unexpected number of elements in degree data"
 
@@ -728,7 +728,7 @@ RegisterNodeSparseSolver[gid_,inputs_,{columns_,vars_,neededvarsin_}]:=Module[
     CheckVariables[neededvars];
     If[!SubsetQ[vars,neededvars], Message[FF::badneededvars]; Throw[$Failed];];
     cols = (CheckedUInt32List/@columns);
-    If[!TrueQ[Max[Union@@cols]<=Length[vars]+1], Message[FF::coloutofcounds]; Throw[$Failed];];
+    If[!TrueQ[Max[Union@@cols]<=Length[vars]+1], Message[FF::coloutofbounds]; Throw[$Failed];];
     FFRegisterNodeSparseSolverImplem[gid,inputs,Length[vars],cols-1,position/@neededvars]
   ]
 ];
