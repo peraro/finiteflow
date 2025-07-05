@@ -156,6 +156,7 @@ FFGraphPrune::usage = "FFGraphPrune[graph] deletes all the nodes of graph which 
 
 FFDumpDegrees::usage="FFDumpDegrees[graph,outputfilename] serializes the information on the total and partial degrees of the output of graph.  It must be called after FFAllDegrees."
 FFLoadDegrees::usage="FFDumpDegrees[graph,filename] loads the information on total and partial degrees of graph, as stored in the file filename."
+FFSetDegrees::usage = "FFSetDegrees[gid,degdata] manually sets the degrees of a graph."
 FFDumpSamplePoints::usage="FFDumpSamplePoints[graph,outputfilename] serializes a list of sample points, i.e. a list of inputs at which graph needs to be evaluated in order to reconstruct the analytic expression of its output."
 FFDumpEvaluations::usage="FFDumpEvaluations[graph,outputfilename] serializes the currently stored evaluations of graph."
 FFLoadEvaluations::usage="FFLoadEvaluations[graph,filelist] loads the evaluations of graph serialized in the files listed in filelist."
@@ -167,6 +168,7 @@ FFSampleFromPoints[graph,filename,nthreads] is equivalent to FFSampleFromPoints[
 FFSampleFromPoints[graph,filename,start,npoints] evaluates the graph at a contiguous subset of npoints sample points, taken from the ones stored in filename, starting from the one at position start (counting from zero).  The evaluations are parallelized over an automatically chosen number of threads.
 FFSampleFromPoints[graph,filename,start,npoints,nthreads] is equivalent to FFSampleFromPoints[graph,filename,start,npoints], but the evaluations are parallelized over nthreads threads."
 FFNSamplePoints::usage = "FFNSamplePoints[graph] returns a list of length two.  The first element is the total number of sample points needed for recostructing the full output of graph.  The second element is a list of integers representing the number of sample points needed for the reconstruction of each element of the output of graph."
+FFParallelReconstructDegreeData::usage = "FFParallelReconstructDegreeData[graph] reconstructs degree data degree data parallelizing univariate reconstructions."
 
 FFGraphEvaluate::usage="FFGraphEvaluate[graph,point] evaluates graph at point, where point is a list of integers.  The prime field may be changed passing the option \"PrimeNo\"."
 FFGraphEvaluateMany::usage="FFGraphEvaluateMany[graph,points] evaluates graph at the specified list of points.  The prime field may be changed globally using the option \"PrimeNo\", or individually for each point by appending an additional entry with the index of the prime to be used.  By default, evaluations are performed in parallel."
@@ -212,6 +214,8 @@ FF::badneededvars = "Needed variables should be a subset of the unknowns."
 
 FF::badinputdim = "The input has invalid dimensions."
 FF::coloutofcounds = "Column indexes are out of bounds"
+
+FF::baddegdata = "Unexpected number of elements in degree data"
 
 FF::nonratsub = "Found invalid subexpression `1`"
 
@@ -624,6 +628,20 @@ FFDumpEvaluations[gid_,file_String]:=FFDumpEvaluationsImplem[GetGraphId[gid],fil
 FFLoadEvaluations[gid_,files_List]:=If[And@@(StringQ/@files), FFLoadEvaluationsImplem[GetGraphId[gid],files], $Failed];
 FFSamplesFileSize[file_String]:=FFSamplesFileSizeImplem[file];
 FFNParsFromDegreesFile[file_String]:=If[TrueQ[#==$Failed],$Failed,{"NParsIn"->#[[1]],"NParsOut"->#[[2]]}]&[FFNParsFromDegreesFileImpl[file]];
+
+
+FFSetDegrees[gid_,degdata_List]:=Module[{nout,nin,cdata},
+  Catch[
+    nout = FFNParsOut[gid];
+    nin = FFNodeNParsOutImplem[GetGraphId[gid],0];
+    cdata = CheckedUInt32List[Flatten[degdata]];
+    If[!(Length[cdata]===nout*(2 + 4*nin)),
+      Message[FF::baddegdata];
+      Throw[$Failed];
+    ];
+    FFSetDegreesImplem[GetGraphId[gid],cdata];
+  ]
+]
 
 
 RegisterSimpleSubgraph[gid_,inputs_,{subgraphid_}]:=Catch[FFSimpleSubGraphImplem[gid,inputs,GetGraphId[subgraphid]]];
@@ -1115,8 +1133,12 @@ FFReconstructFunction[id_,vars_,OptionsPattern[]] := Module[
     thisopt = Join[{"MaxPrimes"->maxnp},FilterRules[opt,Select[Options[FFReconstructUnivariate],FreeQ[#,"MaxPrimes"]&]]];
     Return[FFReconstructUnivariate[id,vars,Sequence@@thisopt]]
   ];
-  If[StringQ[OptionValue["Degrees"]],
+  Which[
+    StringQ[OptionValue["Degrees"]],
     res = FFLoadDegrees[id,OptionValue["Degrees"]];,
+    OptionValue["Degrees"][[0]]===List,
+    res = FFSetDegrees[id,OptionValue["Degrees"]];,
+    True,
     res = FFAllDegrees[id, nthreads, Sequence@@FilterRules[opt,Options[FFAllDegrees]]];
   ];
   If[TrueQ[res == $Failed], Return[$Failed]];
@@ -1633,6 +1655,73 @@ Options[FFParallelRatRec]:={"NThreads"->FFNThreads};
 FFParallelRatRec[a_List,p_,OptionsPattern[]]:=Catch[ToExpression/@FFParallelRatRecImplem[ToString[CheckedInt[#]]&/@a,ToString[CheckedInt[p]],toFFInternalUnsignedFlag["nthreads",OptionValue["NThreads"]]]];
 
 
+(* this is a direct port of the Python version *)
+Options[FFParallelReconstructDegreeData]:=AutoReconstructionOptions[];
+FFParallelReconstructDegreeData[graph_,opt:OptionsPattern[]]:=Module[
+  {check,pmin,rand,nparsin,nparsout,degdata,res,g,t,unirec,j,i,
+   linfuns,constfuns,numexp,denexp},
+  res = Catch[
+  
+  check[a_]:=a;
+  check[$Failed] := Throw[$Failed];
+  pmin = FFPrimeNo[FFNAvailablePrimes[]-1];
+  rand = (RandomInteger[{123456789123456789,pmin-1}])&;
+  nparsin = FFNParsOut[graph,FFGraphInputNode[graph]];
+  nparsout = FFNParsOut[graph];
+  
+  degdata = ConstantArray[0,{nparsout,2 + 4*nparsin}];
+  linfuns = (rand[]+rand[] t)&/@Range[nparsin];
+  constfuns = rand[]&/@Range[nparsin];
+  unirec = (
+    SortBy[CoefficientRules[#,{t}][[;;,1,1]],-#&]&/@#&/@NumeratorDenominator[check[
+      FFParallelReconstructUnivariateMod[g,{t},Sequence@@FilterRules[{opt}, Options[FFParallelReconstructUnivariateMod]]]
+    ]]
+  )&;
+  
+  FFNewGraph[g,"in",{t}];
+  FFAlgRatFunEval[g,"lin",{"in"},{t},linfuns];
+  FFAlgSimpleSubgraph[g,"sub",{"lin"},graph];
+  FFGraphOutput[g,"sub"];
+  res = unirec[];
+  Do[
+    numexp = res[[j,1]];
+    If[Length[numexp]===0,
+      Continue[];
+    ];
+    denexp = res[[j,2]];
+    degdata[[j,1]] = numexp[[1]];
+    degdata[[j,2]] = denexp[[1]];
+  ,{j,nparsout}];
+  
+  Do[
+    linfuns = constfuns;
+    linfuns[[i]] = t;
+    FFNewGraph[g,"in",{t}];
+    FFAlgRatFunEval[g,"lin",{"in"},{t},linfuns];
+    FFAlgSimpleSubgraph[g,"sub",{"lin"},graph];
+    FFGraphOutput[g,"sub"];
+    res = unirec[];
+    Do[
+      numexp = res[[j,1]];
+      If[Length[numexp]===0,
+        Continue[];
+      ];
+      denexp = res[[j,2]];
+      degdata[[j,3 + 4*(i-1)]] = numexp[[1]];
+      degdata[[j,3 + 4*(i-1) + 1]] = numexp[[-1]];
+      degdata[[j,3 + 4*(i-1) + 2]] = denexp[[1]];
+      degdata[[j,3 + 4*(i-1) + 3]] = denexp[[-1]];
+    ,{j,nparsout}];
+  ,{i,nparsin}];
+  
+  degdata
+  ];
+  
+  If[FFGraphQ[g], FFDeleteGraph[g]];
+  res
+]
+
+
 Options[FFTakeUnique]:={"NEvals"->3};
 FFTakeUnique[g_,node_,{in_},OptionsPattern[]]:=Module[
 {nparsin,nevals,evals,check,asso,ii,jj,nout,outs, outn, fromouts, minp},
@@ -1850,6 +1939,7 @@ FFLoadLibObjects[] := Module[
     FFDefaultMaxRecPrimesImplem = LibraryFunctionLoad[fflowlib, "fflowml_default_max_rec_primes", LinkObject, LinkObject];
     FFDumpDegreesImplem=LibraryFunctionLoad[fflowlib, "fflowml_dump_degrees", LinkObject, LinkObject];
     FFLoadDegreesImplem=LibraryFunctionLoad[fflowlib, "fflowml_load_degrees", LinkObject, LinkObject];
+    FFSetDegreesImplem=LibraryFunctionLoad[fflowlib, "fflowml_set_degrees", LinkObject, LinkObject];
     FFDumpSamplePointsImplem=LibraryFunctionLoad[fflowlib, "fflowml_dump_sample_points", LinkObject, LinkObject];
     FFDumpEvaluationsImplem=LibraryFunctionLoad[fflowlib, "fflowml_dump_evaluations", LinkObject, LinkObject];
     FFLoadEvaluationsImplem=LibraryFunctionLoad[fflowlib, "fflowml_load_evaluations", LinkObject, LinkObject];

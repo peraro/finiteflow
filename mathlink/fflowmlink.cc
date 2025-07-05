@@ -4283,6 +4283,36 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
+  int fflowml_set_degrees(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs, gid;
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &gid);
+
+    int * degdatain;
+    int n;
+    MLGetInteger32List(mlp, &degdatain, &n);
+    std::vector<unsigned> degdata(n);
+    std::copy(degdatain, degdatain+n, degdata.data());
+    MLReleaseInteger32List(mlp, degdatain, n);
+
+    MLNewPacket(mlp);
+
+    Ret ret = session.set_degrees(gid, degdata.data());
+
+    if (ret != SUCCESS) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutSymbol(mlp, "Null");
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
   int fflowml_dump_sample_points(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);
