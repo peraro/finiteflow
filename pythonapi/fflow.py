@@ -497,6 +497,12 @@ def LaurentMinOrders(graph, node):
     return res
 
 
+def LSolveNEqsNVars(graph, node):
+    ret = _ffi.new('unsigned[2]')
+    _StatusCheck(_lib.ffLSolveNEqsNVars(graph, node, ret))
+    return (int(ret[0]), int(ret[1]))
+
+
 def LSolveResetNeededVars(graph, node, needed_vars):
     return _StatusCheck(_lib.ffLSolveResetNeededVars(graph, node, needed_vars, len(needed_vars)))
 
@@ -511,6 +517,12 @@ def LSolveOnlyNonHomogeneous(graph, node):
 
 def LSolveSparseOutput(graph, node, sparse=True):
     return _StatusCheck(_lib.ffLSolveSparseOutput(graph, node, sparse))
+
+
+def LSolveEqWeight(graph, node, eq_weight):
+    if not len(eq_weight) == LSolveNEqsNVars(graph,node)[0]:
+        raise ValueError("Equation weights have the wrong length.")
+    return _StatusCheck(_lib.ffLSolveEqWeight(graph, node, eq_weight))
 
 
 def LSolveSparseOutputWithMaxCol(graph, node, maxcol,
@@ -555,6 +567,19 @@ def LSolveIndepVars(graph, node, i=0):
     if retc == _ffi.NULL:
         raise ERROR
     ret = _ffi.unpack(retc, _lib.ffLSolveNIndepVars(graph, node, i))
+    _lib.ffFreeMemoryU32(retc)
+    return ret
+
+
+def LSolveNIndepEqs(graph, node):
+    return _Check(_lib.ffLSolveNIndepEqs(graph, node))
+
+
+def LSolveIndepEqs(graph, node):
+    retc = _lib.ffLSolveIndepEqs(graph, node)
+    if retc == _ffi.NULL:
+        raise ERROR
+    ret = _ffi.unpack(retc, _lib.ffLSolveNIndepEqs(graph, node))
     _lib.ffFreeMemoryU32(retc)
     return ret
 

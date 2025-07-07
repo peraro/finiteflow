@@ -315,6 +315,7 @@ extern "C" {
   // Sparse systems //
   ////////////////////
 
+  FFStatus ffLSolveNEqsNVars(FFGraph graph, FFNode node, unsigned res[]);
   FFStatus ffLSolveResetNeededVars(FFGraph graph, FFNode node,
                                    const unsigned * vars, unsigned n_vars);
   FFStatus ffLSolveOnlyHomogeneous(FFGraph graph, FFNode node);
@@ -324,6 +325,7 @@ extern "C" {
                                           unsigned max_col,
                                           bool back_substitution,
                                           bool keep_full_output);
+  FFStatus ffLSolveEqWeight(FFGraph graph, FFNode node, const int * eq_weight);
   FFStatus ffLSolveMarkAndSweepEqs(FFGraph graph, FFNode node);
 
   // Only for Analytic and Numeric solvers (fails for Node solvers)
@@ -352,6 +354,14 @@ extern "C" {
   // (as returned by ffSparseLSolveDepVars).  If output is not sparse,
   // i is ignored.  The array can be freed by ffFreeMemoryU32.
   unsigned * ffLSolveIndepVars(FFGraph graph, FFNode node, unsigned i);
+
+  // no. of dependent equations
+  unsigned ffLSolveNIndepEqs(FFGraph graph, FFNode node);
+
+  // Lists the independent equations.  The returned array has length =
+  // ffLSolveNIndepEqs(graph,node) and its memory can be freed using
+  // the ffFreeMemoryU32 function.
+  unsigned * ffLSolveIndepEqs(FFGraph graph, FFNode node);
 
 
   ////////////////////////////////

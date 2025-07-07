@@ -790,7 +790,7 @@ namespace fflow {
       return FAILED;
 
     number_eqs_(data);
-    mat_(data).sortRows();
+    mat_(data).sortRows(eq_weight_.get());
 
     mat_(data).toReducedRowEcholon(mod, maxcol_, !(flag_ & NO_BACKSUBST_),
                                    !(flag_ & KEEP_ALL_OUTS_));
@@ -809,7 +809,7 @@ namespace fflow {
       if (ret == FAILED)
         return FAILED;
       number_eqs_(data);
-      mat_(data).sortRows();
+      mat_(data).sortRows(eq_weight_.get());
       mat_(data).toReducedRowEcholon(mod, maxcol_, !(flag_ & NO_BACKSUBST_),
                                      !(flag_ & KEEP_ALL_OUTS_));;
     }
@@ -1104,6 +1104,25 @@ namespace fflow {
     else
       flag_ &= ~flag_t(KEEP_ALL_OUTS_);
     return ret;
+  }
+
+  Ret SparseLinearSolver::set_eq_weight(const int * eq_weight)
+  {
+    if (!is_mutable())
+      return FAILED;
+    invalidate();
+
+    if (!eq_weight) {
+      eq_weight_.reset();
+      return SUCCESS;
+    }
+
+    if (!eq_weight_.get())
+      eq_weight_.reset(new int[neqs_]);
+
+    std::copy(eq_weight, eq_weight+neqs_, eq_weight_.get());
+
+    return SUCCESS;
   }
 
   void SparseLinearSolver::set_sparseout_data_(const AlgorithmData * data)

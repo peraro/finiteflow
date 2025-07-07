@@ -658,7 +658,7 @@ namespace fflow {
         rows_[i].toDenseMatrixRow(mv.row(i), m_, incl_id);
     }
 
-    void sortRows();
+    void sortRows(const int * eq_weight = 0);
 
     void toRowEcholon(Mod mod, unsigned maxrow, bool keep_all_outs,
                       EqDeps * eqdeps = nullptr);

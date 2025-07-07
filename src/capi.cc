@@ -1175,6 +1175,29 @@ extern "C" {
 
   // Sparse systems
 
+  FFStatus ffLSolveNEqsNVars(FFGraph graph, FFNode node, unsigned res[])
+  {
+    if (!session.node_exists(graph,node))
+      return FF_ERROR;
+
+    Algorithm * alg = session.node(graph,node)->algorithm();
+
+    if (dynamic_cast<DenseLinearSolver*>(alg)) {
+      DenseLinearSolver & ls = *static_cast<DenseLinearSolver*>(alg);
+      res[0] = ls.neqs();
+      res[1] = ls.nvars();
+      return FF_SUCCESS;
+    } else if(dynamic_cast<SparseLinearSolver*>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
+      res[0] = ls.neqs();
+      res[1] = ls.nvars();
+      return FF_SUCCESS;
+    }
+
+    logerr("Not a solver.");
+    return FF_ERROR;
+  }
+
   FFStatus ffLSolveResetNeededVars(FFGraph graph, FFNode node,
                                    const unsigned * vars, unsigned n_vars)
   {
@@ -1291,6 +1314,24 @@ extern "C" {
                                    keep_full_output);
       session.invalidate_subctxt_alg_data(graph, node);
     } else {
+      return FF_ERROR;
+    }
+
+    return FF_SUCCESS;
+  }
+
+  FFStatus ffLSolveEqWeight(FFGraph graph, FFNode node, const int * eq_weight)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    if (!alg || !alg->is_mutable())
+      return FF_ERROR;
+
+    if (dynamic_cast<SparseLinearSolver *>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+      ls.set_eq_weight(eq_weight);
+      session.invalidate_subctxt_alg_data(graph, node);
+    } else {
+      logerr("Not a sparse solver.");
       return FF_ERROR;
     }
 
@@ -1438,6 +1479,42 @@ extern "C" {
           return 0;
         return newU32Array(spdata[i].data(), spdata[i].size());
       }
+    }
+
+    return 0;
+  }
+
+  unsigned ffLSolveNIndepEqs(FFGraph graph, FFNode node)
+  {
+    if (!session.node_exists(graph,node))
+      return FF_ERROR;
+
+    Algorithm * alg = session.node(graph,node)->algorithm();
+
+    if (dynamic_cast<DenseLinearSolver*>(alg)) {
+      DenseLinearSolver & ls = *static_cast<DenseLinearSolver*>(alg);
+      return ls.n_indep_eqs();
+    } else if(dynamic_cast<SparseLinearSolver*>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
+      return ls.n_indep_eqs();
+    }
+
+    return FF_ERROR;
+  }
+
+  unsigned * ffLSolveIndepEqs(FFGraph graph, FFNode node)
+  {
+    if (!session.node_exists(graph,node))
+      return 0;
+
+    Algorithm * alg = session.node(graph,node)->algorithm();
+
+    if (dynamic_cast<DenseLinearSolver*>(alg)) {
+      DenseLinearSolver & ls = *static_cast<DenseLinearSolver*>(alg);
+      return newU32Array(ls.indep_eqs(), ls.n_indep_eqs());
+    } else if(dynamic_cast<SparseLinearSolver*>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
+      return newU32Array(ls.indep_eqs(), ls.n_indep_eqs());
     }
 
     return 0;

@@ -51,11 +51,13 @@ FFAlgDebug::usage = "FFAlgDebug[] shows a list of graphs and nodes defined in Ma
 FFAllAlgs::usage = "FFAllAlgs[] returns a list with all the algorithms in all the current graphs."
 (*FFClearAlgs::usage = ""*)
 FFAlgQ::usage = "FFAlgQ[graphname, nodename] returns True if the specified algorithm exists."
+FFSolverNEqsNVars::usage = "FFSolverNEqsNVars[graph,node] returns a length-2 list with the number of equations and variables which defined the linear system represented by the specified node."
 FFSolverResetNeededVars::usage = "FFSolverResetNeededVars[graph, node, vars, neededvars] redefines the set of needed variables of a dense or sparse linear system."
 FFSolverOnlyHomogeneous::usage =  "FFSolverOnlyHomogeneous[graph, node] makes a linear solver return only the homogeneous part of its solution, i.e. without including the constant terms in the output."
 FFSolverOnlyNonHomogeneous::usage =  "FFSolverOnlyNonHomogeneous[graph, node] makes a linear solver return only the non-homogeneous part of its solution and sets to zero all the independent variables (useful if only one solution of the system is needed, rather than the full space of solutions)."
 FFSolverSparseOutput::usage = "FFSolverSparseOutput[graph, node] makes a sparse linear solver return a sparse representation of the solution matrix."
 FFSolverSparseOutputWithMaxCol::usage = "FFSolverSparseOutputWithMaxCol[graph, node, maxcol] is equivalent to FFSolverSparseOutput[graph, node] but also specifies that only the first `maxcol` unknowns of the system (corresponding to the first `maxcol` columns of its matrix representation) are substituted during Gauss elimination.  See also the available Options to further control its behaviour."
+FFSolverEqWeight::usage = "FFSolverEqWeight[graph,node,eqweight] sets the weight of the equations of a sparse solver, as a list of signed integers."
 FFLearn::usage = "FFLearn[graph], executes the learning phase on the output node of graph."
 FFSetLearningOptions::usage = "FFLearn[graph,node,options...] sets the learning options of the specified node in the graph."
 FFLaurentLearn::usage = "FFLaurentLearn[graph] executes the learning phase on a Laurent expansion node, which must be the output node of graph.  It returns a list of two lists.  The first contains the starting power of the Laurent expansion of each element.  The second contains the order of the expansion requested for each element."
@@ -920,6 +922,9 @@ Options[FFSolverSparseOutputWithMaxCol]={"BackSubstitution"->True,"KeepFullOutpu
 FFSolverSparseOutputWithMaxCol[gid_,id_,maxrow_,OptionsPattern[]]:=Catch[FFSolverSparseOutputWithMaxrowImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32[maxrow],toFFInternalBooleanFlag["BackSubstitution",OptionValue["BackSubstitution"]],toFFInternalBooleanFlag["KeepFullOutput",OptionValue["KeepFullOutput"]]]];
 
 
+FFSolverEqWeight[gid_,id_,eqweight_]:=Catch[FFSolverEqWeightImplem[GetGraphId[gid],GetAlgId[gid,id],CheckedInt32List[eqweight]]];
+
+
 FFLearn[gid_]:=Catch[FFLearnImplem[GetGraphId[gid]]];
 
 
@@ -1005,6 +1010,9 @@ FFSubgraphReconstructGetInfo[gid_,id_,vars_]:=Module[
   info = FFAlgorithmGetInfoImplem[GetGraphId[gid],GetAlgId[gid,id]];
   (((Times@@(vars^#))&/@#)&/@#)&/@info
 ];
+
+
+FFSolverNEqsNVars[gid_,id_]:=FFSolverNEqsNVarsImplem[GetGraphId[gid],GetAlgId[gid,id]];
 
 
 FFSolverNIndepEqs[gid_,id_]:=FFSolverNIndepEqsImplem[GetGraphId[gid],GetAlgId[gid,id]];
@@ -1908,11 +1916,13 @@ FFLoadLibObjects[] := Module[
     FFAlgMakeNodeMutableImplem = LibraryFunctionLoad[fflowlib, "fflowml_node_set_mutable", LinkObject, LinkObject];
     FFGraphNodesImplem = LibraryFunctionLoad[fflowlib, "fflowml_graph_nodes", LinkObject, LinkObject];
     FFGraphPruneImplem = LibraryFunctionLoad[fflowlib, "fflowml_graph_prune", LinkObject, LinkObject];
+    FFSolverNEqsNVarsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_solver_neqs_nvars", LinkObject, LinkObject];
     FFSolverResetNeededVarsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_reset_neeed", LinkObject, LinkObject];
     FFSolverOnlyHomogeneousImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_only_homogeneous", LinkObject, LinkObject];
     FFSolverOnlyNonHomogeneousImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_only_non_homogeneous", LinkObject, LinkObject];
     FFSolverSparseOutputImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output", LinkObject, LinkObject];
     FFSolverSparseOutputWithMaxrowImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_sparse_output_with_maxcol", LinkObject, LinkObject];
+    FFSolverEqWeightImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_system_eq_weight", LinkObject, LinkObject];
     FFIndependentOfImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_independent_of_var", LinkObject, LinkObject];
     FFAlgRatFunEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratfun_eval", LinkObject, LinkObject];
     FFAlgRatFunEvalFromCoeffsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_coeff_ratfun_eval", LinkObject, LinkObject];

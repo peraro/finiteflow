@@ -283,15 +283,21 @@ namespace fflow {
     os << std::endl;
   }
 
-  void SparseMatrix::sortRows()
+  void SparseMatrix::sortRows(const int * eq_weight)
   {
     std::vector<unsigned> ii(n_);
     std::iota(ii.begin(), ii.end(), 0);
     const SparseMatrixRow * r = rows_.get();
     std::sort(ii.begin(), ii.end(),
-              [r](unsigned i, unsigned j) -> bool
+              [r, eq_weight](unsigned i, unsigned j) -> bool
               {
-                int cmp = compare<UInt>(r[i].el(0).col, r[j].el(0).col);
+                int cmp;
+                if (eq_weight) {
+                  cmp = compare(eq_weight[i], eq_weight[j]);
+                  if (cmp)
+                    return cmp < 0;
+                }
+                cmp = compare<UInt>(r[i].el(0).col, r[j].el(0).col);
                 if (cmp)
                   return cmp > 0;
                 cmp = compare(r[i].size(), r[j].size());

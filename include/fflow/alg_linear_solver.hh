@@ -327,6 +327,8 @@ namespace fflow {
                                   bool back_subst,
                                   bool keep_all_outs);
 
+    Ret set_eq_weight(const int * eq_weight);
+
     // the returned pointer may be null
     const std::vector<std::vector<unsigned>> * sparse_output_data() const
     {
@@ -430,6 +432,7 @@ namespace fflow {
     std::unique_ptr<unsigned[]> outeq_pos_;
     std::vector<SparseMatrix::EqDeps> eqdeps_;
     std::unique_ptr<std::vector<std::vector<unsigned>>> sparseout_data_;
+    std::unique_ptr<int[]> eq_weight_;
     unsigned neqs_, nvars_;
     unsigned nndeps_ = 0, nnindeps_ = 0, nnindepeqs_ = 0;
     unsigned maxcol_ =  SparseMatrixRow::END;

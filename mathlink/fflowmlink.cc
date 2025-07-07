@@ -2277,6 +2277,52 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
+  int fflowml_alg_system_eq_weight(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int id, nodeid, nargs;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    int * eq_weight;
+    int n;
+    MLGetInteger32List(mlp, &eq_weight, &n);
+    bool okay = true;
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+    if (!alg || !alg->is_mutable())
+      okay = false;
+
+    if (okay) {
+      if (dynamic_cast<SparseLinearSolver *>(alg)) {
+        SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+        if (n==ls.neqs()) {
+          ls.set_eq_weight(eq_weight);
+          session.invalidate_subctxt_alg_data(id, nodeid);
+        } else {
+          logerr("Equation weights have the wrong length.");
+          okay = false;
+        }
+      } else {
+        logerr("Not a sparse solver.");
+        okay = false;
+      }
+    }
+    MLReleaseInteger32List(mlp, eq_weight, n);
+    MLNewPacket(mlp);
+
+    if (okay)
+      MLPutSymbol(mlp, "Null");
+    else
+      MLPutSymbol(mlp, "$Failed");
+
+    return LIBRARY_NO_ERROR;
+  }
+
 
   int fflowml_alg_mark_and_sweep_eqs(WolframLibraryData libData, MLINK mlp)
   {
@@ -2434,6 +2480,48 @@ extern "C" {
       opt.n_singular = maxsingular;
 
     MLPutSymbol(mlp, "Null");
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
+  int fflowml_alg_solver_neqs_nvars(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &nargs);
+
+    int id, nodeid;
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    MLNewPacket(mlp);
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+
+    if (!session.graph_exists(id)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    if (dynamic_cast<DenseLinearSolver*>(alg)) {
+      DenseLinearSolver & ls = *static_cast<DenseLinearSolver*>(alg);
+      MLPutFunction(mlp, "List", 2);
+      MLPutInteger32(mlp, ls.neqs());
+      MLPutInteger32(mlp, ls.nvars());
+
+    } else if (dynamic_cast<SparseLinearSolver*>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
+      MLPutFunction(mlp, "List", 2);
+      MLPutInteger32(mlp, ls.neqs());
+      MLPutInteger32(mlp, ls.nvars());
+
+    } else {
+      logerr("Not a solver");
+      MLPutSymbol(mlp, "$Failed");
+    }
 
     return LIBRARY_NO_ERROR;
   }
