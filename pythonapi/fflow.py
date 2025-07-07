@@ -545,6 +545,11 @@ def LSolveIsImpossible(graph,node):
     return ret == 1
 
 
+def LSolveOutputIsSparse(graph,node):
+    ret = _Check(_lib.ffLSolveOutputIsSparse(graph, node))
+    return ret == 1
+
+
 def LSolveNDepVars(graph, node):
     return _Check(_lib.ffLSolveNDepVars(graph, node))
 

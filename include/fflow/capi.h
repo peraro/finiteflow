@@ -333,8 +333,11 @@ extern "C" {
 
   // Check if system is impossible (the system needs to have completed
   // learning before this call).  Returns 1 is system is impossible, 0
-  // if it is not and FF_ERROR is an error occurred.
+  // if it is not and FF_ERROR if an error occurred.
   unsigned ffLSolveIsImpossible(FFGraph graph, FFNode node);
+
+  // Output: 0 if false, 1 if true, FF_ERROR if an error occurred.
+  unsigned ffLSolveOutputIsSparse(FFGraph graph, FFNode node);
 
   // no. of dependent unknowns
   unsigned ffLSolveNDepVars(FFGraph graph, FFNode node);

@@ -1320,6 +1320,20 @@ extern "C" {
     return FF_SUCCESS;
   }
 
+  FFStatus ffLSolveOutputIsSparse(FFGraph graph, FFNode node)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    if (!alg || !alg->is_mutable())
+      return FF_ERROR;
+
+    if (dynamic_cast<SparseLinearSolver *>(alg)) {
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+      return ls.output_is_sparse();
+    }
+
+    return FF_ERROR;
+  }
+
   FFStatus ffLSolveEqWeight(FFGraph graph, FFNode node, const int * eq_weight)
   {
     Algorithm * alg = session.algorithm(graph, node);
