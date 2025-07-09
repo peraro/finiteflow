@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.12)
 
 project(finiteflow CXX C)
 
@@ -274,6 +274,27 @@ The Mathematica interface cannot be installed \
 because no suitable Mathematica installation was found."
         )
 
+endif()
+
+
+set(FFLOW_PYTHON OFF CACHE BOOL "Build Python interface")
+if (FFLOW_PYTHON)
+    find_package (Python3 COMPONENTS Interpreter)
+    if (Python3_FOUND)
+        add_custom_command(
+            DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/include/fflow/capi.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/fflow_build.py"
+            COMMAND ${Python3_EXECUTABLE} "fflow_build.py"
+            OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/_cffi_fflow.c"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi"
+        )
+        add_custom_target(
+            fflow_python_interface ALL
+            DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/_cffi_fflow.c"
+        )
+    endif()
 endif()
 
 

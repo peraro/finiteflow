@@ -33,9 +33,11 @@ ffibuilder.set_source("_cffi_fflow",
                       ''',
                       libraries = ['fflow'],
                       include_dirs=[includedir],
+                      verbose=True,
                       extra_link_args=["-L" + fflowlibdir,
                                        "-Wl,-rpath," + fflowlibdir]
                       )
 
 if __name__ == "__main__":
+    pathlib.Path("_cffi_fflow.c").touch()
     ffibuilder.compile(verbose=True)
