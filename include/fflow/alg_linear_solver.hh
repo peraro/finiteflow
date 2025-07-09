@@ -340,6 +340,18 @@ namespace fflow {
       return is_learning_impossible_();
     }
 
+    void zero_vars(std::vector<unsigned> & zeroes) const;
+
+    const unsigned * zero_needed_vars() const
+    {
+      return zerodeps_.data();
+    }
+
+    unsigned n_zero_needed_vars() const
+    {
+      return zerodeps_.size();
+    }
+
   private:
 
     static SparseLinearSolverData & adata_(AlgorithmData * data)

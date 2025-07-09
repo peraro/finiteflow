@@ -65,6 +65,7 @@ FFDenseSolverLearn::usage = "FFDenseSolverLearn[graph,vars] executes the learnin
 FFSparseSolverLearn::usage = "FFSparseSolverLearn[graph,vars] executes the learning phase on a sparse solver, with unknowns vars, which must be the output node of graph."
 FFDenseSolverGetInfo::usage = "FFDenseSolverGetInfo[graph,node,vars] returns the info about a dense solver or a linear fit, with unknowns vars, obtained during the learning step, namely dependent variables, independent variables and zero variables."
 FFSparseSolverGetInfo::usage = "FFSparseSolverGetInfo[graph,node,vars] returns the info on a sparse solver, with unknowns vars, obtained during the learning step, namely dependent variables, independent variables and zero variables."
+FFSolverZeroVars::usage = "FFSolverZeroVars[graph,node,vars] retuns the subset of the unknowns vars which are found to be zero in a solver."
 FFNonZeroesLearn::usage = "FFNonZeroesLearn[graph] executes the learning phase on a NonZero algorithm, which must be the output node of graph."
 FFNonZeroesGetInfo::usage = "FFNonZeroesGetInfo[graph,ndode] returns the info on a NonZero algorithm obtained during the learning step."
 FFMultiFitLearn::usage = "FFMultiFitLearn[graph,coefficients] executes the learning phase on a multi-fit subgraph algorithm, which must be the output node of graph."
@@ -1027,6 +1028,9 @@ FFSparseSolverMarkAndSweepEqs[gid_,id_]:=FFSparseSolverMarkAndSweepEqsImplem[Get
 FFSparseSolverDeleteUnneededEqs[gid_,id_]:=FFSparseSolverDeleteUnneededEqsImplem[GetGraphId[gid],GetAlgId[gid,id]];
 
 
+FFSolverZeroVars[gid_,id_,vars_]:=Catch[If[TrueQ[#[[0]]==List],vars[[#+1]],#]&[FFSolverZeroVarsImplem[GetGraphId[gid],GetAlgId[gid,id]]]];
+
+
 RegisterAlgRatFunEval[gid_,inputs_,{vars_List,functions_}]:=Catch[FFAlgRatFunEvalImplem[gid,inputs,Length[vars],toFFInternalRatFun[#,vars]&/@functions]];
 FFAlgRatFunEval[gid_,id_,inputs_List,params_,functions_List]:=FFRegisterAlgorithm[RegisterAlgRatFunEval,gid,id,inputs,{params,functions}];
 
@@ -1940,6 +1944,7 @@ FFLoadLibObjects[] := Module[
     FFAlgTakeAndAddBLImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_take_and_add_bl", LinkObject, LinkObject];
     FFSolverNIndepEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_n_indep_eqs", LinkObject, LinkObject];
     FFSolverIndepEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_indep_eqs", LinkObject, LinkObject];
+    FFSolverZeroVarsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_solver_zero_vars", LinkObject, LinkObject];
     FFAlgJSONSparseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_json_sparse_system", LinkObject, LinkObject];
     FFAlgJSONRatFunEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_json_ratfun", LinkObject, LinkObject];
     FFAlgLinearFitImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_linear_fit", LinkObject, LinkObject];

@@ -366,6 +366,12 @@ extern "C" {
   // the ffFreeMemoryU32 function.
   unsigned * ffLSolveIndepEqs(FFGraph graph, FFNode node);
 
+  // On success, *zerovars will point to the list of zero variables
+  // (including needed and non-needed) while *n_zerovars will be its
+  // length.  The allocated array can be freed using ffFreeMemoryU32.
+  FFStatus ffLSolveZeroVars(FFGraph graph, FFNode node,
+                            unsigned ** zerovars, unsigned * n_zerovars);
+
 
   ////////////////////////////////
   // Rational functions, etc... //

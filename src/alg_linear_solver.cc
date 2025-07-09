@@ -1155,4 +1155,12 @@ namespace fflow {
     nparsout = nout;
   }
 
+  void SparseLinearSolver::zero_vars(std::vector<unsigned> & zeroes) const
+  {
+    zeroes.clear();
+    for (unsigned j=0; j<nvars_; ++j)
+      if (!(xinfo_[j] & LSVar::IS_NON_ZERO) && (xinfo_[j] & LSVar::IS_DEP))
+        zeroes.push_back(j);
+  }
+
 } // namespace fflow

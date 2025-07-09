@@ -1534,6 +1534,44 @@ extern "C" {
     return 0;
   }
 
+  FFStatus ffLSolveZeroVars(FFGraph graph, FFNode node,
+                            unsigned ** zerovars, unsigned * n_zerovars)
+  {
+    if (!session.node_exists(graph,node))
+      return FF_ERROR;
+
+    Algorithm * alg = session.node(graph,node)->algorithm();
+
+    if (dynamic_cast<DenseLinearSolver*>(alg)) {
+
+      DenseLinearSolver & ls = *static_cast<DenseLinearSolver*>(alg);
+      std::vector<unsigned> zeroes;
+      for (unsigned i=0; i<ls.nvars(); ++i)
+        if (!(ls.xinfo()[i] & LSVar::IS_NON_ZERO))
+          zeroes.push_back(i);
+      if (zerovars)
+        *zerovars = newU32Array(zeroes.data(), zeroes.size());
+      if (n_zerovars)
+        *n_zerovars = zeroes.size();
+      return FF_SUCCESS;
+
+    } else if (dynamic_cast<SparseLinearSolver*>(alg)) {
+
+      SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
+      std::vector<unsigned> zeroes;
+      ls.zero_vars(zeroes);
+      if (zerovars)
+        *zerovars = newU32Array(zeroes.data(), zeroes.size());
+      if (n_zerovars)
+        *n_zerovars = zeroes.size();
+      return FF_SUCCESS;
+
+    }
+
+    logerr("Not a solver");
+    return FF_ERROR;
+  }
+
 
   // Rational functions
 

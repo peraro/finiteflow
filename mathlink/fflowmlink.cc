@@ -2608,6 +2608,50 @@ extern "C" {
   }
 
 
+  int fflowml_alg_solver_zero_vars(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &nargs);
+
+    int id, nodeid;
+    MLGetInteger32(mlp, &id);
+    MLGetInteger32(mlp, &nodeid);
+    MLNewPacket(mlp);
+
+    Algorithm * alg = session.algorithm(id, nodeid);
+
+    if (!session.graph_exists(id)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    if (dynamic_cast<DenseLinearSolver*>(alg)) {
+        DenseLinearSolver & ls = *static_cast<DenseLinearSolver*>(alg);
+        std::vector<int> zeroes;
+        for (unsigned i=0; i<ls.nvars(); ++i)
+          if (!(ls.xinfo()[i] & LSVar::IS_NON_ZERO))
+            zeroes.push_back(i);
+        MLPutInteger32List(mlp, zeroes.data(), zeroes.size());
+
+    } else if (dynamic_cast<SparseLinearSolver*>(alg)) {
+        SparseLinearSolver & ls = *static_cast<SparseLinearSolver*>(alg);
+        std::vector<unsigned> zeroes;
+        ls.zero_vars(zeroes);
+        MLPutInteger32List(mlp, (int*)zeroes.data(), zeroes.size());
+
+    } else {
+      MLPutSymbol(mlp, "$Failed");
+
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_degrees(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);

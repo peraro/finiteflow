@@ -588,6 +588,14 @@ def LSolveIndepEqs(graph, node):
     _lib.ffFreeMemoryU32(retc)
     return ret
 
+def LSolveZeroVars(graph, node):
+    zerovars = _ffi.new("unsigned **")
+    nzerovars = _ffi.new("unsigned *")
+    _StatusCheck(_lib.ffLSolveZeroVars(graph,node,zerovars,nzerovars))
+    ret = _ffi.unpack(zerovars[0], nzerovars[0])
+    _lib.ffFreeMemoryU32(zerovars[0])
+    return ret
+
 
 def RatFunToJSON(rf, json_file):
     if not type(rf) is RatFunList:
