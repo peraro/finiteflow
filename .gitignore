@@ -21,6 +21,7 @@ config.hh.in.*
 *Minibuf*
 *.dSYM
 compile_commands.json
+.cache
 
 CMakeCache.txt
 CMakeFiles/*
@@ -49,3 +50,4 @@ testjson
 # these files are generated
 tests_json/tinvsys.json
 pythonapi/_cffi_fflow.c
+pythonapi/__pycache__/*
