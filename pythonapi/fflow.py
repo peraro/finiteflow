@@ -496,6 +496,24 @@ def LaurentMinOrders(graph, node):
     _lib.ffFreeMemoryS32(retc)
     return res
 
+def LaurentOutput(graph, node, elems):
+    """LaurentOutput(graph, node, elems) returns a list of lists with
+    elements (o,elems[j]) in the i-th list meaning that the
+    coefficient of O(x^o) in the Laurent expansion of the i-th element
+    of the output of subgraph is the j-th element of the output of the
+    Laurent node of graph (where x the expansion variable)
+
+    """
+    min_orders = LaurentMinOrders(graph,node)
+    max_orders = LaurentMaxOrders(graph,node)
+    def get_order_coeff_pairs(coeff_iter):
+        return list(
+            list((o,next(coeff_iter)) \
+                 for o in range(min_orders[i], max_orders[i]+1)
+                 ) for i in range(len(min_orders))
+        )
+    return list(get_order_coeff_pairs(iter(elems)))
+
 
 def LSolveNEqsNVars(graph, node):
     ret = _ffi.new('unsigned[2]')

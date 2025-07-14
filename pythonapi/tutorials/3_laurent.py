@@ -45,12 +45,7 @@ starting_orders = ff.LaurentMinOrders(g2,laurent)
 # g1, a list of pairs (o,j), meaning that the coefficient of O(x1^o)
 # in the Laurent expansion is the j-th element of the output of graph
 # g2
-def get_order_coeff_pairs(coeff_iter):
-    return list(
-        list((o,next(coeff_iter)) for o in range(starting_orders[i], order+1)) \
-        for i in range(ff.GraphNParsOut(g1))
-    )
-order_idx_pairs = get_order_coeff_pairs(iter(range(ff.GraphNParsOut(g2))))
+order_idx_pairs = ff.LaurentOutput(g2,laurent,range(ff.GraphNParsOut(g2)))
 
 
 # The coefficients of the Laurent expansion can be computed
@@ -60,7 +55,7 @@ recratfun = ff.ReconstructFunction(g2)
 # Similarly as before, we may list, for each function we have
 # expanded, a list of pairs (o,c), meaning that c is the coefficient
 # (converted to a string) of O(x1^o) of the expansion
-order_coeff_pairs = get_order_coeff_pairs(iter(recratfun.to_string(newxs)))
+order_coeff_pairs = ff.LaurentOutput(g2,laurent,recratfun.to_string(newxs))
 
 # Notice that, as mentioned, the coefficients of the Laurent expansion
 # computed by g2 can be obtained without knowing the analytic
