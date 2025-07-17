@@ -1,5 +1,3 @@
-#ifndef FFLOW_NO_DBG
-
 #include <cstdio>
 #include <mutex>
 #include <fflow/debug.hh>
@@ -66,5 +64,3 @@ namespace fflow {
   }
 
 } // namespace fflow
-
-#endif // !FFLOW_NO_DBG

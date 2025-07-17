@@ -66,8 +66,6 @@ namespace fflow {
 } // namespace fflow
 
 
-#ifndef FFLOW_NO_DBG
-
 namespace  {
 
   class MathDbgPrint : public fflow::DBGPrint {
@@ -107,12 +105,6 @@ namespace  {
   fflow::LogErrorSet math_log_error_setter_(math_log_err_)
 
 } // namespace
-
-#else
-
-#define FFLOWML_SET_DBGPRINT()
-
-#endif
 
 
 namespace  {

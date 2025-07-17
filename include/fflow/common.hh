@@ -25,9 +25,7 @@
 #include <fflow/config.hh>
 #include <fflow/format.h>
 #include <fflow/ostream.h>
-#ifndef FFLOW_NO_DBG
-# include <fflow/debug.hh>
-#endif
+#include <fflow/debug.hh>
 
 #ifdef FFLOW_USE_EXCEPTIONS
 # define FFLOW_THROW(exc) throw exc
