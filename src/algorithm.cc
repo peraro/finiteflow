@@ -52,8 +52,7 @@ namespace fflow {
                             Input[], Mod, AlgorithmData *,
                             UInt[]) const
   {
-    std::cerr << "Error: NoAlgorithm::evaluate "
-              << "should never be called." << std::endl;
+    logerr("Error: NoAlgorithm::evaluate should never be called.");
     return FAILED;
   }
 
@@ -62,8 +61,8 @@ namespace fflow {
                                Input[], Mod, AlgorithmData *,
                                UInt[]) const
   {
-    std::cerr << "Iternal error: Graph::GraphInputVars_::evaluate "
-              << "should never be called." << std::endl;
+    logerr("Internal error: Graph::GraphInputVars_::evaluate "
+           "should never be called.");
     return FAILED;
   }
 
