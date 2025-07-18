@@ -225,6 +225,29 @@ extern "C" {
                                const unsigned * needed_vars,
                                unsigned n_needed_vars);
 
+  // Ex version of analytic solver
+  FFNode ffAlgAnalyticSparseLSolveEx(FFGraph graph,
+                                     FFNode * in_nodes, unsigned n_in_nodes,
+                                     unsigned n_eqs, unsigned n_vars,
+                                     const unsigned * n_non_zero,
+                                     const unsigned * non_zero_els,
+                                     const unsigned * n_weights,
+                                     const unsigned * weights,
+                                     const size_t * non_zero_coeffs,
+                                     const FFRatFunList * rat_functions,
+                                     const unsigned * needed_vars,
+                                     unsigned n_needed_vars);
+  FFNode ffAlgAnalyticSparseLSolveIdxEx(FFGraph graph,
+                                        FFNode * in_nodes, unsigned n_in_nodes,
+                                        unsigned n_eqs, unsigned n_vars,
+                                        const unsigned * n_non_zero,
+                                        const unsigned * non_zero_els,
+                                        const unsigned * n_weights,
+                                        const unsigned * weights,
+                                        const FFIdxRatFunList * non_zero_funcs,
+                                        const unsigned * needed_vars,
+                                        unsigned n_needed_vars);
+
   FFNode ffAlgJSONSparseLSolve(FFGraph graph, FFNode in_node,
                                FFCStr json_file);
 

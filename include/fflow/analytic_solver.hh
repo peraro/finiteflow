@@ -87,6 +87,83 @@ namespace fflow {
   }
 
 
+  class AnalyticSparseSolverEx;
+  struct AnalyticSparseSolverExData : public SparseLinearSolverData {
+  public:
+    std::vector<HornerRatFunPtr> c;
+
+  private:
+    friend class AnalyticSparseSolverEx;
+    void reset_mod_(const AnalyticSparseSolverEx & ls, Mod mod);
+    void reset_evals_(const AnalyticSparseSolverEx & ls);
+
+  private:
+    std::unique_ptr<UInt[]> xp_ = nullptr;
+    std::unique_ptr<UInt[]> evals_ = nullptr;
+    UInt this_mod_ = 0;
+  };
+
+  class AnalyticSparseSolverEx : public SparseLinearSolver {
+  public:
+    void delete_unneeded_eqs(AlgorithmData * data);
+
+    virtual Ret fill_matrix(Context * ctxt,
+                            unsigned n_rows, const unsigned rows[],
+                            AlgInput xi[], Mod mod,
+                            AlgorithmData * data,
+                            SparseMatrix & m) const override;
+
+    virtual AlgorithmData::Ptr
+    clone_data(const AlgorithmData * data) const override;
+
+    virtual Ret learn(Context * ctxt,
+                      AlgInput xin[], Mod mod, AlgorithmData * data) override;
+
+  private:
+
+    Ret learn_zero_ccs_(Context * ctxt,
+                        AlgInput xin[], Mod mod, AlgorithmData * data);
+
+  public:
+
+    struct Weight {
+      unsigned node, el;
+      std::size_t idx;
+    };
+
+    struct Weights {
+      unsigned size;
+      std::unique_ptr<Weight[]> w;
+
+      void from(Weights && w2)
+      {
+        size = w2.size;
+        w = std::move(w2.w);
+      }
+    };
+
+    struct RowInfo {
+      std::size_t size;
+      std::unique_ptr<unsigned[]> cols;
+      std::unique_ptr<Weights[]> w;
+    };
+
+    std::vector<RowInfo> rinfo;
+    std::vector<MPHornerRatFunMap> cmap;
+    bool learned_ccs_ = false;
+  };
+
+  inline void
+  AnalyticSparseSolverExData::reset_evals_(const AnalyticSparseSolverEx & ls)
+  {
+    std::size_t len = ls.cmap.size();
+    if (!evals_)
+      evals_.reset(new UInt[len]);
+    for (unsigned j=0; j<len; ++j)
+      evals_[j] = MISSING_SAMPLES;
+  }
+
+
 } // namespace fflow
 
 

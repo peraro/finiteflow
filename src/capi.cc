@@ -109,6 +109,30 @@ static FFStatus CopyNonZeroIdxEls(std::size_t max_els,
   return FF_SUCCESS;
 }
 
+static FFStatus CopyNonZeroIdxElsEx(const unsigned * nparsin,
+                                    unsigned n_input_nodes,
+                                    std::size_t max_els,
+                                    const std::size_t * elems,
+                                    const unsigned * weights,
+                                    std::size_t n_elems,
+                                    AnalyticSparseSolverEx::Weight * dest)
+{
+  for (unsigned j=0; j<n_elems; ++j, ++dest, weights += 2) {
+    if (elems[j] >= max_els) {
+      logerr("Indexes of non-zero coefficients out of bounds");
+      return FF_ERROR;
+    }
+    if (weights[0] >= n_input_nodes || weights[1] >= nparsin[weights[0]]) {
+      logerr("Indexes of weights out of bounds");
+      return FF_ERROR;
+    }
+    dest->idx = elems[j];
+    dest->node = weights[0];
+    dest->el = weights[1];
+  }
+  return FF_SUCCESS;
+}
+
 static FFStatus CopyNonZeroColumnElsUnordered(unsigned n_cols,
                                               const unsigned * elems,
                                               unsigned n_elems,
@@ -802,6 +826,120 @@ extern "C" {
     return id;
   }
 
+  FFNode ffAlgAnalyticSparseLSolveEx(FFGraph graph,
+                                     FFNode * in_nodes, unsigned n_in_nodes,
+                                     unsigned n_eqs, unsigned n_vars,
+                                     const unsigned * n_non_zero,
+                                     const unsigned * non_zero_els,
+                                     const unsigned * n_weights,
+                                     const unsigned * weights,
+                                     const size_t * non_zero_coeffs,
+                                     const FFRatFunList * rat_functions,
+                                     const unsigned * needed_vars,
+                                     unsigned n_needed_vars)
+  {
+    typedef AnalyticSparseSolverExData Data;
+    std::unique_ptr<AnalyticSparseSolverEx> algptr(new AnalyticSparseSolverEx());
+    std::unique_ptr<Data> dataptr(new Data());
+    auto & sys = *algptr;
+    auto & data = *dataptr;
+
+    const unsigned n_rows = n_eqs;
+    sys.rinfo.resize(n_rows);
+
+    const std::size_t max_functions = rat_functions->n_functions;
+    data.c.resize(max_functions);
+    sys.cmap.resize(max_functions);
+
+    for (int j=0; j<max_functions; ++j)
+      get_horner_ratfun(rat_functions, j, data.c[j], sys.cmap[j],
+                        session.main_context()->ww);
+
+    if (n_in_nodes < 1) {
+      logerr("At least one input node is required");
+      return FF_ERROR;
+    }
+    sys.nparsin.resize(n_in_nodes);
+    sys.nparsin[0] = rat_functions->n_vars;
+    for (unsigned j=1; j<n_in_nodes; ++j) {
+      unsigned node_nout = ffNodeNParsOut(graph, in_nodes[j]);
+      if (ffIsError(node_nout)) {
+        logerr("Invalid input node.");
+        return FF_ERROR;
+      }
+      sys.nparsin[j] = node_nout;
+    }
+
+    for (int i=0; i<n_rows; ++i) {
+
+      const unsigned csize = n_non_zero[i];
+      AnalyticSparseSolverEx::RowInfo & rinf = sys.rinfo[i];
+      rinf.size = csize;
+      rinf.cols.reset(new unsigned[csize]);
+      FFStatus ret = CopyNonZeroColumnEls(n_vars, non_zero_els, csize,
+                                          rinf.cols.get());
+      if (ret != FF_SUCCESS)
+        return ret;
+
+      auto & ws = rinf.w;
+      ws.reset(new AnalyticSparseSolverEx::Weights[csize]);
+      for (unsigned j=0; j<csize; ++j) {
+        auto & w = ws[j];
+        const unsigned n_ws = *n_weights;
+        w.size = n_ws;
+        w.w.reset(new AnalyticSparseSolverEx::Weight[n_ws]);
+        ret = CopyNonZeroIdxElsEx(sys.nparsin.data(), n_in_nodes,
+                                  max_functions,
+                                  non_zero_coeffs, weights, n_ws,
+                                  w.w.get());
+        if (ret != FF_SUCCESS)
+          return ret;
+        non_zero_coeffs += n_ws;
+        ++n_weights;
+        weights += 2*n_ws;
+      }
+
+      non_zero_els += csize;
+    }
+
+    if (needed_vars) {
+      sys.init(n_eqs, n_vars, needed_vars, n_needed_vars, data);
+    } else {
+      unsigned * needed = (unsigned*)malloc(n_vars*sizeof(n_vars));
+      std::iota(needed, needed+n_vars, 0);
+      sys.init(n_eqs, n_vars, needed, n_vars, data);
+      free(needed);
+    }
+
+    if (!session.graph_exists(graph))
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), std::move(dataptr),
+                              in_nodes);
+    return id;
+  }
+
+  FFNode ffAlgAnalyticSparseLSolveIdxEx(FFGraph graph,
+                                        FFNode * in_nodes, unsigned n_in_nodes,
+                                        unsigned n_eqs, unsigned n_vars,
+                                        const unsigned * n_non_zero,
+                                        const unsigned * non_zero_els,
+                                        const unsigned * n_weights,
+                                        const unsigned * weights,
+                                        const FFIdxRatFunList * non_zero_funcs,
+                                        const unsigned * needed_vars,
+                                        unsigned n_needed_vars)
+  {
+    return ffAlgAnalyticSparseLSolveEx(graph, in_nodes, n_in_nodes,
+                                       n_eqs, n_vars,
+                                       n_non_zero, non_zero_els,
+                                       n_weights, weights,
+                                       non_zero_funcs->idx.get(),
+                                       &non_zero_funcs->rf,
+                                       needed_vars, n_needed_vars);
+  }
+
   FFNode ffAlgJSONRatFunEval(FFGraph graph, FFNode in_node,
                              const char * json_file)
   {
@@ -1384,6 +1522,11 @@ extern "C" {
 
     } else if (dynamic_cast<NumericSparseSolver *>(alg)) {
       NumericSparseSolver & ls = *static_cast<NumericSparseSolver *>(alg);
+      ls.delete_unneeded_eqs(session.alg_data(graph, node));
+      session.invalidate_subctxt_alg_data(graph, node);
+
+    } else if (dynamic_cast<AnalyticSparseSolverEx *>(alg)) {
+      AnalyticSparseSolverEx & ls = *static_cast<AnalyticSparseSolverEx *>(alg);
       ls.delete_unneeded_eqs(session.alg_data(graph, node));
       session.invalidate_subctxt_alg_data(graph, node);
 

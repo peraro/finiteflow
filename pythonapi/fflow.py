@@ -743,6 +743,34 @@ def AlgNodeSparseLSolve(graph, in_node, n_vars,
     return _Check(retc)
 
 
+def AlgAnalyticSparseLSolveEx(graph, in_nodes, n_vars,
+                              non_zero_els, non_zero_coeffs,
+                              needed_vars = None):
+    needed = needed_vars
+    if needed is None:
+        needed = _ffi.NULL
+        neededlen = 0
+    else:
+        neededlen = len(needed)
+    nonzero_cols = [list(col for col,el in row) for row in non_zero_els]
+    nonzero_wgs = [tuple(tuple(_Flattened(el)) for col,el in row) \
+                   for row in non_zero_els]
+    two_n_wgs = sum(sum(len(y) for y in row) for row in nonzero_wgs)
+    if two_n_wgs != 2*len(non_zero_coeffs):
+        raise ERROR
+    n_weights = [tuple(len(sub)//2 for sub in row) for row in nonzero_wgs]
+    retc = _lib.ffAlgAnalyticSparseLSolveIdxEx(graph, in_nodes, len(in_nodes),
+                                               len(non_zero_els), n_vars,
+                                               list(len(x) for x in nonzero_cols),
+                                               list(_Flattened(nonzero_cols)),
+                                               list(_Flattened(n_weights)),
+                                               list(_Flattened(nonzero_wgs)),
+                                               non_zero_coeffs._ptr,
+                                               needed,
+                                               neededlen)
+    return _Check(retc)
+
+
 def NewRatFunList(nvars, allterms):
     coeffs = []
     exponents = []

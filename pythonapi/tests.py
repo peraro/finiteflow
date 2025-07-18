@@ -471,6 +471,54 @@ def testNumeric():
 
     print("- Test passed")
 
+
+def testLSolverEx():
+    print("Test linear solver 'ex'")
+    with GraphContextWithInput(1) as (g,inp):
+        unused = AlgRatNumEval(g,["1","2","3"])
+        # w0 = -1
+        # w1 = 1
+        # w2 = t
+        # w3 = t^2
+        ws = AlgRatFunEval(g,inp,ParseRatFun(["t"],"-1,1,t,t^2".split(",")))
+        w1 = (1,1)
+        w2 = (1,2)
+        w3 = (1,3)
+        nonzero_cols = [
+            # (w1 * t * x + (w2 * 1/t + w3 * t) * y == (w1))
+            [(0,[w1]), (1,[w2,w3]), (2,[w1])],
+            # (w1*t - (1)*w2) * y == 0
+            [(1,[w1,w2])],
+            # (w1 * t * x + (w1*t - (1)*w2) * y == w2)
+            [(0,[w1]), (1,[w1,w2]), (2,[w2])]
+        ]
+        nonzero_ccs = ParseIdxRatFun(
+            ["t"],
+            ("t,1/t,t,1,"+\
+             "t,-1,"+\
+             "t,t,-1,1").split(",")
+        )
+        ls = AlgAnalyticSparseLSolveEx(g,[inp,ws],2,nonzero_cols,nonzero_ccs)
+        SetOutputNode(g,ls)
+        Learn(g)
+        depvars = LSolveDepVars(g, ls)
+        indepvars = LSolveIndepVars(g, ls)
+        impossible = LSolveIsImpossible(g,ls)
+        if impossible or (depvars != [0,1] and depvars != [1,0]):
+            print("- Test of depvars failed")
+            exit(1)
+        LSolveMarkAndSweepEqs(g, ls)
+        LSolveDeleteUnneededEqs(g, ls)
+        pt = [1234567890]
+        rec = ReconstructFunction(g)
+        check = ParseRatFun(["t"],["1","(-t+1)/(1+t^3)"])
+        if EvaluateRatFunList(rec,pt,0) == EvaluateRatFunList(check,pt,0):
+            print("- Test passed")
+        else:
+            print("- Test failed")
+            exit(1)
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -479,6 +527,7 @@ if __name__ == '__main__':
     testLSolver("analytic")
     testLSolver("node")
     testLSolver("numeric")
+    testLSolverEx()
     testLaurent()
     testLists()
     testEvaluate()
