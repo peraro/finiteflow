@@ -164,10 +164,10 @@ extern "C" {
    * varibles x.  The entries of the matrix a A and the vector b are
    * rational functions of the free parameters returned by in_node.
    *
-   * The inputs are the non vanishing entries of the n_eqs*vars+1
+   * The inputs are the non vanishing entries of the n_eqs*(n_vars+1)
    * dimensional matrix (A|b).  More precisely:
    * - n_non_zero[i] is the number of non-zero entries of row i
-   * - n_zero_cols lists the columns with non-zero entries for each
+   * - non_zero_els lists the columns with non-zero entries for each
    *   row, stored in a contiguous array (one row after the other)
    * - non_zero_coeffs is a list of indexes in the array of rational
    *   functions rat_functions representing the non-vanishing
