@@ -352,12 +352,12 @@ toFFInternalUnsignedFlag[var_, n_Integer]:=If[TrueQ[n>=0], n, Message[FF::baduin
 toFFInternalUnsignedFlag[var_, other_]:=(Message[FF::baduintflag, var]; Throw[$Failed]);
 
 
-toFFInternalPoly[poly_,vars_] := ({#[[1]],ToString[#[[2]],InputForm]})&/@PolyCoefficientRules[poly, vars];
+toFFInternalPoly[poly_,vars_] := Check[({#[[1]],ToString[#[[2]],InputForm]})&/@PolyCoefficientRules[poly, vars],Message[FF::badfun,vars]; Throw[$Failed]];
 toFFInternalRatFun[ratfun_,vars_] := {toFFInternalPoly[Numerator[ratfun],vars],toFFInternalPoly[Denominator[ratfun],vars]};
 toFFInternalRatFun[0,vars_] := {Length[vars]}; (* optimization \[Rule] this represents a vanishing function *)
 
 
-toFFInternalPolyCoeffMap[poly_,vars_,coeffmap_] := ({#[[1]],coeffmap[#[[2]]]})&/@PolyCoefficientRulesCoeffMap[poly, vars, coeffmap];
+toFFInternalPolyCoeffMap[poly_,vars_,coeffmap_] := Check[({#[[1]],coeffmap[#[[2]]]})&/@PolyCoefficientRulesCoeffMap[poly, vars, coeffmap],Message[FF::badfun,vars]; Throw[$Failed]];
 toFFInternalRatFunCoeffMap[ratfun_,vars_,coeffmap_] := {toFFInternalPolyCoeffMap[Numerator[ratfun],vars,coeffmap],toFFInternalPolyCoeffMap[Denominator[ratfun],vars,coeffmap]};
 toFFInternalRatFunCoeffMap[0,vars_,coeffmap_] := {Length[vars]}; (* optimization \[Rule] this represents a vanishing function *)
 
@@ -377,7 +377,7 @@ toFFInternalPolyPoly[poly_,tauvars_,params_] := ({#[[1]],toFFInternalPoly[#[[2]]
 toFFInternalPolyRatFun[ratfun_,tauvars_,params_] := {toFFInternalPolyPoly[Numerator[ratfun],tauvars,params],toFFInternalPolyPoly[Denominator[ratfun],tauvars,params]};
 
 
-toFFJSONPoly[poly_,vars_] := ({ToString[#[[2]],InputForm],#[[1]]})&/@PolyCoefficientRules[poly, vars];
+toFFJSONPoly[poly_,vars_] := Check[({ToString[#[[2]],InputForm],#[[1]]})&/@PolyCoefficientRules[poly, vars],Message[FF::badfun,vars]; Throw[$Failed]];
 toFFJSONRatFun[ratfun_,vars_] := {Length[#],#}&/@{toFFJSONPoly[Numerator[ratfun],vars],toFFJSONPoly[Denominator[ratfun],vars]};
 toFFJSONRatFun[0,vars_] := 0;
 
