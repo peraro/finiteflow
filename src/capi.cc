@@ -122,7 +122,7 @@ static FFStatus CopyNonZeroIdxElsEx(const unsigned * nparsin,
       logerr("Indexes of non-zero coefficients out of bounds");
       return FF_ERROR;
     }
-    if (weights[0] >= n_input_nodes || weights[1] >= nparsin[weights[0]]) {
+    if (weights[0]+1 >= n_input_nodes || weights[1] >= nparsin[weights[0]+1]) {
       logerr("Indexes of weights out of bounds");
       return FF_ERROR;
     }

@@ -384,7 +384,7 @@ namespace fflow {
               if (FF_ERRCOND(res == FAILED || res == 0))
                 return bad_sparse_ccs_(res);
             }
-            addmul_mod(tot_res, res, xin[wgt->node][wgt->el], mod);
+            addmul_mod(tot_res, res, xin[wgt->node+1][wgt->el], mod);
           }
           if (tot_res != 0)
             ++non_zero_col;
@@ -467,7 +467,7 @@ namespace fflow {
               if (FF_ERRCOND(res == FAILED || res == 0))
                 return bad_sparse_ccs_(res);
             }
-            addmul_mod(tot_res, res, xin[wgt->node][wgt->el], mod);
+            addmul_mod(tot_res, res, xin[wgt->node+1][wgt->el], mod);
           }
           if (tot_res == 0)
             return bad_sparse_ccs_(tot_res);

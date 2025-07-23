@@ -481,9 +481,9 @@ def testLSolverEx():
         # w2 = t
         # w3 = t^2
         ws = AlgRatFunEval(g,inp,ParseRatFun(["t"],"-1,1,t,t^2".split(",")))
-        w1 = (1,1)
-        w2 = (1,2)
-        w3 = (1,3)
+        w1 = (0,1)
+        w2 = (0,2)
+        w3 = (0,3)
         nonzero_cols = [
             # (w1 * t * x + (w2 * 1/t + w3 * t) * y == (w1))
             [(0,[w1]), (1,[w2,w3]), (2,[w1])],
