@@ -389,6 +389,10 @@ def AlgSubgraphMap(graph, in_nodes, subgraph):
     return _Check(_lib.ffAlgSubgraphMap(graph,in_nodes,len(in_nodes),
                                         subgraph))
 
+def AlgSubgraphRec(graph, in_node, subgraph, n_rec_vars, shift_vars=True):
+    return _Check(_lib.ffAlgSubgraphRec(graph,in_node,subgraph,
+                                        n_rec_vars, shift_vars))
+
 def AlgJSONSparseLSolve(graph, in_node, json_file):
     return _Check(_lib.ffAlgJSONSparseLSolve(graph, in_node,
                                              json_file.encode('utf8')))
@@ -773,6 +777,29 @@ def AlgAnalyticSparseLSolveEx(graph, in_nodes, n_vars,
                                                needed,
                                                neededlen)
     return _Check(retc)
+
+
+def SubgraphRecExponents(graph,node,idx=None):
+    nv = _Check(_lib.ffSubgraphRecNVars(graph,node))
+
+    if idx is None:
+
+        nfuncs = _Check(_lib.ffSubgraphNParsout(graph,node))
+        return list(SubgraphRecExponents(graph,node,i) for i in range(nfuncs))
+
+    else:
+
+        def _poly_exponents(getterms,getexps):
+            nterms = _Check(getterms(graph,node,idx))
+            exps = getexps(graph,node,idx)
+            ret = list(tuple(exps[i*nv: i*nv+nv]) for i in range(nterms))
+            _lib.ffFreeMemoryU16(exps)
+            return ret
+
+        return (_poly_exponents(_lib.ffSubgraphRecNumNTerms,
+                                _lib.ffSubgraphRecNumExponents),
+                _poly_exponents(_lib.ffSubgraphRecDenNTerms,
+                                _lib.ffSubgraphRecDenExponents))
 
 
 def NewRatFunList(nvars, allterms):

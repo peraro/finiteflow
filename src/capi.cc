@@ -11,6 +11,7 @@
 #include <fflow/capi.h>
 #include <fflow/graph.hh>
 #include <fflow/subgraph.hh>
+#include <fflow/subgraph_reconstruct.hh>
 #include <fflow/mp_common.hh>
 #include <fflow/alg_functions.hh>
 #include <fflow/analytic_solver.hh>
@@ -194,6 +195,21 @@ static char * cstr_to_cstr(const char * str, size_t n)
 {
   char * ret = (char*)malloc(n + 1);
   strcpy(ret, str);
+  return ret;
+}
+
+template <typename TPoly>
+static uint16_t * ffRatNumRatPolyExps(const TPoly & poly)
+{
+  unsigned num_size = poly.size();
+  unsigned nv = poly.nvars();
+
+  uint16_t * ret = (uint16_t *)malloc(num_size * nv * sizeof(uint16_t));
+  uint16_t * out = ret;
+  for (unsigned j=0; j<num_size; ++j)
+    for (unsigned k=0; k<nv; ++k, ++out)
+      *out = poly.monomial(j).exponent(k);
+
   return ret;
 }
 
@@ -637,6 +653,35 @@ extern "C" {
 
     Graph * g = session.graph(graph);
     unsigned id = g->new_node(std::move(algptr), std::move(data), in_nodes);
+
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
+  FFNode ffAlgSubgraphRec(FFGraph graph, FFNode in_node,
+                          FFGraph subgraph,
+                          unsigned n_rec_vars, bool shift_vars)
+  {
+    typedef SubgraphRecData Data;
+    std::unique_ptr<SubgraphRec> algptr(new SubgraphRec());
+    std::unique_ptr<Data> data(new Data());
+
+    Node * node = session.node(graph, in_node);
+    if (!node) {
+      logerr("Invalid input node");
+      return FF_ERROR;
+    }
+
+    unsigned npars = node->algorithm()->nparsout;
+    Ret ret = algptr->init(session, subgraph, *data,
+                           npars, n_rec_vars, shift_vars);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), std::move(data), &in_node);
 
     if (id == ALG_NO_ID)
       return FF_ERROR;
@@ -1957,20 +2002,6 @@ extern "C" {
     return ffRatNumRatPolyCoeff(poly);
   }
 
-  static uint16_t * ffRatNumRatPolyExps(const MPReconstructedPoly & poly)
-  {
-    unsigned num_size = poly.size();
-    unsigned nv = poly.nvars();
-
-    uint16_t * ret = (uint16_t *)malloc(num_size * nv * sizeof(uint16_t));
-    uint16_t * out = ret;
-    for (unsigned j=0; j<num_size; ++j)
-      for (unsigned k=0; k<nv; ++k, ++out)
-        *out = poly.monomial(j).exponent(k);
-
-    return ret;
-  }
-
   uint16_t * ffRatFunNumExponents(const FFRatFunList * rf, unsigned idx)
   {
     if (idx >= rf->n_functions)
@@ -2603,6 +2634,95 @@ extern "C" {
 
     return ccs;
   }
+
+
+  // SubgraphRec
+
+  static SubgraphRec * asSubgrahRec(FFGraph graph, FFNode node)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    SubgraphRec * subrec = dynamic_cast<SubgraphRec*>(alg);
+    if (!subrec) {
+      logerr("Not a SubgrahRec algorithm");
+      return 0;
+    }
+    return subrec;
+  }
+
+  static SubgraphRec * asLearnedSubgrahRec(FFGraph graph, FFNode node)
+  {
+    SubgraphRec * subrec = asSubgrahRec(graph, node);
+    if (!subrec)
+      return 0;
+    if (!subrec->has_learned()) {
+      logerr("Learning not complete");
+      return 0;
+    }
+    return subrec;
+  }
+
+  static bool checkSubgraphRecIdx(const SubgraphRec * alg, unsigned idx)
+  {
+    if (idx >= alg->subgraph()->nparsout) {
+      logerr("Function index of SubgraphRec out of bounds");
+      return false;
+    }
+    return true;
+  }
+
+  static SubgraphRec * asLearnedSubgrahRecWIdx(FFGraph graph, FFNode node,
+                                               unsigned idx)
+  {
+    SubgraphRec * alg = asLearnedSubgrahRec(graph, node);
+    if (!alg || !checkSubgraphRecIdx(alg,idx))
+      return 0;
+    return alg;
+  }
+
+  unsigned ffSubgraphRecNVars(FFGraph graph, FFNode node)
+  {
+    SubgraphRec * alg = asSubgrahRec(graph, node);
+    if (!alg)
+      return FF_ERROR;
+    return alg->n_rec_vars();
+  }
+
+  unsigned ffSubgraphRecNumNTerms(FFGraph graph, FFNode node, unsigned idx)
+  {
+    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
+    if (!alg)
+      return FF_ERROR;
+    return alg->rec_function()[idx].numerator().size();
+  }
+
+  unsigned ffSubgraphRecDenNTerms(FFGraph graph, FFNode node, unsigned idx)
+  {
+    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
+    if (!alg)
+      return FF_ERROR;
+    return alg->rec_function()[idx].denominator().size();
+  }
+
+  uint16_t * ffSubgraphRecNumExponents(FFGraph graph, FFNode node,
+                                       unsigned idx)
+  {
+    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
+    if (!alg)
+      return 0;
+    return ffRatNumRatPolyExps(alg->rec_function()[idx].numerator());
+  }
+
+  uint16_t * ffSubgraphRecDenExponents(FFGraph graph, FFNode node,
+                                       unsigned idx)
+  {
+    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
+    if (!alg)
+      return 0;
+    return ffRatNumRatPolyExps(alg->rec_function()[idx].denominator());
+  }
+
+
+  // Chinese Remainder and RatRec
 
   char ** ffChineseRemainder(const FFCStr * z1, FFCStr mod1,
                              const FFUInt * z2, FFUInt mod2,

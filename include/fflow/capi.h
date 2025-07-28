@@ -161,6 +161,9 @@ extern "C" {
   FFNode ffAlgSubgraphMap(FFGraph graph,
                           const FFNode * in_nodes, unsigned n_in_nodes,
                           FFGraph subgraph);
+  FFNode ffAlgSubgraphRec(FFGraph graph, FFNode in_node,
+                          FFGraph subgraph,
+                          unsigned n_rec_vars, bool shift_vars);
 
   /*
    * Solves the system A.x = b with n_eqs equations and n_vars unknown
@@ -335,6 +338,17 @@ extern "C" {
   // The length of the returned list is ffSubgraphNParsout(graph,node).
   // The returned list can be freed with ffFreeMemoryS32.
   int * ffLaurentMinOrders(FFGraph graph, FFNode node);
+
+  // Information about reconstructed functions in a SubgraphRec node
+  // (same meaning and conventions of similarly named ffRatFun*
+  // functions below).
+  unsigned ffSubgraphRecNVars(FFGraph graph, FFNode node);
+  unsigned ffSubgraphRecNumNTerms(FFGraph graph, FFNode node, unsigned idx);
+  unsigned ffSubgraphRecDenNTerms(FFGraph graph, FFNode node, unsigned idx);
+  uint16_t * ffSubgraphRecNumExponents(FFGraph graph, FFNode node,
+                                       unsigned idx);
+  uint16_t * ffSubgraphRecDenExponents(FFGraph graph, FFNode node,
+                                       unsigned idx);
 
 
   ////////////////////

@@ -540,6 +540,36 @@ def testSubgraph():
                 print("- Test failed")
                 exit(1)
 
+
+def testSubgraphRec():
+    print("Test Subgraph Rec")
+    with GraphContextWithInput(3) as (g,inp):
+        funs = ParseRatFun(["x","y","t"],
+                           ["x + y*t","(1+x*y*t)/(x + y^2*t)"])
+        rf = AlgRatFunEval(g,inp,funs)
+        SetOutputNode(g,rf)
+
+        with GraphContextWithInput(1) as (g2,inp2):
+            sub = AlgSubgraphRec(g2,inp2,g,2)
+            SetOutputNode(g2,sub)
+            Learn(g2)
+
+            exps = SubgraphRecExponents(g2,sub)
+            exps_check = [([(1, 0), (0, 1)], [(0, 0)]),
+                          ([(1, 1), (0, 0)], [(0, 2), (1, 0)])]
+            if not exps == exps_check:
+                print("- Test failed: wrong monomial exponents")
+
+            tval = 1234567890
+            ev = EvaluateGraph(g2,[tval],0)
+            if ev == [1,tval,1,
+                      tval,1,tval,1]:
+                print("- Test passed")
+            else:
+                print("- Test failed")
+                exit(1)
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -555,3 +585,4 @@ if __name__ == '__main__':
     testUnivariate()
     testNumeric()
     testSubgraph()
+    testSubgraphRec()

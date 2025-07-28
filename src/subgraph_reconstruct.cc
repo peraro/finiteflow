@@ -23,13 +23,15 @@ namespace fflow {
     Ret ret =  SubGraph::init_subgraph(session, graphid, data,
                                        &n_parsin, 1,
                                        n_recvars);
+    if (ret != SUCCESS)
+      return ret;
 
     if (shiftvars)
       set_default_shift();
     else
       shift_.reset();
 
-    return ret;
+    return SUCCESS;
   }
 
 

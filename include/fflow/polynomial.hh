@@ -653,6 +653,11 @@ namespace fflow {
       return monomials_.data();
     }
 
+    const Monomial & monomial(std::size_t i) const
+    {
+      return monomials_[i];
+    }
+
     // undefined if *this.is_zero()
     const Monomial & lowest()
     {
