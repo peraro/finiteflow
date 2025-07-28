@@ -385,6 +385,10 @@ def AlgMemoizedSubgraph(graph, in_nodes, subgraph):
     return _Check(_lib.ffAlgMemoizedSubgraph(graph,in_nodes,len(in_nodes),
                                              subgraph))
 
+def AlgSubgraphMap(graph, in_nodes, subgraph):
+    return _Check(_lib.ffAlgSubgraphMap(graph,in_nodes,len(in_nodes),
+                                        subgraph))
+
 def AlgJSONSparseLSolve(graph, in_node, json_file):
     return _Check(_lib.ffAlgJSONSparseLSolve(graph, in_node,
                                              json_file.encode('utf8')))

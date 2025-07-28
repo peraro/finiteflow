@@ -158,6 +158,9 @@ extern "C" {
   FFNode ffAlgMemoizedSubgraph(FFGraph graph,
                                const FFNode * in_nodes, unsigned n_in_nodes,
                                FFGraph subgraph);
+  FFNode ffAlgSubgraphMap(FFGraph graph,
+                          const FFNode * in_nodes, unsigned n_in_nodes,
+                          FFGraph subgraph);
 
   /*
    * Solves the system A.x = b with n_eqs equations and n_vars unknown

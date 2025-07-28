@@ -612,6 +612,38 @@ extern "C" {
     return id;
   }
 
+  FFNode ffAlgSubgraphMap(FFGraph graph,
+                          const FFNode * in_nodes, unsigned n_in_nodes,
+                          FFGraph subgraph)
+  {
+    typedef SubGraphData Data;
+    std::unique_ptr<SubGraphMap> algptr(new SubGraphMap());
+    std::unique_ptr<Data> data(new Data());
+
+    std::vector<unsigned> nparsin(n_in_nodes);
+    for (unsigned i=0; i<n_in_nodes; ++i) {
+      Node * node = session.node(graph, in_nodes[i]);
+      if (!node) {
+        logerr("Input node does not exist");
+        return FF_ERROR;
+      }
+      nparsin[i] = node->algorithm()->nparsout;
+    }
+
+    Ret ret = algptr->init(session, subgraph, *data,
+                           nparsin.data(), nparsin.size());
+    if (ret != SUCCESS)
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), std::move(data), in_nodes);
+
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
   FFNode ffAlgJSONSparseLSolve(FFGraph graph, FFNode in_node,
                                const char * json_file)
   {

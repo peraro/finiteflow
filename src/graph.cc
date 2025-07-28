@@ -92,7 +92,7 @@ namespace fflow {
         return ALG_NO_ID;
       }
       if (nodes_[inputs[j]]->alg_->nparsout != alg->nparsin[j]) {
-        logerr(format("Input nodes do not have the expected length",j));
+        logerr("Input nodes do not have the expected length");
         return ALG_NO_ID;
       }
     }

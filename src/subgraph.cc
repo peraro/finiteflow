@@ -8,20 +8,26 @@ namespace fflow {
                               unsigned n_aux_vars)
   {
     Graph * g = session.graph(graphid);
-    if (!g || !g->has_learned())
+    if (!g || !g->has_learned()) {
+      logerr("Subgraph does not exist or cannot be evaluated");
       return FAILED;
+    }
 
     nparsin.resize(npars_size);
     unsigned tot_parsin = g->nparsin.size() ? g->nparsin[0] : 0;
 
-    if (!npars_size && tot_parsin != n_aux_vars)
+    if (!npars_size && tot_parsin != n_aux_vars) {
+      logerr("Inputs of subgraph node do not have the expected length");
       return FAILED;
+    }
 
     for (unsigned j=0; j<npars_size; ++j) {
       unsigned nout = npars[j];
       nparsin[j] = nout;
-      if (tot_parsin != nparsin[j] + n_aux_vars)
+      if (tot_parsin != nparsin[j] + n_aux_vars) {
+        logerr("Inputs of subgraph node do not have the expected length");
         return FAILED;
+      }
     }
 
     aux_vars_ = n_aux_vars;

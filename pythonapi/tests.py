@@ -519,6 +519,27 @@ def testLSolverEx():
             exit(1)
 
 
+def testSubgraph():
+    print("Test Subgraph Map")
+    with GraphContextWithInput(2) as (g,inp):
+        funs = ParseRatFun(["x","y"],
+                           ["x","x^2","y","y^2"])
+        rf = AlgRatFunEval(g,inp,funs)
+        SetOutputNode(g,rf)
+
+        with GraphContextWithInput(1) as (g2,inp2):
+            rfa = AlgRatFunEval(g2,inp2,ParseRatFun(["x"],["x","x^2"]))
+            rfb = AlgRatFunEval(g2,inp2,ParseRatFun(["x"],["x^3","x^4"]))
+            sub = AlgSubgraphMap(g2,[rfa,rfb],g)
+            SetOutputNode(g2,sub)
+
+            ev = EvaluateGraph(g2,[2],0)
+            if ev == [2,2**2,2**2,2**4,2**3,2**6,2**4,2**8]:
+                print("- Test passed")
+            else:
+                print("- Test failed")
+                exit(1)
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -533,3 +554,4 @@ if __name__ == '__main__':
     testEvaluate()
     testUnivariate()
     testNumeric()
+    testSubgraph()
