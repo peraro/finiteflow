@@ -95,7 +95,7 @@ namespace fflow {
         return tok;
       }
 
-      if (std::isalpha(*cur))
+      if (std::isalpha(*cur) || *cur == '_')
         return parse_var();
 
       if (*cur == '^') {
