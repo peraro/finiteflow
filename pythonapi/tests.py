@@ -49,6 +49,8 @@ def testRatFun():
     if rec2.monomials() != rec.monomials():
         print("- Test 3/3 failed :(")
         exit(1)
+    DeleteGraph(graph)
+    DeleteGraph(graph2)
     print("- Test 3/3 passed!!!")
 
 
@@ -138,6 +140,7 @@ def testTutorial2():
         print("- Test failed: reconstructed wrong result")
         exit(1)
 
+    DeleteGraph(mygraph)
     print("- Test passed!")
 
 
@@ -271,6 +274,7 @@ def testLSolver(type):
             print("- Test failed: something wrong with the reconstructed solution")
             exit(1)
 
+    DeleteGraph(mygraph)
     print("- Test passed!")
 
 
@@ -304,6 +308,8 @@ def testLaurent():
     if EvaluateRatFunList(rec, [24,45], 10) != check:
         print("- Failed check")
         exit(1)
+    DeleteGraph(g1)
+    DeleteGraph(g2)
     print("- Test passed")
 
 
@@ -367,6 +373,7 @@ def testLists():
         print("- Check failed!")
         exit(1)
 
+    DeleteGraph(g)
     print("- Test passed!")
 
 
@@ -421,6 +428,8 @@ def testUnivariate_(parallel,mod):
         print("- Check failed with parallel = {}, mod = {}"
               .format(parallel,mod))
         return ERROR
+
+    DeleteGraph(g)
 
 def testUnivariate():
     print("Testing univariate reconstruction")
