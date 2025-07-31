@@ -403,7 +403,8 @@ def AlgJSONRatFunEval(graph, in_node, json_file):
 
 def AlgRatFunEval(graph, in_node, rf):
     if not type(rf) is RatFunList:
-        raise TypeError("Third argument of AlgRatFunEval() must be a RatFunList")
+        raise TypeError("Third argument of AlgRatFunEval() " +
+                        "must be a RatFunList")
     return _Check(_lib.ffAlgRatFunEval(graph, in_node, rf._ptr))
 
 def AlgRatFunEvalFromCoeffs(graph, coeffs_node, vars_node, rf):
@@ -538,7 +539,8 @@ def LSolveNEqsNVars(graph, node):
 
 
 def LSolveResetNeededVars(graph, node, needed_vars):
-    return _StatusCheck(_lib.ffLSolveResetNeededVars(graph, node, needed_vars, len(needed_vars)))
+    return _StatusCheck(_lib.ffLSolveResetNeededVars(graph, node, needed_vars,
+                                                     len(needed_vars)))
 
 
 def LSolveOnlyHomogeneous(graph, node):
@@ -633,7 +635,8 @@ def LSolveZeroVars(graph, node):
 
 def RatFunToJSON(rf, json_file):
     if not type(rf) is RatFunList:
-        raise TypeError("First argument of RatFunToJSON() must be a RatFunList")
+        raise TypeError("First argument of RatFunToJSON() " +
+                        "must be a RatFunList")
     return _StatusCheck(_lib.ffRatFunToJSON(rf._ptr,
                                             json_file.encode('utf8')))
 
@@ -775,15 +778,15 @@ def AlgAnalyticSparseLSolveEx(graph, in_nodes, n_vars,
     if two_n_wgs != 2*len(non_zero_coeffs):
         raise ERROR
     n_weights = [tuple(len(sub)//2 for sub in row) for row in nonzero_wgs]
-    retc = _lib.ffAlgAnalyticSparseLSolveIdxEx(graph, in_nodes, len(in_nodes),
-                                               len(non_zero_els), n_vars,
-                                               list(len(x) for x in nonzero_cols),
-                                               list(_Flattened(nonzero_cols)),
-                                               list(_Flattened(n_weights)),
-                                               list(_Flattened(nonzero_wgs)),
-                                               non_zero_coeffs._ptr,
-                                               needed,
-                                               neededlen)
+    libfuncall = _lib.ffAlgAnalyticSparseLSolveIdxEx
+    retc = libfuncall(graph, in_nodes, len(in_nodes),
+                      len(non_zero_els), n_vars,
+                      list(len(x) for x in nonzero_cols),
+                      list(_Flattened(nonzero_cols)),
+                      list(_Flattened(n_weights)),
+                      list(_Flattened(nonzero_wgs)),
+                      non_zero_coeffs._ptr,
+                      needed, neededlen)
     return _Check(retc)
 
 
@@ -817,16 +820,17 @@ def NewRatFunList(nvars, allterms):
     n_den_terms = []
     for ratfun in allterms:
         if len(ratfun) != 2:
-            raise TypeError("For each rational function, terms should be listed"
-                            + " for both the numerator and the denominator.")
+            raise ValueError("For each rational function, terms should be "
+                             + "listed for both the numerator and the "
+                             + "denominator.")
         n_num_terms.append(len(ratfun[0]))
         n_den_terms.append(len(ratfun[1]))
         for poly in ratfun:
             for t in poly:
                 coeffs.append(_ffi.new("char[]", t[0].encode('utf8')))
                 if len(t[1]) != nvars:
-                    raise TypeError("The length of the exponents' list is not "
-                                    + str(nvars))
+                    raise ValueError("The length of the exponents' list is not "
+                                     + str(nvars))
                 exponents.extend(t[1])
     resc = _lib.ffNewRatFunList(nvars, len(allterms), n_num_terms, n_den_terms,
                                 coeffs, exponents)
@@ -848,7 +852,8 @@ def NewIdxRatFunList(nvars, allterms, indexes = None):
 
 def EvaluateRatFunList(rf, z, prime_no):
     if not type(rf) is RatFunList:
-        raise TypeError("First argument of EvaluateRatFunList() must be a RatFunList")
+        raise TypeError("First argument of EvaluateRatFunList() must be " +
+                        "a RatFunList")
     if rf._ptr == _ffi.NULL or rf.nvars() != len(z):
         raise FAILED
     retc = _lib.ffEvaluateRatFunList(rf._ptr, z, prime_no)
