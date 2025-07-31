@@ -271,6 +271,60 @@ namespace {
     workspace.ensure_size(max_workspace);
   }
 
+  Ret get_horner_ratfun_coeffs(const FFRatFunList * rf,
+                               unsigned ncoeffs,
+                               unsigned idx,
+                               HornerRatFunPtr & f,
+                               CoeffHornerRatFunMap & map,
+                               HornerWorkspacePtr & workspace)
+  {
+    const MPReconstructedRatFun & rfun = rf->rf[idx];
+    const MPReconstructedPoly & num = rfun.numerator();
+    const MPReconstructedPoly & den = rfun.denominator();
+    unsigned nterms_num = num.size();
+    unsigned nterms_den = den.size();
+
+    // numerator
+    map.num_map.resize(nterms_num);
+    auto num_c = map.num_map.coeff.get();
+    for (unsigned j=0; j<nterms_num; ++j) {
+      Int n, d;
+      num.coeff(j).to_int(n, d);
+      if (d != 1 || n < 0 || n >= ncoeffs) {
+        logerr("RatFunEvalFromCoeffs coefficient index out of bounds");
+        return FAILED;
+      }
+      num_c[j] = n;
+    }
+
+
+    // denominator
+    map.den_map.resize(nterms_den);
+    auto den_c = map.den_map.coeff.get();
+    for (unsigned j=0; j<nterms_den; ++j) {
+      Int n, d;
+      den.coeff(j).to_int(n, d);
+      if (d != 1 || n < 0 || n >= ncoeffs) {
+        logerr("RatFunEvalFromCoeffs coefficient index out of bounds");
+        return FAILED;
+      }
+      den_c[j] = n;
+    }
+
+    // build result
+    f.from_sparse_poly(num.monomials(), num.size(),
+                       den.monomials(), den.size(),
+                       rf->n_vars, 0,
+                       map.num_map.pos.get(), map.den_map.pos.get());
+
+    std::size_t max_workspace = horner_required_workspace(f.num());
+    max_workspace = std::max(horner_required_workspace(f.den()),
+                             max_workspace);
+    workspace.ensure_size(max_workspace);
+
+    return SUCCESS;
+  }
+
 } // namespace
 
 
@@ -2141,6 +2195,49 @@ extern "C" {
     alg.init(nparsin, nfunctions, *data);
     unsigned id = g->new_node(std::move(algptr), std::move(data), &in_node);
 
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
+  FFNode ffAlgRatFunEvalFromCoeffs(FFGraph graph,
+                                   FFNode coeffs_node,
+                                   FFNode vars_node,
+                                   const FFRatFunList * rf)
+  {
+    typedef FunctionFromCoeffsData Data;
+    std::unique_ptr<FunctionFromCoeffs> algptr(new FunctionFromCoeffs());
+    std::unique_ptr<Data> data(new Data());
+    FunctionFromCoeffs & alg = *algptr;
+
+    unsigned nparsin = rf->n_vars;
+    unsigned nfunctions = rf->n_functions;
+
+    unsigned ncoeffs = ffNodeNParsOut(graph, coeffs_node);
+    if (ffIsError(ncoeffs))
+      return FF_ERROR;
+
+    data->f.reset(new HornerRatFunPtr[nfunctions]);
+    alg.fmap.reset(new CoeffHornerRatFunMap[nfunctions]);
+    Ret ret = 0;
+    for (int i=0; i<nfunctions; ++i) {
+      ret = get_horner_ratfun_coeffs(rf, ncoeffs, i, data->f[i], alg.fmap[i],
+                                     session.main_context()->ww);
+      if (ret != SUCCESS)
+        return FF_ERROR;
+    }
+
+    Graph * g = session.graph(graph);
+    if (!g) {
+      logerr("Graph does not exist");
+      return FF_ERROR;
+    }
+
+    FFNode inputnodes[2] = {coeffs_node, vars_node};
+    alg.init(ncoeffs, nparsin, nfunctions, *data);
+    unsigned id = g->new_node(std::move(algptr), std::move(data),
+                              inputnodes);
     if (id == ALG_NO_ID)
       return FF_ERROR;
 

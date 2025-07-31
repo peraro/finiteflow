@@ -261,6 +261,9 @@ extern "C" {
                              FFCStr json_file);
   FFNode ffAlgRatFunEval(FFGraph graph, FFNode in_node,
                          const FFRatFunList * rf);
+  FFNode ffAlgRatFunEvalFromCoeffs(FFGraph graph,
+                                   FFNode coeffs_node, FFNode vars_node,
+                                   const FFRatFunList * rf);
   FFNode ffAlgRatNumEval(FFGraph graph, FFCStr * nums, unsigned n_nums);
 
   // The array pointed by order must have length ==

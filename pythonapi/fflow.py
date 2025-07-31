@@ -406,8 +406,16 @@ def AlgRatFunEval(graph, in_node, rf):
         raise TypeError("Third argument of AlgRatFunEval() must be a RatFunList")
     return _Check(_lib.ffAlgRatFunEval(graph, in_node, rf._ptr))
 
+def AlgRatFunEvalFromCoeffs(graph, coeffs_node, vars_node, rf):
+    if not type(rf) is RatFunList:
+        raise TypeError("Fourth argument of AlgRatFunEvalFromCoeffs() " +
+                        "must be a RatFunList")
+    return _Check(_lib.ffAlgRatFunEvalFromCoeffs(graph,
+                                                 coeffs_node, vars_node,
+                                                 rf._ptr))
+
 def AlgRatNumEval(graph, nums):
-    cnums = [_ffi.new("char[]", x.encode('utf8')) for x in nums]
+    cnums = [_ffi.new("char[]", str(x).encode('utf8')) for x in nums]
     return _Check(_lib.ffAlgRatNumEval(graph, cnums, len(nums)))
 
 def AlgLaurent(graph, in_node, subgraph, order, max_deg=-1):

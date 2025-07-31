@@ -579,6 +579,32 @@ def testSubgraphRec():
                 exit(1)
 
 
+def testRatFunEvalFromCoeffs():
+    print("Test RatFunEvalFromCoeffs")
+    with GraphContextWithInput(2) as (g,inp):
+
+        rn = AlgRatNumEval(g,(1,2,3,4))
+
+        # note: here the coefficients 0,1,3,4 will be indexes inside
+        # the first input node (rn) and not actual numerical values.
+        fun = ParseRatFun(["x","y"],["(0 x + 1 y)/(2 x + 3 y)"])
+        if not len(fun.monomials()[0][0]) == len(fun.monomials()[0][1]) == 2:
+            print("- Something wrong with parser function")
+            exit(1)
+
+        rf = AlgRatFunEvalFromCoeffs(g,rn,inp,fun)
+        SetOutputNode(g,rf)
+
+        rec = ReconstructFunction(g)
+        pt = [1234567,67890123]
+        check = ParseRatFun(["x","y"],["(1 x + 2 y)/(3 x + 4 y)"])
+        if not EvaluateRatFunList(rec,pt,3) == EvaluateRatFunList(check,pt,3):
+            print("- Test failed!")
+            exit(1)
+
+        print("- Test passed!")
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -595,3 +621,4 @@ if __name__ == '__main__':
     testNumeric()
     testSubgraph()
     testSubgraphRec()
+    testRatFunEvalFromCoeffs()
