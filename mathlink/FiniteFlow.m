@@ -898,6 +898,7 @@ FFUIntListToJSON[file_,list_]:=Catch[Export[file,{Length[list],CheckedUInt32List
 
 
 FFSolverResetNeededVars[gid_,id_,vars_,needed_]:=Module[{position},
+  If[!SubsetQ[vars,needed], Message[FF::badneededvars]; Return[$Failed];];
   position = Association[{}];
   Table[position[vars[[ii]]]=ii-1;,{ii,Length[vars]}];
   FFSolverResetNeededVarsImplem[GetGraphId[gid],GetAlgId[gid,id],position/@needed]
