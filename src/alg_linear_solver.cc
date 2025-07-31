@@ -598,7 +598,7 @@ namespace fflow {
         ++ieq;
       }
     }
-    nndeps_ = ieq;
+    nndeps_ = nz+ieq;
 
     if (!output_is_sparse())
       get_needed_indep_();
@@ -889,6 +889,7 @@ namespace fflow {
     if (ret == FAILED)
       return FAILED;
 
+    eqdeps_.clear();
     eqdeps_.resize(nnindepeqs_);
     mat_(data).toReducedRowEcholon(mod, maxcol_, !(flag_ & NO_BACKSUBST_),
                                    !(flag_ & KEEP_ALL_OUTS_),
