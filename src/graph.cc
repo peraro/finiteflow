@@ -421,7 +421,9 @@ namespace fflow {
         continue;
       }
       Algorithm & alg = *node->algorithm();
-      if (all_nodes || mark_nodes_[idx])
+      if (0==idx && alg.nparsout)
+        adataout.xout_[idx].resize(alg.nparsout);
+      else if (all_nodes || mark_nodes_[idx])
         if (adataout.algdata_[idx].get() == nullptr) {
           adataout.algdata_[idx] = alg.clone_data(adatain.algdata_[idx].get());
           adataout.xout_[idx].resize(alg.nparsout);
