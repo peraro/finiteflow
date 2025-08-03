@@ -1133,7 +1133,7 @@ namespace fflow {
       return FAILED;
     Graph & a = *graphs_[graphid];
 
-    if (!a.nparsin[0])
+    if (!a.nparsin[0] && samplegen == nullptr)
       return FAILED;
 
     if (!a.rec_data_.get())
@@ -1211,7 +1211,7 @@ namespace fflow {
       return FAILED;
     Graph & a = *graphs_[graphid];
 
-    if (!a.nparsin[0])
+    if (!a.nparsin[0] && samplegen == nullptr)
       return FAILED;
 
     if (!a.rec_data_.get())
@@ -1318,8 +1318,10 @@ namespace fflow {
       return FAILED;
     Graph & a = *graphs_[graphid];
 
-    if (!a.nparsin[0] || a.nparsout<1)
-      return FAILED;
+    if (a.nparsout<1) {
+      res.clear();
+      return SUCCESS;
+    }
 
     if (!a.rec_data_.get())
       make_reconstructible_(a.id_);
