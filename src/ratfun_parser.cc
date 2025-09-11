@@ -1,6 +1,8 @@
 #include <cctype>
 #include <string>
 #include <cstdlib>
+#include <algorithm>
+#include <memory>
 #include <fflow/ratfun_parser.hh>
 #include <fflow/rational_function.hh>
 #include <fflow/mp_common.hh>
@@ -46,6 +48,8 @@ namespace fflow {
         return RatFunToken{RatFunToken::END, nullptr, 0, 0};
       }
 
+      void init();
+
       RatFunToken parse_var();
       RatFunToken parse_coeff();
       RatFunToken next_token();
@@ -54,8 +58,27 @@ namespace fflow {
       const char * end;
 
       const std::string * vars;
+      std::unique_ptr<unsigned[]> var_idxs;
       unsigned nvars;
     };
+
+    void RatFunTokenizer::init()
+    {
+      // sort variable indexes from longest to shortest name, so that
+      // the tokenizer is "greedy" when matching variable names
+      var_idxs.reset(new unsigned[nvars]);
+      std::iota(var_idxs.get(), var_idxs.get()+nvars, 0);
+      std::sort(var_idxs.get(), var_idxs.get()+nvars,
+                [this](unsigned i, unsigned j) -> bool
+                {
+                  int cmp = compare(this->vars[i].size(),
+                                    this->vars[j].size());
+                  if (cmp)
+                    return cmp > 0;
+                  else
+                    return i < j;
+                });
+    }
 
     RatFunToken RatFunTokenizer::next_token()
     {
@@ -164,7 +187,8 @@ namespace fflow {
     RatFunToken RatFunTokenizer::parse_var()
     {
       std::size_t max_length = end-cur;
-      for (unsigned i=0; i<nvars; ++i) {
+      for (unsigned j=0; j<nvars; ++j) {
+        unsigned i = var_idxs[j];
         if (vars[i].size() > max_length)
           continue;
         if (vars[i].compare(0, vars[i].size(), cur, vars[i].size()) == 0) {
@@ -224,7 +248,9 @@ namespace fflow {
       den.clear();
       cden.clear();
 
-      tokenizer = RatFunTokenizer{start, end, vars, nvars};
+      tokenizer = RatFunTokenizer{start, end, vars, 0, nvars};
+      tokenizer.init();
+
       DO_NEXT_TOKEN();
 
       // parse numerator
