@@ -162,6 +162,7 @@ namespace fflow {
 
   private:
     std::unique_ptr<UInt[]> bignumbers_ = nullptr;
+    std::unique_ptr<UInt[]> varpows_ = nullptr;
     std::unique_ptr<UInt[]> stack_ = nullptr;
     UInt this_mod_ = 0;
   };
@@ -180,14 +181,21 @@ namespace fflow {
           SMALLNUM,
           MEDNUM,
           BIGNUM,
+          VARPOW,
           END
     };
+
+   struct VarPow {
+     unsigned var;
+     int exponent;
+   };
 
   public:
 
     void init(unsigned npars,
               std::vector<std::vector<Instruction>> && bytecode,
               std::vector<MPRational> && bignums,
+              std::vector<VarPow> && varpows,
               AnalyticExpressionData & data);
 
     virtual Ret evaluate(Context * ctxt,
@@ -205,6 +213,7 @@ namespace fflow {
   private:
     std::vector<std::vector<Instruction>> bytecode_;
     std::vector<MPRational> bignumbers_;
+    std::vector<VarPow> varpows_;
     unsigned max_stack_size_ = 0;
   };
 

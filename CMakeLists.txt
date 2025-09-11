@@ -99,6 +99,7 @@ set(FFLOW_SOURCES
     src/alg_reconstruction.cc
     src/alg_mp_reconstruction.cc
     src/ratfun_parser.cc
+    src/ratexpr_parser.cc
 
     src/mp_functions.cc
     src/mp_gcd.cc
@@ -153,6 +154,7 @@ set(FFLOW_HEADERS
     include/fflow/rational_function.hh
     include/fflow/univariate_reconstruction.hh
     include/fflow/ratfun_parser.hh
+    include/fflow/ratexpr_parser.hh
 
     include/fflow/mp_common.hh
     include/fflow/mp_functions.hh

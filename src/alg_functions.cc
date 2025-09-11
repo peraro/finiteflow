@@ -211,6 +211,7 @@ namespace fflow {
   AnalyticExpression::init(unsigned npars,
                            std::vector<std::vector<Instruction>> && bytecode,
                            std::vector<MPRational> && bignums,
+                           std::vector<VarPow> && varpows,
                            AnalyticExpressionData & data)
   {
     nparsin.resize(1);
@@ -220,11 +221,14 @@ namespace fflow {
     nparsout = bytecode_.size();
 
     bignumbers_ = std::move(bignums);
+    varpows_ = std::move(varpows);
 
     max_stack_size_ = compute_max_stack_size_();
 
     if (bignumbers_.size())
       data.bignumbers_.reset(new UInt[bignumbers_.size()]);
+    if (varpows_.size())
+      data.varpows_.reset(new UInt[varpows_.size()]);
 
     data.stack_.reset(new UInt[max_stack_size_]);
   }
@@ -236,6 +240,8 @@ namespace fflow {
     Ptr newptr(new AnalyticExpressionData());
     if (bignumbers_.size())
       newptr->bignumbers_.reset(new UInt[bignumbers_.size()]);
+    if (varpows_.size())
+      newptr->varpows_.reset(new UInt[varpows_.size()]);
     newptr->stack_.reset(new UInt[max_stack_size_]);
     return std::move(newptr);
   }
@@ -266,6 +272,20 @@ namespace fflow {
 
     const UInt * bignums = data.bignumbers_.get();
     const UInt * in = xin[0];
+
+    for (unsigned j=0; j<varpows_.size(); ++j) {
+      if (varpows_[j].exponent >= 0) {
+        UInt z = in[varpows_[j].var];
+        data.varpows_[j] = power(z, varpows_[j].exponent, mod);
+      } else {
+        UInt z = in[varpows_[j].var];
+        if (z == 0)
+          return FAILED;
+        data.varpows_[j] = mul_inv(power(z, -varpows_[j].exponent, mod), mod);
+      }
+    }
+
+    const UInt * vpows = data.varpows_.get();
 
 #define POP() (*(--stack))
 #define PUSH(el) (*(stack++) = el)
@@ -312,8 +332,8 @@ namespace fflow {
 
         case POW:
           {
-            const UInt a = POP();
             const UInt b = POP();
+            const UInt a = POP();
             const UInt res = power(a,b,mod);
             PUSH(res);
             ++instr;
@@ -331,8 +351,8 @@ namespace fflow {
 
         case NEGPOW:
           {
-            const UInt a = POP();
             const UInt b = POP();
+            const UInt a = POP();
             if (a == 0)
               return FAILED;
             const UInt res = mul_inv(power(a,b,mod),mod);
@@ -366,6 +386,15 @@ namespace fflow {
           {
             const std::size_t idx = POP();
             const UInt res = bignums[idx];
+            PUSH(res);
+            ++instr;
+          }
+          break;
+
+        case VARPOW:
+          {
+            const std::size_t idx = POP();
+            const UInt res = vpows[idx];
             PUSH(res);
             ++instr;
           }
@@ -475,6 +504,14 @@ namespace fflow {
           break;
 
         case BIGNUM:
+          {
+            POP();
+            PUSH();
+            ++instr;
+          }
+          break;
+
+        case VARPOW:
           {
             POP();
             PUSH();

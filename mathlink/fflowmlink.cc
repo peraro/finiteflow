@@ -21,6 +21,7 @@
 #include <fflow/node_solver.hh>
 #include <fflow/eval_count.hh>
 #include <fflow/cached_subgraph.hh>
+#include <fflow/ratexpr_parser.hh>
 #include <mathlink.h>
 #include <WolframLibrary.h>
 using namespace fflow;
@@ -895,6 +896,30 @@ namespace  {
     return get_rec_opt(mlp, ReconstructionOptions());
   }
 
+  struct MathStringList {
+
+    void get_str(MLINK mlp, unsigned idx)
+    {
+      mlp_ = mlp;
+      MLGetString(mlp, &list[idx]);
+    }
+
+    void clear()
+    {
+      for (auto & str : list)
+        if (str)
+          MLReleaseString(mlp_, str);
+      list.clear();
+    }
+
+    ~MathStringList()
+    {
+      clear();
+    }
+
+    MLINK mlp_ = 0;
+    std::vector<const char *> list;
+  };
 
 } // namespace
 
@@ -4949,6 +4974,19 @@ extern "C" {
     for (int i=0; i<nnumbers; ++i)
       get_rational(mlp, numbers[i]);
 
+    int * varpowptr;
+    int varpowcount;
+    std::vector<AnalyticExpression::VarPow> varpows;
+    MLGetInteger32List(mlp,&varpowptr,&varpowcount);
+    if (varpowcount > 0) {
+      varpows.resize(varpowcount/2);
+      for (int j=0; j<varpowcount; j += 2) {
+        varpows[j/2].var = varpowptr[j];
+        varpows[j/2].exponent = varpowptr[j+1];
+      }
+    }
+    MLReleaseInteger32List(mlp, varpowptr, varpowcount);
+
     MLNewPacket(mlp);
 
     if (!session.graph_exists(graphid) || inputnodes.size() != 1) {
@@ -4958,7 +4996,97 @@ extern "C" {
 
     Graph * graph = session.graph(graphid);
 
-    alg.init(nparsin, std::move(bytecode), std::move(numbers), *data);
+    alg.init(nparsin, std::move(bytecode), std::move(numbers),
+             std::move(varpows), *data);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
+  int fflowml_alg_ratexpr_parse(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int n_args, nfunctions;
+    int nparsin=0;
+    MLNewPacket(mlp);
+    MLTestHead( mlp, "List", &n_args);
+
+    int graphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+    get_input_nodes(mlp, inputnodes);
+
+    typedef AnalyticExpressionData Data;
+    std::unique_ptr<AnalyticExpression> algptr(new AnalyticExpression());
+    std::unique_ptr<Data> data(new Data());
+    AnalyticExpression & alg = *algptr;
+
+    MLGetInteger32(mlp, &nparsin);
+
+    std::string vars_prefix;
+    {
+      const char * varprefix_str;
+      MLGetString(mlp, &varprefix_str);
+      vars_prefix.assign(varprefix_str);
+      MLReleaseString(mlp, varprefix_str);
+    }
+
+#if 0
+    std::vector<std::string> * vars_list;
+    int vars_len = 0;
+    MLTestHead(mlp, "List", &vars_len);
+    for (unsigned j=0; j<vars_len; ++j) {
+      const char * varstr;
+      MLGetString(mlp, &varstr);
+      vars_list.push_back(varstr);
+      MLReleaseString(mlp, varstr);
+    }
+#endif
+
+    MLTestHead(mlp, "List", &nfunctions);
+    MathStringList expr;
+    expr.list.resize(nfunctions);
+    for (int i=0; i<nfunctions; ++i)
+      expr.get_str(mlp, i);
+    std::unique_ptr<unsigned[]> expr_len(new unsigned[nfunctions]);
+    for (int i=0; i<nfunctions; ++i)
+      expr_len[i] = std::strlen(expr.list[i]);
+
+    MLNewPacket(mlp);
+
+    std::vector<std::vector<Instruction>> bytecode(nfunctions);
+    std::vector<MPRational> numbers;
+    std::vector<AnalyticExpression::VarPow> varpows;
+
+    Ret ret = parse_ratexpr_list(nparsin, vars_prefix, 0, //vars_list.data(),
+                                 expr.list.data(),
+                                 expr_len.get(),
+                                 nfunctions,
+                                 bytecode,
+                                 numbers,
+                                 varpows);
+    expr.clear();
+
+    if (ret != SUCCESS || !session.graph_exists(graphid)
+        || inputnodes.size() != 1) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+
+    alg.init(nparsin, std::move(bytecode), std::move(numbers),
+             std::move(varpows), *data);
     unsigned id = graph->new_node(std::move(algptr), std::move(data),
                                   inputnodes.data());
 

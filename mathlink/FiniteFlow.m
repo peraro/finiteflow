@@ -1787,18 +1787,31 @@ FFInstrNEGPOW = 5;
 FFInstrSMALLNUM = 6;
 FFInstrMEDNUM = 7;
 FFInstrBIGNUM = 8;
-FFInstrEND = 9;
+FFInstrVARPOW = 9;
+FFInstrEND = 10;
 
 
-RegisterAlgRatExprEval[gid_,inputs_,{params_,funcsin_}]:=Module[
+RegisterAlgRatExprEval[gid_,inputs_,{params_,funcsin_,fromstr_}]:=Module[
   {fun,FFCompile,numcounter,number,invnumber,error,
-   byteinstr,maxsmallint,maxmediumint,bytecodes,funcs},
+   byteinstr,maxsmallint,maxmediumint,bytecodes,funcs,
+   vpows,ffexppowdict},
+   
+  If[TrueQ[fromstr],
+    funcs = ToString[#,InputForm]&/@(funcsin /. Dispatch[Inner[Rule,params,Symbol["ffsym"<>ToString[#]]&/@Range[0,Length[params]-1],List]]);
+    Return[FFAlgRatExprEvalParseImplem[gid,inputs,Length[params],"ffsym",funcs]]
+  ];
   
   byteinstr = 2^8;
   maxsmallint = byteinstr-1;
   maxmediumint = 2^62;
   
-  funcs = funcsin /. Dispatch[Inner[Rule,params,FFExV/@Range[0,Length[params]-1],List]];
+  funcs = funcsin /. Dispatch[Inner[Rule,params,FFExV/@Range[0,Length[params]-1],List]] /. FFExV[a_]^b_:>FFExVPow[{a,b}];
+  vpows = Union[Cases[funcs,_FFExVPow,Infinity]][[;;,1]];
+  If[Length[vpows]>0,
+    ffexppowdict = Association[{}];
+    Do[ffexppowdict[vpows[[iii]]]=FFExVPow[iii-1];,{iii,Length[vpows]}];
+    funcs = funcs /. FFExVPow->ffexppowdict;
+  ];
   
   numcounter=0;
   number[i_]:=number[i]=(invnumber[numcounter]=i; numcounter++);
@@ -1807,6 +1820,7 @@ RegisterAlgRatExprEval[gid_,inputs_,{params_,funcsin_}]:=Module[
 
   FFCompile[expr_]:=error[expr];
   FFCompile[FFExV[j_]]:=(FFCompile[j]; Sow[FFInstrVAR];);
+  FFCompile[FFExVPow[j_]]:=(FFCompile[j]; Sow[FFInstrVARPOW];);
   FFCompile[a_Integer]:=Which[
     0<=a<=maxsmallint,
     Sow[FFInstrSMALLNUM]; Sow[a];,
@@ -1824,20 +1838,21 @@ RegisterAlgRatExprEval[gid_,inputs_,{params_,funcsin_}]:=Module[
   FFCompile[a_Times]:=(FFCompile/@(List@@a); FFCompile[Length[a]]; Sow[FFInstrMUL];);
   FFCompile[Power[a_,b_Integer]]:=Which[
     TrueQ[b>0],
-    (FFCompile[b]; FFCompile[a]; Sow[FFInstrPOW];);,
+    (FFCompile[a]; FFCompile[b]; Sow[FFInstrPOW];);,
     TrueQ[b<0],
-    (FFCompile[-b]; FFCompile[a]; Sow[FFInstrNEGPOW];);,
+    (FFCompile[a]; FFCompile[-b]; Sow[FFInstrNEGPOW];);,
     True,
     error[a^b];
   ];
     
   Catch[
     bytecodes = Table[ Reap[FFCompile[fun]; Sow[FFInstrEND];][[2,1]] ,{fun,funcs}];
-    FFAlgRatExprEvalImplem[gid,inputs,Length[params],bytecodes,ToString[#,InputForm]&/@(invnumber/@Range[0,numcounter-1])]
+    FFAlgRatExprEvalImplem[gid,inputs,Length[params],bytecodes,ToString[#,InputForm]&/@(invnumber/@Range[0,numcounter-1]),CheckedInt32List[Flatten[vpows]]]
   ]  
 ];
 
-FFAlgRatExprEval[gid_,id_,inputs_List,params_,functions_List]:=FFRegisterAlgorithm[RegisterAlgRatExprEval,gid,id,inputs,{params,functions}];
+Options[FFAlgRatExprEval]={"FromStringParser"->False};
+FFAlgRatExprEval[gid_,id_,inputs_List,params_,functions_List,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgRatExprEval,gid,id,inputs,{params,functions,OptionValue["FromStringParser"]}];
 
 
 Options[FFTogether] := Join[{"Parameters"->Automatic},AutoReconstructionOptions[]];
@@ -1969,6 +1984,7 @@ FFLoadLibObjects[] := Module[
     FFRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_alg_rat_rec", LinkObject, LinkObject];
     FFParallelRatRecImplem=LibraryFunctionLoad[fflowlib, "fflowml_parallel_rat_rec", LinkObject, LinkObject];
     FFAlgRatExprEvalImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratexpr_eval", LinkObject, LinkObject];
+    FFAlgRatExprEvalParseImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_ratexpr_parse", LinkObject, LinkObject];
     FFSetLearningOptionsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_set_learning_options", LinkObject, LinkObject];
     FFCachedSubgraphImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph", LinkObject, LinkObject];
     FFCachedFromSubgraphImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_from_subgraph", LinkObject, LinkObject];
