@@ -1855,7 +1855,7 @@ Options[FFAlgRatExprEval]={"FromStringParser"->False};
 FFAlgRatExprEval[gid_,id_,inputs_List,params_,functions_List,OptionsPattern[]]:=FFRegisterAlgorithm[RegisterAlgRatExprEval,gid,id,inputs,{params,functions,OptionValue["FromStringParser"]}];
 
 
-Options[FFTogether] := Join[{"Parameters"->Automatic},AutoReconstructionOptions[]];
+Options[FFTogether] := Join[{"Parameters"->Automatic},AutoReconstructionOptions[],Options[FFAlgRatExprEval]];
 FFTogether[expr_,OptionsPattern[]]:=Module[
   {opt,vars,g,res,in,ex},
   opt = (#[[1]]->OptionValue[#[[1]]])&/@Options[FFTogether];
@@ -1867,7 +1867,7 @@ FFTogether[expr_,OptionsPattern[]]:=Module[
   res = Catch[
     CheckVariables[vars];
     FFNewGraph[g,in,vars];
-    If[!TrueQ[FFAlgRatExprEval[g,ex,{in},vars,{expr}]], Throw[$Failed]];
+    If[!TrueQ[FFAlgRatExprEval[g,ex,{in},vars,{expr},Sequence@@FilterRules[{opt}, Options[FFAlgRatExprEval]]]], Throw[$Failed]];
     FFGraphOutput[g,ex];
     If[TrueQ[#[[0]]==List],#[[1]],#]&@FFReconstructFunction[g,vars,Sequence@@FilterRules[{opt}, Options[FFReconstructFunction]]]
   ];
