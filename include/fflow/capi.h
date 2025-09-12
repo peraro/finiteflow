@@ -327,6 +327,21 @@ extern "C" {
   FFUInt ffEvalCountReset(FFGraph graph, FFNode node, FFUInt count);
 
 
+  // At least one between vars and var_prefix must be specified.  The
+  // latter allows to refer to the variables in the expression as
+  // "`var_prefix``idx`" where `idx` is their index (zero-based).
+  FFNode ffAlgRatExprEval(FFGraph graph, FFNode in_node,
+                          FFCStr * vars, unsigned n_vars,
+                          FFCStr var_prefix,
+                          FFCStr * functions, unsigned n_functions);
+  FFNode ffAlgRatExprEvalEx(FFGraph graph, FFNode in_node,
+                            FFCStr * vars, unsigned n_vars,
+                            FFCStr var_prefix,
+                            FFCStr * functions,
+                            const unsigned * functions_len,
+                            unsigned n_functions);
+
+
   /////////////////////////////
   // Info about learned algs //
   /////////////////////////////

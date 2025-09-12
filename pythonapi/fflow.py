@@ -990,6 +990,58 @@ def EvaluatePoints(graph,points,prime_no=0,n_threads=0):
     return res
 
 
+def AlgRatExprEval(graph, in_node, functions,
+                   variables=None, variable_prefix=None, n_vars=None):
+    '''At least one between variables and variable_prefix must be
+       specified.  The latter is especially recommended when the list
+       of variables is long and it allows to refer to the variables in
+       the expressions as "`variable_prefix``idx`" where `idx` is
+       their index (zero-based).
+
+    '''
+    if variables is None:
+        if variable_prefix is None:
+            raise ValueError("At least one between variables " +
+                             "and variable_prefix must be given as input.")
+        if n_vars is None:
+            raise ValueError("At least one between variables " +
+                             "and n_vars must be given as input.")
+    else:
+        if not (n_vars is None) and n_vars != len(variables):
+            raise ValueError("Explicit n_vars != len(variables)")
+        n_vars = len(variables)
+
+    cvars = _ffi.NULL
+    if not variables is None:
+        cvars = [_ffi.new("char[]", x.encode('utf8')) for x in variables]
+    cvarpref = _ffi.NULL
+    if not variable_prefix is None:
+        cvarpref = _ffi.new("char[]", variable_prefix.encode('utf8'))
+    cfuns = [_ffi.new("char[]", f.encode('utf8')) for f in functions]
+    lens = [len(f) for f in functions]
+    return _Check(_lib.ffAlgRatExprEvalEx(graph, in_node,
+                                          cvars, len(variables), cvarpref,
+                                          cfuns, lens, len(functions)))
+
+
+def RatExprToRatFunList(expressions,
+                        variables=None, variable_prefix=None, n_vars=None,
+                        **kwargs):
+    if n_vars is None and not (variables is None):
+        n_vars = len(variables)
+    with GraphContextWithInput(n_vars) as (g,inp):
+        node = AlgRatExprEval(g,inp, expressions,
+                              variables=variables,
+                              variable_prefix=variable_prefix,
+                              n_vars=n_vars)
+        SetOutputNode(g,node)
+        rec = ReconstructFunction(g,**kwargs)
+        if type(rec) is RatFunList:
+            return rec
+        else:
+            raise RuntimeError("Reconstruction Failed")
+
+
 def ReconstructNumeric(graph, **kwargs):
     nparsout = GraphNParsOut(graph)
     recopt = _ffi.new("FFRecOptions *",kwargs)

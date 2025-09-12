@@ -605,6 +605,20 @@ def testRatFunEvalFromCoeffs():
         print("- Test passed!")
 
 
+def testRatExpr():
+    print("Test RatExprEval")
+    rf = RatExprToRatFunList(["(-1/3433683820292512484657849089281 - x^(-1) - y^2)^(-2)",
+                              "(x^2 - y^(-1))*(1 + z^(-2))^2"],
+                             variables=["x","y","z"])
+    point = [758187025378063064,4448666498048535379,2564206275484034988]
+    check = [5118394223678577184, 1684865360044594812]
+    if EvaluateRatFunList(rf,point,prime_no=0)==check:
+        print("- Test passed!")
+    else:
+        print("- Test failed!")
+        exit(1)
+
+
 if __name__ == '__main__':
     testRatFun()
     testParsing()
@@ -622,3 +636,4 @@ if __name__ == '__main__':
     testSubgraph()
     testSubgraphRec()
     testRatFunEvalFromCoeffs()
+    testRatExpr()

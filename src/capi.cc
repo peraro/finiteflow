@@ -23,6 +23,7 @@
 #include <fflow/mp_functions.hh>
 #include <fflow/json.hh>
 #include <fflow/ratfun_parser.hh>
+#include <fflow/ratexpr_parser.hh>
 #include <fflow/eval_count.hh>
 #include <fflow/algorithm.hh>
 #include <fflow/mp_gcd.hh>
@@ -2940,6 +2941,70 @@ extern "C" {
     out[len] = 0;
 
     return out;
+  }
+
+  FFNode ffAlgRatExprEvalEx(FFGraph graph, FFNode in_node,
+                            FFCStr * vars, unsigned n_vars,
+                            FFCStr var_prefix,
+                            FFCStr * functions,
+                            const unsigned * functions_len,
+                            unsigned n_functions)
+  {
+    if (!vars && !var_prefix) {
+      logerr("Either a list of variables of a variable prefix "
+             "needs to be specified.");
+      return FF_ERROR;
+    }
+
+    std::unique_ptr<std::string[]> var_names;
+    if (vars) {
+      var_names.reset(new std::string[n_vars]);
+      for (unsigned j=0; j<n_vars; ++j)
+        var_names[j] = vars[j];
+    }
+    std::string varpref;
+    if (var_prefix)
+      varpref = var_prefix;
+
+    std::vector<std::vector<Instruction>> bytecode(n_functions);
+    std::vector<MPRational> numbers;
+    std::vector<AnalyticExpression::VarPow> varpows;
+
+    Ret ret = parse_ratexpr_list(n_vars, varpref, var_names.get(),
+                                 functions, functions_len, n_functions,
+                                 bytecode, numbers, varpows);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    if (!g)
+      return FF_ERROR;
+
+    typedef AnalyticExpressionData Data;
+    std::unique_ptr<AnalyticExpression> algptr(new AnalyticExpression());
+    std::unique_ptr<Data> data(new Data());
+    AnalyticExpression & alg = *algptr;
+
+    alg.init(n_vars, std::move(bytecode), std::move(numbers),
+             std::move(varpows), *data);
+    FFNode id = g->new_node(std::move(algptr), std::move(data), &in_node);
+
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
+  FFNode ffAlgRatExprEval(FFGraph graph, FFNode in_node,
+                          FFCStr * vars, unsigned n_vars,
+                          FFCStr var_prefix,
+                          FFCStr * functions, unsigned n_functions)
+  {
+    std::unique_ptr<unsigned []> functions_len(new unsigned[n_functions]);
+    for (unsigned j=0; j<n_functions; ++j)
+      functions_len[j] = strlen(functions[j]);
+    return ffAlgRatExprEvalEx(graph, in_node, vars, n_vars, var_prefix,
+                              functions, functions_len.get(), n_functions);
   }
 
 } // extern "C"
