@@ -171,7 +171,7 @@ FFSampleFromPoints[graph,filename,nthreads] is equivalent to FFSampleFromPoints[
 FFSampleFromPoints[graph,filename,start,npoints] evaluates the graph at a contiguous subset of npoints sample points, taken from the ones stored in filename, starting from the one at position start (counting from zero).  The evaluations are parallelized over an automatically chosen number of threads.
 FFSampleFromPoints[graph,filename,start,npoints,nthreads] is equivalent to FFSampleFromPoints[graph,filename,start,npoints], but the evaluations are parallelized over nthreads threads."
 FFNSamplePoints::usage = "FFNSamplePoints[graph] returns a list of length two.  The first element is the total number of sample points needed for recostructing the full output of graph.  The second element is a list of integers representing the number of sample points needed for the reconstruction of each element of the output of graph."
-FFParallelReconstructDegreeData::usage = "FFParallelReconstructDegreeData[graph] reconstructs degree data degree data parallelizing univariate reconstructions."
+FFParallelReconstructDegreeData::usage = "FFParallelReconstructDegreeData[graph] reconstructs degree data parallelizing univariate reconstructions."
 
 FFGraphEvaluate::usage="FFGraphEvaluate[graph,point] evaluates graph at point, where point is a list of integers.  The prime field may be changed passing the option \"PrimeNo\"."
 FFGraphEvaluateMany::usage="FFGraphEvaluateMany[graph,points] evaluates graph at the specified list of points.  The prime field may be changed globally using the option \"PrimeNo\", or individually for each point by appending an additional entry with the index of the prime to be used.  By default, evaluations are performed in parallel."
