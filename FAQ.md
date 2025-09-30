@@ -42,9 +42,3 @@ and is equivalent to
 ```
   FFDenseSolve[{Together[t + 1/t] x + y == 3}, {x,y}]
 ```
-
-
-The definition of a node in a graph returns `$Failed`
------------------------------------------------------
-
-This can happen because of multiple reasons, but it is often due to the fact that the expected numbers of inputs of the new node, or their length, is incompatible with the selected input nodes.
