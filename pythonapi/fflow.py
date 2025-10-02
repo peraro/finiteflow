@@ -174,12 +174,12 @@ class RatFunList:
 
 class IdxRatFunList:
     '''\
-An opaque object representing an indexed list of rational \
-functions, namely a list of functions and a list of indexes into \
-the list of functions.  The indexes are meant avoid repetition of \
-equal entries in the list.
+An opaque object representing an indexed list of rational functions,
+namely a list of functions and a list of indexes into the list of
+functions.  The indexes are meant avoid repetition of equal entries in
+the list.
 
-It is used to define sparse linear systems, which often have many \
+It is used to define sparse linear systems, which often have many
 repeated entries.
 
 As an example using
@@ -189,10 +189,11 @@ would be effectively equivalent to the list
     functions = [f0,f0,f1,f2,f2,f0]
 but storing the functions [f0,f1,f2] only once.
 
-Note that the builtin len() function and the .size() method return \
-the length of the list of indexes.  Use the method .nfunctions() to \
+Note that the builtin len() function and the .size() method return
+the length of the list of indexes.  Use the method .nfunctions() to
 get the list of unique functions instead.
-'''
+
+    '''
     def __init__(self):
         self._ptr = _ffi.NULL
 
@@ -642,7 +643,8 @@ def RatFunToJSON(rf, json_file):
 
 
 def ParseRatFun(variables, functions):
-    '''This uses a simple and limited parser of rational functions:
+    '''\
+This uses a simple and limited parser of rational functions:
 - functions must be collected under common denominator
 - numerators and denominators must be in expanded form
 - rational coefficients must be in front of their monomials,
@@ -879,7 +881,8 @@ ReconstructFunction(graph,**kwargs) reconstructs the rational function
 defined by the graph. The allowed keyword arguments kwargs are:
 start_mod, min_primes, max_primes, max_deg, dbginfo, polymethod,
 n_threads.  All of them must have integer values.
-'''
+
+    '''
     return _ReconstructFunction(_lib.ffReconstructFunction,graph,**kwargs)
 
 def ReconstructFunctionMod(graph, **kwargs):
@@ -889,7 +892,8 @@ function defined by the graph modulo the prime PrimeNo(start_mod),
 with start_mod=0 by default. The allowed keyword arguments kwargs are:
 start_mod, max_deg, dbginfo, polymethod, n_threads.  All of them must
 have integer values.
-'''
+
+    '''
     return _ReconstructFunction(_lib.ffReconstructFunctionMod,graph,**kwargs)
 
 def ParallelReconstructUnivariate(graph, **kwargs):
@@ -1091,12 +1095,6 @@ def ParallelRatRec(z, mod, nthreads=0):
         return _lib.ffParallelRatRec(zz,mmod,llen,nthreads)
     return _RatRec(cfun, z, mod)
 
-def RatMod(rationals, prime_no):
-    with GraphContext() as g:
-        neval = AlgRatNumEval(g,rationals)
-        SetOutputNode(g,neval)
-        return EvaluateGraph(g, [], prime_no)
-
 
 def ReconstructFunctionWithDegrees(graph, degdata, **kwargs):
     degs = _GetDegData(graph,degdata)
@@ -1109,6 +1107,19 @@ def ReconstructFunctionWithDegreesMod(graph, degdata, **kwargs):
     def cfun(g,opt,res):
         return _lib.ffReconstructFunctionWithDegreesMod(g,opt,degs,res)
     return _ReconstructFunction(cfun,graph,**kwargs)
+
+
+
+
+# The following functions are additional utilities implemented using
+# in the Python API, which are not part of the C API (yet).
+
+
+def RatMod(rationals, prime_no):
+    with GraphContext() as g:
+        neval = AlgRatNumEval(g,rationals)
+        SetOutputNode(g,neval)
+        return EvaluateGraph(g, [], prime_no)
 
 
 def ParallelReconstructDegreeData(graph,**kwargs):
@@ -1186,7 +1197,8 @@ such that
     input == list(output[i] for i in fromouts)
 ```
 where input/output is the input/output of the new node.
-'''
+
+    '''
     SetOutputNode(graph, nodein)
     nout = GraphNParsOut(graph)
     nin = NodeNParsOut(graph,0)

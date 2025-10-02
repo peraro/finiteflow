@@ -18,14 +18,12 @@
 extern "C" {
 #endif
 
-  // Used for FFStatus
+  // Possible return values of FFStatus.  FF_ERROR is also used on
+  // error when FFGraph or FFNode are expected.
 #define FF_SUCCESS (0)
 #define FF_ERROR (~(unsigned)(0))
 #define FF_MISSING_POINTS (FF_ERROR - 1)
 #define FF_MISSING_PRIMES (FF_ERROR - 2)
-
-  // Used for missing FFGraph, FFNode or things returning unsigned
-#define FF_NO_ALGORITHM (~(unsigned)(0))
 
   // Used for errors in functions returning 64-bit unsigned ints
 #define FF_FAILED (~(FFUInt)(0))
@@ -167,7 +165,7 @@ extern "C" {
 
   /*
    * Solves the system A.x = b with n_eqs equations and n_vars unknown
-   * varibles x.  The entries of the matrix a A and the vector b are
+   * variables x.  The entries of the matrix a A and the vector b are
    * rational functions of the free parameters returned by in_node.
    *
    * The inputs are the non vanishing entries of the n_eqs*(n_vars+1)
@@ -454,7 +452,7 @@ extern "C" {
   uint16_t * ffRatFunNumExponents(const FFRatFunList * rf, unsigned idx);
   uint16_t * ffRatFunDenExponents(const FFRatFunList * rf, unsigned idx);
 
-  // returned string must be freed using ffFreeCStr
+  // The returned string must be freed using ffFreeCStr
   char * ffRatFunToStr(const FFRatFunList * rf, unsigned idx,
                        const FFCStr * vars);
 
@@ -540,7 +538,7 @@ extern "C" {
                                        const size_t * idx,
                                        size_t n_indexes);
 
-  // output must be freed using ffFreeMemoryU64
+  // The returned list must be freed using ffFreeMemoryU64
   FFUInt * ffEvaluateRatFunList(const FFRatFunList * rf,
                                 const FFUInt * input, unsigned prime_no);
 
@@ -549,7 +547,7 @@ extern "C" {
   // Reconstruction //
   ////////////////////
 
-  // on success, results will point to a list of rational functions,
+  // On success, results will point to a list of rational functions,
   // which can be cleared with ffFreeRatFun
   FFStatus ffReconstructFunction(FFGraph graph, FFRecOptions options,
                                  FFRatFunList ** results);

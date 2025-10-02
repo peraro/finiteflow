@@ -584,7 +584,7 @@ extern "C" {
 
     SubGraph * subalg = dynamic_cast<SubGraph*>(alg);
     if (!subalg)
-      return FF_NO_ALGORITHM;
+      return FF_ERROR;
 
     return subalg->subgraph()->nparsout;
   }

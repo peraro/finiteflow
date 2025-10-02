@@ -684,7 +684,6 @@ namespace fflow {
 
   } // namespace
 
-  // TODO: first tests without bignums
 
   Ret parse_ratexpr_list(unsigned npars,
                          const std::string & vars_prefix,
