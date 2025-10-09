@@ -565,6 +565,70 @@ namespace  {
     }
   }
 
+  Ret get_sparse_system_ex_data(MLINK mlp,
+                                const unsigned in_nodes_nparsin[],
+                                unsigned n_in_nodes,
+                                AnalyticSparseSolverEx & sys,
+                                AnalyticSparseSolverExData & data,
+                                HornerWorkspacePtr & ww,
+                                unsigned & nparsin)
+  {
+    Ret ret = SUCCESS;
+
+    long n_rows, two, lcsize;
+    int csize;
+
+    MLCheckFunction(mlp, "List", &lcsize);
+    data.c.resize(lcsize);
+    sys.cmap.resize(lcsize);
+    for (int j=0; j<lcsize; ++j) {
+      MathGetHornerFun getfun;
+      getfun.get_horner_ratfun(mlp, data.c[j], sys.cmap[j], ww);
+      nparsin = getfun.nvars;
+    }
+
+    MLCheckFunction(mlp, "List", &n_rows);
+    sys.rinfo.resize(n_rows);
+    for (int i=0; i<n_rows; ++i) {
+      MLCheckFunction(mlp, "List", &two);
+      {
+        int * crinfo;
+        MLGetInteger32List(mlp, &crinfo, &csize);
+        AnalyticSparseSolverEx::RowInfo & rinf = sys.rinfo[i];
+        rinf.size = csize;
+        rinf.cols.reset(new unsigned[csize]);
+        rinf.w.reset(new AnalyticSparseSolverEx::Weights[csize]);
+        std::copy(crinfo, crinfo+csize, rinf.cols.get());
+        MLReleaseInteger32List(mlp, crinfo, csize);
+
+        MLCheckFunction(mlp, "List", &lcsize);
+        for (unsigned k=0; k<csize; ++k) {
+          int wsizex3;
+          mlint64 * ws;
+          MLGetInteger64List(mlp, &ws, &wsizex3);
+          unsigned wsize = wsizex3/3;
+          rinf.w[k].size = wsize;
+          rinf.w[k].w.reset(new AnalyticSparseSolverEx::Weight[wsize]);
+          AnalyticSparseSolverEx::Weight * wn = rinf.w[k].w.get();
+          for (unsigned wj=0; wj<wsize; ++wj) {
+            wn[wj].node = ws[3*wj];
+            wn[wj].el = ws[3*wj+1];
+            wn[wj].idx = ws[3*wj+2];
+            if (ret == SUCCESS &&
+                (wn[wj].node+1 >= n_in_nodes ||
+                 wn[wj].el >= in_nodes_nparsin[wn[wj].node+1])) {
+              logerr("Indexes of weights out of bounds");
+              ret = FAILED;
+            }
+          }
+          MLReleaseInteger64List(mlp, ws, wsize);
+        }
+      }
+    }
+
+    return ret;
+  }
+
 
   void get_num_dense_system_data(MLINK mlp,
                                  DynamicMatrixT<MPRational> & c)
@@ -1915,6 +1979,80 @@ extern "C" {
   }
 
 
+  int fflowml_alg_sparse_system_ex(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int nargs, nvars;
+    MLNewPacket(mlp);
+
+    MLTestHead( mlp, "List", &nargs);
+
+    int graphid;
+    std::vector<unsigned> inputnodes;
+    MLGetInteger32(mlp, &graphid);
+
+    get_input_nodes(mlp, inputnodes);
+
+    unsigned nparsin = 0;
+
+    MLGetInteger32(mlp, (int*)(&nparsin));
+    MLGetInteger32(mlp, &nvars);
+
+    typedef AnalyticSparseSolverExData Data;
+    std::unique_ptr<AnalyticSparseSolverEx> algptr(new AnalyticSparseSolverEx());
+    std::unique_ptr<Data> data(new Data());
+    auto & alg = *algptr;
+
+    alg.nparsin.resize(inputnodes.size());
+    for (unsigned i=1; i<inputnodes.size(); ++i) {
+      Node * node = session.node(graphid, inputnodes[i]);
+      if (!node) {
+        MLNewPacket(mlp);
+        MLPutSymbol(mlp, "$Failed");
+        return LIBRARY_NO_ERROR;
+      }
+      alg.nparsin[i] = node->algorithm()->nparsout;
+    }
+
+    Ret ret = get_sparse_system_ex_data(mlp,
+                                        alg.nparsin.data(),
+                                        alg.nparsin.size(),
+                                        alg,
+                                        *data, session.main_context()->ww,
+                                        nparsin);
+
+    if (ret == SUCCESS) {
+      set_first_nparsin(alg,nparsin);
+      int * neededv;
+      int needed_size;
+      MLGetInteger32List(mlp, &neededv, &needed_size);
+      alg.init(alg.rinfo.size(), nvars,
+               (unsigned*)neededv, needed_size, *data);
+      MLReleaseInteger32List(mlp, neededv, needed_size);
+    }
+    MLNewPacket(mlp);
+
+    if (ret != SUCCESS || !session.graph_exists(graphid)) {
+      MLPutSymbol(mlp, "$Failed");
+      return LIBRARY_NO_ERROR;
+    }
+
+    Graph * graph = session.graph(graphid);
+    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+                                  inputnodes.data());
+
+    if (id == ALG_NO_ID) {
+      MLPutSymbol(mlp, "$Failed");
+    } else {
+      MLPutInteger32(mlp, id);
+    }
+
+    return LIBRARY_NO_ERROR;
+  }
+
+
   int fflowml_alg_json_sparse_system(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);
@@ -2403,6 +2541,12 @@ extern "C" {
 
     } else if (dynamic_cast<NumericSparseSolver *>(alg)) {
       NumericSparseSolver & ls = *static_cast<NumericSparseSolver *>(alg);
+      ls.delete_unneeded_eqs(session.alg_data(id, nodeid));
+      session.invalidate_subctxt_alg_data(id, nodeid);
+      MLPutSymbol(mlp, "Null");
+
+    } else if (dynamic_cast<AnalyticSparseSolverEx *>(alg)) {
+      auto & ls = *static_cast<AnalyticSparseSolverEx *>(alg);
       ls.delete_unneeded_eqs(session.alg_data(id, nodeid));
       session.invalidate_subctxt_alg_data(id, nodeid);
       MLPutSymbol(mlp, "Null");

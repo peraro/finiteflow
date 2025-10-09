@@ -41,6 +41,7 @@ FFAlgDenseSolver::usage = "FFAlgDenseSolver[graph,node,{input},params,eqs,vars] 
 FFAlgSparseSolver::usage = "FFAlgSparseSolver[graph,node,{input},params,eqs,vars] defines a sparse linear solver returning the solution of the equations eqs in the variables vars as function of the free input parameters params."
 FFAlgNodeDenseSolver::usage = "FFAlgNodeDenseSolver[graph,node,{input},neqs,vars] defines a dense linear solver returning the solution of the equations A[[i,1]] vars[[1]] + A[[i,2]] vars[[2]] + ... == b[[i]] in the variables vars, for i=1,...,neqs, where the entries returned by the input node are interpreted as the elements of the matrix (A b) in row-major order."
 FFAlgNodeSparseSolver::usage = "FFAlgNodeSparseSolver[graph,node,{input},columns,vars] defines a sparse linear solver returning the solution of the equations A[[i,1]] vars[[1]] + A[[i,2]] vars[[2]] + ... == b[[i]] in the variables vars, for i=1,...,neqs=Length[columns].  The entries returned by the input node are interpreted as the non-vanishing elements of the matrix (A b) in row-major order and columns is a list of lists, namely columns[[i]] contains the indexes of the non-vanishing columns of the i-th row of such matrix."
+FFAlgSparseSolverEx::usage = "FFAlgSparseSolverEx[graph,node,{paramsinput,weights1,weights2,...},params,{{w11,w12,...},{w21,w22,...},...},eqs,vars] defines a sparse linear solver (see FFAlgSparseSolver) where the rational coefficients of the matrix (A|b) defining the system (A.vars==b) are rational functions of params and homogeneous linear functions of the weights, where the latter are obtained from additional input nodes."
 FFAlgSubgraphFit::usage = "FFAlgSubgraphFit[graph,node,{input},subgraph,vars,coeffs] is a subgraph algorithm which returns the solution for the coefficients coeffs, as functions of the input parameters, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the list of variables vars concatenated with the input parameters represented by the input node.
 FFAlgSubgraphFit[graph,node,{},subgraph,vars,coeffs] is a subgraph algorithm which returns the numerical solution for the coefficients coeffs, solving the linear fit problem coeffs[[1]] f[[1]] + coeffs[[2]] f[[2]] + ... + coeffs[[n-1]] f[[n-1]] == f[[n]], where f is the output list of subgraph, evaluated as a function of the variables vars."
 FFAlgSubgraphReconstruct::usage = "FFAlgSubgraphReconstruct[graph,node,{input},subgraph,vars] reconstructs the output of subgraph as a list of functions of the variables vars and returns the coefficients of their monomials as functions of the input parameters.  The input of subgraph is the list of variables vars concatenated with the input parameters represented by the input node."
@@ -209,6 +210,10 @@ FF::noregfun = "No registered function with identifier `1`."
 FF::badregfunvars = "The registered expression `1` depends on `2` variables, but `3` are required."
 FF::badpattern = "Variables `1` match the variables pattern but they are not in the list of unknowns."
 FF::badtakepattern = "Invalid take pattern."
+FF::badsysweights = "Weights must of a list of lists."
+FF::badsysautoweights = "Automatic weights require both \"WeightIdx\" and \"WeightPattern\" options to be set."
+FF::badweqpattern = "Equations non-homogeneous in the weights or invalid weight pattern."
+FF::badwnodelen = "Input nodes for weights do not have the expected length"
 
 FF::noalg = "No algorithm with identifier `1`."
 FF::nograph = "No graph with identifier `1`."
@@ -793,6 +798,85 @@ FFAlgSparseSolver[gid_,id_,inputs_List,params_,eqs_,vars_,OptionsPattern[]]:=Mod
   If[TrueQ[OptionValue["VarsPattern"]==Automatic],
    FFRegisterAlgorithm[RegisterSparseSolver, gid, id, inputs, {params, eqs, vars, OptionValue["NeededVars"], OptionValue["ApplyFunction"]}],
    FFRegisterAlgorithm[RegisterSparseSolver, gid, id, inputs, {params, eqs, vars, OptionValue["VarsPattern"], OptionValue["NeededVars"], OptionValue["ApplyFunction"]}]
+  ]
+];
+
+
+RegisterSparseSolverEx[gid_,inputs_,{params_,weights_,eqsin_,vars_,widx_,wpatt_,neededvarsin_,applyfun_}]:=Module[
+  {varmap,xx,xvars},
+  Catch[
+    xvars = xx/@Range[Length[vars]];
+    varmap = Dispatch[Inner[Rule, vars, xvars, List]];
+    RegisterSparseSolverEx[gid,inputs, {params,weights,eqsin,xvars,widx,wpatt,(Union[Cases[{#},_xx,Infinity]]&),neededvarsin,applyfun}/.varmap]
+  ]
+];
+
+RegisterSparseSolverEx[gid_,inputs_,{params_,weights_,eqsin_,vars_,widxin_,wpattin_,pattern_,neededvarsin_,applyfun_}]:=Module[
+  {eqs, neededvars, lincoeffs, dummy, position, tointernalw, tointernale, tointernal, uniqueccs, uniquemap,
+   ii, jj, widx, wpatt, wsym},
+  Catch[
+    position = Association[{}];
+    Table[position[vars[[ii]]]=ii-1;,{ii,Length[vars]}];
+    eqs = Select[eqsin, !TrueQ[#]&];
+    CheckVariables[params]; (* checks that params is non-empty! *)
+    neededvars = If[TrueQ[neededvarsin==Automatic], vars, neededvarsin];
+    CheckVariables[vars];
+    CheckVariables[neededvars];
+    If[!SubsetQ[vars,neededvars], Message[FF::badneededvars]; Throw[$Failed];];
+    If[!TrueQ[eqs[[0]]==List && And@@(((#[[0]] == Equal) && (Length[#] == 2))&/@eqs)],
+        Message[FF::badsystem]; Throw[$Failed];
+    ];
+    If[weights =!= Automatic && (weights[[0]] =!= List || DeleteDuplicates[weights[[;;,0]]] =!= {List}),
+      Message[FF::badsysweights]; Throw[$Failed];
+    ];
+    If[weights =!= Automatic && Length/@weights =!= (FFNodeNParsOutImplem[gid,#]&/@inputs)[[2;;]],
+      Message[FF::badwnodelen]; Throw[$Failed];
+    ];
+    eqs = (#[[1]]-#[[2]])&/@eqs;
+    
+    widx = widxin;
+    wpatt = wpattin;
+    If[weights === Automatic && (widx === None || wpatt === None),
+      Message[FF::badsysautoweights]; Throw[$Failed];
+    ];
+    If[wpatt === None || widx === None,
+      (* if any of them is None we assume both of them are *)
+      eqs = eqs /. Dispatch[Join@@Table[weights[[ii,jj]]->wsym[{ii,jj}],{ii,Length[weights]},{jj,Length[weights[[ii]]]}]];
+      wpatt = DeleteDuplicates[Cases[{#},_wsym,Infinity]]&;
+      widx = First;
+    ];
+    
+    tointernalw = SparseLinearEqCoeffsWithPattern[#,$Failed,wpatt,widx,applyfun]&;
+    tointernale[eq_] := Module[{tmp},
+      tmp = SparseLinearEqCoeffsWithPattern[eq,Length[vars],pattern,position,Identity];
+      tmp[[2]] = tointernalw/@tmp[[2]];
+      tmp
+    ];
+    lincoeffs = tointernale/@eqs;
+    If[!FreeQ[lincoeffs[[;;,2]],Missing["KeyAbsent",_]],
+        Message[FF::badpattern,#[[2]]&/@Union[Cases[lincoeffs,_Missing,Infinity]]]; Throw[$Failed];
+    ];
+    If[!AllTrue[lincoeffs[[;;,1]], AllTrue[#,(#[[0]]===List && Length[#]==2)]&],
+        Message[FF::badweqpattern]; Throw[$Failed];
+    ];
+    
+    tointernal[expr_]:=toFFInternalRatFun[expr,params];
+    uniqueccs = DeleteDuplicates[Flatten[lincoeffs[[;;,2,;;,2]]]];
+    uniquemap = Association[{}];
+    Do[uniquemap[uniqueccs[[ii]]]=ii-1;,{ii,1,Length[uniqueccs]}];
+    uniqueccs = tointernal/@uniqueccs;
+    lincoeffs[[;;,2,;;,2]] = Map[uniquemap,lincoeffs[[;;,2,;;,2]],{3}];
+    Clear[uniquemap];
+    lincoeffs[[;;,2]] = Map[Inner[Join[#1[[1]]-1,{#2[[1]]}]&,d/@#[[1]],d/@#[[2]],Join,1]&,lincoeffs[[;;,2]],{2}];
+    FFRegisterSparseSolverExImplem[gid,inputs,Length[params],Length[vars],uniqueccs,lincoeffs,position/@neededvars]
+  ]
+];
+
+Options[FFAlgSparseSolverEx]:={"NeededVars"->Automatic, "ApplyFunction"->Identity, "VarsPattern"->Automatic, "WeightIdx"->None, "WeightPattern"->None};
+FFAlgSparseSolverEx[gid_,id_,{varin_,weightnodes__},params_,weights_,eqs_,vars_,OptionsPattern[]]:=Module[{},
+  If[TrueQ[OptionValue["VarsPattern"]==Automatic],
+   FFRegisterAlgorithm[RegisterSparseSolverEx, gid, id, {varin,weightnodes}, {params, weights, eqs, vars, OptionValue["WeightIdx"], OptionValue["WeightPattern"], OptionValue["NeededVars"], OptionValue["ApplyFunction"]}],
+   FFRegisterAlgorithm[RegisterSparseSolverEx, gid, id, {varin,weightnodes}, {params, weights, eqs, vars, OptionValue["WeightIdx"], OptionValue["WeightPattern"], OptionValue["VarsPattern"], OptionValue["NeededVars"], OptionValue["ApplyFunction"]}]
   ]
 ];
 
@@ -1918,6 +2002,7 @@ FFLoadLibObjects[] := Module[
     FFRegisterSparseSolverImplemN = LibraryFunctionLoad[fflowlib, "fflowml_alg_num_sparse_system", LinkObject, LinkObject];
     FFRegisterNodeDenseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_node_dense_system", LinkObject, LinkObject];
     FFRegisterNodeSparseSolverImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_node_sparse_system", LinkObject, LinkObject];
+    FFRegisterSparseSolverExImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_sparse_system_ex", LinkObject, LinkObject];
     FFLearnImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_learn", LinkObject, LinkObject];
     FFSparseSolverMarkAndSweepEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_mark_and_sweep_eqs", LinkObject, LinkObject];
     FFSparseSolverDeleteUnneededEqsImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_delete_unneeded_eqs", LinkObject, LinkObject];
