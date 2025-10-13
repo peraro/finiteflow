@@ -715,10 +715,40 @@ extern "C" {
     return id;
   }
 
+  static FFNode ffAlgSubgraphUniRec(FFGraph graph, FFNode in_node,
+                                    FFGraph subgraph)
+  {
+    typedef SubgraphUniRecData Data;
+    std::unique_ptr<SubgraphUniRec> algptr(new SubgraphUniRec());
+    std::unique_ptr<Data> data(new Data());
+
+    Node * node = session.node(graph, in_node);
+    if (!node) {
+      logerr("Invalid input node");
+      return FF_ERROR;
+    }
+
+    unsigned npars = node->algorithm()->nparsout;
+    Ret ret = algptr->init(session, subgraph, *data, &npars, 1);
+    if (ret != SUCCESS)
+      return FF_ERROR;
+
+    Graph * g = session.graph(graph);
+    unsigned id = g->new_node(std::move(algptr), std::move(data), &in_node);
+
+    if (id == ALG_NO_ID)
+      return FF_ERROR;
+
+    return id;
+  }
+
   FFNode ffAlgSubgraphRec(FFGraph graph, FFNode in_node,
                           FFGraph subgraph,
                           unsigned n_rec_vars, bool shift_vars)
   {
+    if (n_rec_vars == 1)
+      return ffAlgSubgraphUniRec(graph, in_node, subgraph);
+
     typedef SubgraphRecData Data;
     std::unique_ptr<SubgraphRec> algptr(new SubgraphRec());
     std::unique_ptr<Data> data(new Data());
@@ -2736,30 +2766,7 @@ extern "C" {
 
   // SubgraphRec
 
-  static SubgraphRec * asSubgrahRec(FFGraph graph, FFNode node)
-  {
-    Algorithm * alg = session.algorithm(graph, node);
-    SubgraphRec * subrec = dynamic_cast<SubgraphRec*>(alg);
-    if (!subrec) {
-      logerr("Not a SubgrahRec algorithm");
-      return 0;
-    }
-    return subrec;
-  }
-
-  static SubgraphRec * asLearnedSubgrahRec(FFGraph graph, FFNode node)
-  {
-    SubgraphRec * subrec = asSubgrahRec(graph, node);
-    if (!subrec)
-      return 0;
-    if (!subrec->has_learned()) {
-      logerr("Learning not complete");
-      return 0;
-    }
-    return subrec;
-  }
-
-  static bool checkSubgraphRecIdx(const SubgraphRec * alg, unsigned idx)
+  static bool checkSubgraphRecIdx(const SubGraph * alg, unsigned idx)
   {
     if (idx >= alg->subgraph()->nparsout) {
       logerr("Function index of SubgraphRec out of bounds");
@@ -2768,55 +2775,83 @@ extern "C" {
     return true;
   }
 
-  static SubgraphRec * asLearnedSubgrahRecWIdx(FFGraph graph, FFNode node,
-                                               unsigned idx)
-  {
-    SubgraphRec * alg = asLearnedSubgrahRec(graph, node);
-    if (!alg || !checkSubgraphRecIdx(alg,idx))
-      return 0;
-    return alg;
-  }
-
   unsigned ffSubgraphRecNVars(FFGraph graph, FFNode node)
   {
-    SubgraphRec * alg = asSubgrahRec(graph, node);
-    if (!alg)
-      return FF_ERROR;
-    return alg->n_rec_vars();
+    Algorithm * alg = session.algorithm(graph, node);
+
+    if (dynamic_cast<SubgraphRec*>(alg))
+      return static_cast<SubgraphRec*>(alg)->n_rec_vars();
+
+    if (dynamic_cast<SubgraphUniRec*>(alg))
+      return static_cast<SubgraphUniRec*>(alg)->n_rec_vars();
+
+    logerr("Not a SubgrahRec algorithm");
+    return FF_ERROR;
+  }
+
+  static const SparseRationalFunction *
+  getSubgrahRecFun(FFGraph graph, FFNode node, unsigned idx)
+  {
+    Algorithm * alg = session.algorithm(graph, node);
+    if (!alg) {
+      logerr("Node does not exist");
+      return 0;
+    }
+    if (!alg->has_learned()) {
+      logerr("Learning not complete");
+      return 0;
+    }
+
+    if (dynamic_cast<SubgraphRec*>(alg)) {
+      SubgraphRec * subrec = static_cast<SubgraphRec*>(alg);
+      if (!checkSubgraphRecIdx(subrec,idx))
+        return 0;
+      return &subrec->rec_function()[idx];
+    }
+
+    if (dynamic_cast<SubgraphUniRec*>(alg)) {
+      SubgraphUniRec * subrec = static_cast<SubgraphUniRec*>(alg);
+      if (!checkSubgraphRecIdx(subrec,idx))
+        return 0;
+      return &subrec->rec_function()[idx];
+    }
+
+    logerr("Not a SubgrahRec algorithm");
+    return 0;
   }
 
   unsigned ffSubgraphRecNumNTerms(FFGraph graph, FFNode node, unsigned idx)
   {
-    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
-    if (!alg)
+    const SparseRationalFunction * rf = getSubgrahRecFun(graph,node,idx);
+    if (!rf)
       return FF_ERROR;
-    return alg->rec_function()[idx].numerator().size();
+    return rf->numerator().size();
   }
 
   unsigned ffSubgraphRecDenNTerms(FFGraph graph, FFNode node, unsigned idx)
   {
-    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
-    if (!alg)
+    const SparseRationalFunction * rf = getSubgrahRecFun(graph,node,idx);
+    if (!rf)
       return FF_ERROR;
-    return alg->rec_function()[idx].denominator().size();
+    return rf->denominator().size();
   }
 
   uint16_t * ffSubgraphRecNumExponents(FFGraph graph, FFNode node,
                                        unsigned idx)
   {
-    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
-    if (!alg)
+    const SparseRationalFunction * rf = getSubgrahRecFun(graph,node,idx);
+    if (!rf)
       return 0;
-    return ffRatNumRatPolyExps(alg->rec_function()[idx].numerator());
+    return ffRatNumRatPolyExps(rf->numerator());
   }
 
   uint16_t * ffSubgraphRecDenExponents(FFGraph graph, FFNode node,
                                        unsigned idx)
   {
-    SubgraphRec * alg = asLearnedSubgrahRecWIdx(graph, node, idx);
-    if (!alg)
+    const SparseRationalFunction * rf = getSubgrahRecFun(graph,node,idx);
+    if (!rf)
       return 0;
-    return ffRatNumRatPolyExps(alg->rec_function()[idx].denominator());
+    return ffRatNumRatPolyExps(rf->denominator());
   }
 
 

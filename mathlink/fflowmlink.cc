@@ -727,6 +727,26 @@ namespace  {
   }
 
 
+  template <typename T>
+  void put_subgraphrec_info(MLINK mlp, Algorithm * alg)
+  {
+    T & ls = *static_cast<T*>(alg);
+    const SparseRationalFunction * fun = ls.rec_function();
+    const unsigned nout = ls.subgraph()->nparsout;
+    const unsigned nrec = ls.n_rec_vars();
+    MLPutFunction(mlp, "List", nout);
+    for (unsigned j=0; j<nout; ++j) {
+      MLPutFunction(mlp, "List", 2);
+      MLPutFunction(mlp, "List", fun[j].numerator().size());
+      for (const auto & mon : fun[j].numerator())
+        MLPutInteger16List(mlp, mon.exponents(), nrec);
+      MLPutFunction(mlp, "List", fun[j].denominator().size());
+      for (const auto & mon : fun[j].denominator())
+        MLPutInteger16List(mlp, mon.exponents(), nrec);
+    }
+  }
+
+
   void put_alg_info(MLINK mlp, unsigned graphid, unsigned id)
   {
     if (!session.node_exists(graphid,id)) {
@@ -886,20 +906,10 @@ namespace  {
         MLPutInteger32List(mlp, salg.order(), pref_exp.size());
 
     } else if(dynamic_cast<SubgraphRec*>(alg)) {
-      SubgraphRec & ls = *static_cast<SubgraphRec*>(alg);
-      const SparseRationalFunction * fun = ls.rec_function();
-      const unsigned nout = ls.subgraph()->nparsout;
-      const unsigned nrec = ls.n_rec_vars();
-      MLPutFunction(mlp, "List", nout);
-      for (unsigned j=0; j<nout; ++j) {
-        MLPutFunction(mlp, "List", 2);
-        MLPutFunction(mlp, "List", fun[j].numerator().size());
-        for (const auto & mon : fun[j].numerator())
-          MLPutInteger16List(mlp, mon.exponents(), nrec);
-        MLPutFunction(mlp, "List", fun[j].denominator().size());
-        for (const auto & mon : fun[j].denominator())
-          MLPutInteger16List(mlp, mon.exponents(), nrec);
-      }
+      put_subgraphrec_info<SubgraphRec>(mlp, alg);
+
+    } else if(dynamic_cast<SubgraphUniRec*>(alg)) {
+      put_subgraphrec_info<SubgraphUniRec>(mlp, alg);
 
     } else {
       MLPutSymbol(mlp, "Null");
@@ -4456,10 +4466,6 @@ extern "C" {
     get_input_nodes(mlp, inputnodes);
     MLGetInteger32(mlp, &subgraphid);
 
-    typedef SubgraphRecData Data;
-    std::unique_ptr<SubgraphRec> algptr(new SubgraphRec());
-    std::unique_ptr<Data> data(new Data());
-
     int nrec=0, shiftvars=0;
     MLGetInteger32(mlp, &nrec);
     MLGetInteger32(mlp, &shiftvars);
@@ -4467,13 +4473,44 @@ extern "C" {
 
     Ret ret = FAILED;
 
-    if (inputnodes.size()==1) {
-      Node * node = session.node(graphid, inputnodes[0]);
-      if (node) {
-        unsigned npars = node->algorithm()->nparsout;
-        ret = algptr->init(session, subgraphid, *data,
-                           npars, nrec, shiftvars);
+    std::unique_ptr<Algorithm> alg;
+    std::unique_ptr<AlgorithmData> algdata;
+
+    if (nrec > 1) {
+
+      typedef SubgraphRecData Data;
+      std::unique_ptr<SubgraphRec> algptr(new SubgraphRec());
+      std::unique_ptr<Data> data(new Data());
+
+      if (inputnodes.size()==1) {
+
+        Node * node = session.node(graphid, inputnodes[0]);
+        if (node) {
+          unsigned npars = node->algorithm()->nparsout;
+          ret = algptr->init(session, subgraphid, *data,
+                             npars, nrec, shiftvars);
+          alg = std::move(algptr);
+          algdata = std::move(data);
+        }
       }
+
+    } else {
+
+      typedef SubgraphUniRecData Data;
+      std::unique_ptr<SubgraphUniRec> algptr(new SubgraphUniRec());
+      std::unique_ptr<Data> data(new Data());
+
+      if (inputnodes.size()==1) {
+
+        Node * node = session.node(graphid, inputnodes[0]);
+        if (node) {
+          unsigned npars = node->algorithm()->nparsout;
+          ret = algptr->init(session, subgraphid, *data, &npars, 1);
+          alg = std::move(algptr);
+          algdata = std::move(data);
+        }
+      }
+
     }
 
     if (ret != SUCCESS) {
@@ -4492,7 +4529,7 @@ extern "C" {
     }
 
     Graph * graph = session.graph(graphid);
-    unsigned id = graph->new_node(std::move(algptr), std::move(data),
+    unsigned id = graph->new_node(std::move(alg), std::move(algdata),
                                   inputnodes.data());
 
     if (id == ALG_NO_ID) {
