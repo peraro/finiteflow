@@ -185,6 +185,8 @@ FFRatRec::usage="FFRatRec[a,n], where a and n are integers, returns a rational q
 FFRatRec[{a1,a2,...},n] is equivalent to {FFRatRec[a1],n],FFRatRec[a2],n],...}."
 FFParallelRatRec::usage = "FFParallelRatRec[{a1,a2,...},n] where a1,a2,... and n are integers, is equivalent to FFRatRec[{a1,a2,...},n] but performs the reconstructions in parallel."
 
+FFPeekNewNodeId::usage = "FFPeekNewNodeId[graph] returns the unique integer id that would internally be assigned to a new node of the graph, if defined immediately after this function call.  It can be used to assign unique identifiers to nodes before their creation."
+
 
 FF::badrational = "Argument `1` is not a rational number."
 FF::badfun = "Argument is not a polynomial or a rational function in the specified variables `1` with rational coefficients."
@@ -479,6 +481,9 @@ FFNParsOut[gid_,id_]:=Catch[FFNodeNParsOutImplem[GetGraphId[gid],GetAlgId[gid,id
 
 
 FFMakeMutable[gid_,id_]:=Catch[FFAlgMakeNodeMutableImplem[GetGraphId[gid],GetAlgId[gid,id]]];
+
+
+FFPeekNewNodeId[graph_]:=Catch[FFPeekNewNodeIdImplem[GetGraphId[graph]]];
 
 
 Options[FFGraphEdges]:={"Pruned"->False};
@@ -2077,6 +2082,7 @@ FFLoadLibObjects[] := Module[
     FFCachedSubgraphSetDefaultSubcacheSizeImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_cached_subgraph_default_subcache_size", LinkObject, LinkObject];
     FFAlgEvalCountImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_evalcount", LinkObject, LinkObject];
     FFAlgEvalCountGetSetImplem = LibraryFunctionLoad[fflowlib, "fflowml_alg_evalcount_getset", LinkObject, LinkObject];
+    FFPeekNewNodeIdImplem = LibraryFunctionLoad[fflowlib, "fflowml_peek_new_node_id", LinkObject, LinkObject];
 ];
 
 

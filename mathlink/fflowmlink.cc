@@ -1299,6 +1299,27 @@ extern "C" {
     return LIBRARY_NO_ERROR;
   }
 
+  int fflowml_peek_new_node_id(WolframLibraryData libData, MLINK mlp)
+  {
+    (void)(libData);
+    FFLOWML_SET_DBGPRINT();
+
+    int one;
+    MLTestHead( mlp, "List", &one);
+    int id;
+    MLGetInteger32(mlp, &id);
+    MLNewPacket(mlp);
+
+    const Graph * g = session.graph(id);
+
+    if (!g)
+      MLPutSymbol(mlp, "$Failed");
+    else
+      MLPutInteger32(mlp, g->peek_new_node_id());
+
+    return LIBRARY_NO_ERROR;
+  }
+
   int fflowml_graph_nparsout(WolframLibraryData libData, MLINK mlp)
   {
     (void)(libData);

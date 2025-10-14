@@ -349,6 +349,9 @@ def GraphNParsOut(graph):
 def NodeNParsOut(graph, node):
     return _Check(_lib.ffNodeNParsOut(graph,node))
 
+def PeekNewNodeId(graph):
+    return _Check(_lib.ffPeekNewNodeId(graph))
+
 def MakeNodeMutable(graph, node):
     return _StatusCheck(_lib.ffMakeNodeMutable(graph,node))
 

@@ -160,6 +160,8 @@ namespace fflow {
                       std::unique_ptr<AlgorithmData> && algdata,
                       const unsigned * inputs);
 
+    unsigned peek_new_node_id() const;
+
     // This will fail unless the node is mutable
     unsigned delete_node(unsigned id);
 

@@ -145,6 +145,12 @@ extern "C" {
                             const FFUInt * input, unsigned n_points,
                             unsigned n_threads);
 
+  // Returns the FFNode id that would be assigned to a new node of the
+  // graph, if defined immediately after this function call.  It can
+  // be useful in APIs or applications requiring to assign unique
+  // identifiers to nodes before their creation.
+  FFNode ffPeekNewNodeId(FFGraph graph);
+
 
   ////////////////
   // Algorithms //

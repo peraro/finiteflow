@@ -173,6 +173,23 @@ namespace fflow {
     return id;
   }
 
+  unsigned Graph::peek_new_node_id() const
+  {
+    if (!free_node_slots_.empty()) {
+
+      return free_node_slots_.back();
+
+    } else if (input_vars_not_set()) {
+
+      return 1;
+
+    } else {
+
+      return nodes_.size();
+
+    }
+  }
+
   unsigned Graph::edges(std::vector<unsigned> & out) const
   {
     return edges_(out, false);

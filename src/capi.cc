@@ -3042,4 +3042,14 @@ extern "C" {
                               functions, functions_len.get(), n_functions);
   }
 
+  FFNode ffPeekNewNodeId(FFGraph graph)
+  {
+    const Graph * g = session.graph(graph);
+    if (!g) {
+      logerr("Graph does not exist.");
+      return FF_ERROR;
+    }
+    return g->peek_new_node_id();
+  }
+
 } // extern "C"
