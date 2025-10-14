@@ -19,45 +19,47 @@ _FF_MISSING_PRIMES = _FF_ERROR - 2
 _FF_FAILED = 2**64 - 1
 
 
-class Singleton(type):
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
-class _SuccessType(metaclass=Singleton):
-    def __str__(self):
-        return 'SUCCESS'
+class Success:
+    def __eq__(self, other):
+        return type(self) is type(other)
     def __repr__(self):
         return 'fflow.SUCCESS'
 
 
-class _ErrorType(Exception,metaclass=Singleton):
-    def __str__(self):
-        return 'ERROR'
+class FFlowError(Exception):
+    def __init__(self):
+        super().__init__("FiniteFlow detected an error "
+                         "(check for any FF_LOG messages).")
+    def __eq__(self, other):
+        return type(self) is type(other)
     def __repr__(self):
         return 'fflow.ERROR'
 
 
-class _MissingPointsType(metaclass=Singleton):
-    def __str__(self):
-        return 'MISSING_POINTS'
+class MissingPoints(Exception):
+    def __init__(self):
+        super().__init__("Reconstruction failed: MISSING POINTS.")
+    def __eq__(self, other):
+        return type(self) is type(other)
     def __repr__(self):
         return 'fflow.MISSING_POINTS'
 
 
-class _MissingPrimesType(metaclass=Singleton):
-    def __str__(self):
-        return 'MISSING_PRIMES'
+class MissingPrimes(Exception):
+    def __init__(self):
+        super().__init__("Reconstruction failed: MISSING PRIMES.")
+    def __eq__(self, other):
+        return type(self) is type(other)
     def __repr__(self):
         return 'fflow.MISSING_PRIMES'
 
 
-class _FailedType(Exception,metaclass=Singleton):
-    def __str__(self):
-        return 'FAILED'
+class Failed(Exception):
+    def __init__(self):
+        super().__init__("Evaluation or reconstruction failed "
+                         "(check for any FF_LOG messages).")
+    def __eq__(self, other):
+        return type(self) is type(other)
     def __repr__(self):
         return 'fflow.FAILED'
 
@@ -159,7 +161,7 @@ class RatFunList:
 
     def to_string(self,svars,idx=None):
         if len(svars) != self.nvars():
-            raise ValueError("List svars must have the same length as the " +
+            raise ValueError("List svars must have the same length as the "
                              "number of variables self.nvars()")
         if idx is None:
             return list(self.to_string(svars,i) for i in range(self.size()))
@@ -167,7 +169,7 @@ class RatFunList:
             cvars = [_ffi.new("char[]", x.encode('utf8')) for x in svars]
             cstr = _lib.ffRatFunToStr(self._ptr,idx,cvars)
             if cstr == _ffi.NULL:
-                raise ERROR
+                raise FFlowError()
             ret = _ffi.string(cstr).decode()
             _lib.ffFreeCStr(cstr)
             return ret
@@ -220,40 +222,33 @@ get the list of unique functions instead.
 
 
 
-SUCCESS = _SuccessType()
-ERROR = _ErrorType()
-MISSING_POINTS = _MissingPointsType()
-MISSING_PRIMES = _MissingPrimesType()
-FAILED = _FailedType()
-
-
 _to_status = {
-    _FF_SUCCESS : SUCCESS,
-    _FF_ERROR : ERROR,
-    _FF_MISSING_PRIMES : MISSING_PRIMES,
-    _FF_MISSING_POINTS : MISSING_POINTS
+    _FF_SUCCESS : Success,
+    _FF_ERROR : FFlowError,
+    _FF_MISSING_PRIMES : MissingPrimes,
+    _FF_MISSING_POINTS : MissingPoints
 }
 
 def _ToUint(z):
     if z == _FF_FAILED:
-        raise FAILED
+        raise Failed()
     return z
 
 def _Check(arg):
     if _lib.ffIsError(arg):
-        raise _to_status[arg]
+        raise _to_status[arg]()
     return arg
 
 def _CheckIter(arg):
     for v in arg:
         if _lib.ffIsError(v):
-            raise to_status[v]
+            raise to_status[v]()
     return arg
 
 def _StatusCheck(arg):
     if _lib.ffIsError(arg):
-        raise ERROR
-    return _to_status[arg]
+        raise FFlowError()
+    return _to_status[arg]()
 
 def _Flattened(data):
     for el in data:
@@ -369,11 +364,13 @@ def LearnEx(graph,**kwargs):
 
 def EvaluateGraph(graph,z,primeno):
     nparsin = _lib.ffNodeNParsOut(graph,0)
-    if _lib.ffIsError(nparsin) or len(z) != nparsin:
-        raise FAILED
+    if _lib.ffIsError(nparsin):
+        raise RuntimeError("Graph or input node not available")
+    if len(z) != nparsin:
+        raise ValueError("Unexpected input length")
     retc = _lib.ffEvaluateGraph(graph,z,primeno)
     if retc == _ffi.NULL:
-        raise FAILED
+        raise Failed()
     ret = _ffi.unpack(retc,_lib.ffGraphNParsOut(graph))
     _lib.ffFreeMemoryU64(retc)
     return ret
@@ -404,13 +401,13 @@ def AlgJSONRatFunEval(graph, in_node, json_file):
 
 def AlgRatFunEval(graph, in_node, rf):
     if not type(rf) is RatFunList:
-        raise TypeError("Third argument of AlgRatFunEval() " +
+        raise TypeError("Third argument of AlgRatFunEval() "
                         "must be a RatFunList")
     return _Check(_lib.ffAlgRatFunEval(graph, in_node, rf._ptr))
 
 def AlgRatFunEvalFromCoeffs(graph, coeffs_node, vars_node, rf):
     if not type(rf) is RatFunList:
-        raise TypeError("Fourth argument of AlgRatFunEvalFromCoeffs() " +
+        raise TypeError("Fourth argument of AlgRatFunEvalFromCoeffs() "
                         "must be a RatFunList")
     return _Check(_lib.ffAlgRatFunEvalFromCoeffs(graph,
                                                  coeffs_node, vars_node,
@@ -421,12 +418,12 @@ def AlgRatNumEval(graph, nums):
     return _Check(_lib.ffAlgRatNumEval(graph, cnums, len(nums)))
 
 def AlgLaurent(graph, in_node, subgraph, order, max_deg=-1):
-    if type(order) is list:
+    if type(order) is list or type(order) is tuple:
         nout = _lib.ffGraphNParsOut(subgraph)
-        if _lib.ffIsError(nout) or len(z) != nout:
-            raise ERROR
+        if len(order) != nout:
+            raise ValueError("Unexpected length for `order`")
         return _Check(_lib.ffAlgLaurent(graph, in_node, subgraph,
-                                       order, max_deg))
+                                        order, max_deg))
     else:
         return _Check(_lib.ffAlgLaurentConstOrder(graph, in_node, subgraph,
                                                   order, max_deg))
@@ -441,7 +438,7 @@ def AlgChain(graph, in_nodes):
 def AlgTake(graph, in_nodes, elems):
     for x in elems:
         if len(x) != 2:
-            raise ERROR
+            raise ValueError("Each item in `elems` must have length 2.")
     return _Check(_lib.ffAlgTake(graph, in_nodes, len(in_nodes),
                                  [x for x in _chain(*elems)],
                                  len(elems)))
@@ -480,7 +477,7 @@ def AlgTakeAndAddBL(graph, in_nodes, elems):
 def AlgSparseMatMul(graph, in_node_a, in_node_b, n_rows_a, n_cols_a, n_cols_b,
                     non_zeroes_a, non_zeroes_b):
     if len(non_zeroes_a) != n_rows_a or len(non_zeroes_b) != n_cols_a:
-        raise ERROR
+        raise ValueError("Inconsistent row data.")
     return _Check(_lib.ffAlgSparseMatMul(graph, in_node_a, in_node_b,
                                          n_rows_a, n_cols_a, n_cols_b,
                                          [len(x) for x in non_zeroes_a],
@@ -501,7 +498,7 @@ def EvalCountReset(graph, node, count=0):
 def LaurentMaxOrders(graph, node):
     retc = _lib.ffLaurentMaxOrders(graph, node)
     if retc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     res =  _ffi.unpack(retc,_lib.ffSubgraphNParsout(graph, node))
     _lib.ffFreeMemoryS32(retc)
     return res
@@ -509,7 +506,7 @@ def LaurentMaxOrders(graph, node):
 def LaurentMinOrders(graph, node):
     retc = _lib.ffLaurentMinOrders(graph, node)
     if retc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     res =  _ffi.unpack(retc,_lib.ffSubgraphNParsout(graph, node))
     _lib.ffFreeMemoryS32(retc)
     return res
@@ -594,7 +591,7 @@ def LSolveNDepVars(graph, node):
 def LSolveDepVars(graph, node):
     retc = _lib.ffLSolveDepVars(graph, node)
     if retc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     ret = _ffi.unpack(retc, _lib.ffLSolveNDepVars(graph, node))
     _lib.ffFreeMemoryU32(retc)
     return ret
@@ -607,7 +604,7 @@ def LSolveNIndepVars(graph, node, i=0):
 def LSolveIndepVars(graph, node, i=0):
     retc = _lib.ffLSolveIndepVars(graph, node, i)
     if retc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     ret = _ffi.unpack(retc, _lib.ffLSolveNIndepVars(graph, node, i))
     _lib.ffFreeMemoryU32(retc)
     return ret
@@ -620,7 +617,7 @@ def LSolveNIndepEqs(graph, node):
 def LSolveIndepEqs(graph, node):
     retc = _lib.ffLSolveIndepEqs(graph, node)
     if retc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     ret = _ffi.unpack(retc, _lib.ffLSolveNIndepEqs(graph, node))
     _lib.ffFreeMemoryU32(retc)
     return ret
@@ -636,7 +633,7 @@ def LSolveZeroVars(graph, node):
 
 def RatFunToJSON(rf, json_file):
     if not type(rf) is RatFunList:
-        raise TypeError("First argument of RatFunToJSON() " +
+        raise TypeError("First argument of RatFunToJSON() "
                         "must be a RatFunList")
     return _StatusCheck(_lib.ffRatFunToJSON(rf._ptr,
                                             json_file.encode('utf8')))
@@ -663,7 +660,7 @@ instead.
 
     retc = _lib.ffParseRatFunEx(z, len(z), rf, rfl, len(rf))
     if retc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     ret = RatFunList()
     ret._ptr = retc
     return ret
@@ -675,7 +672,7 @@ def MoveRatFunToIdx(ratfunlist, indexes):
         raise TypeError("Expected a RatFunList as input")
     retc = _lib.ffMoveRatFunToIdx(funl._ptr, indexes, len(indexes))
     if retc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     ret = IdxRatFunList()
     ret._ptr = retc
     return ret
@@ -713,7 +710,7 @@ def AlgAnalyticSparseLSolve(graph, in_node, n_vars,
     else:
         neededlen = len(needed)
     if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
-        raise ERROR
+        raise ValueError("Inconsistent row data.")
     retc = _lib.ffAlgAnalyticSparseLSolveIdx(graph, in_node,
                                              len(non_zero_els), n_vars,
                                              [len(x) for x in non_zero_els],
@@ -734,7 +731,7 @@ def AlgNumericSparseLSolve(graph, n_vars,
     else:
         neededlen = len(needed)
     if sum(len(x) for x in non_zero_els) != len(non_zero_coeffs):
-        raise ERROR
+        raise ValueError("Inconsistent row data.")
     (uniqueccs, indexes) = _getUniqueAndIdx(non_zero_coeffs)
     coeffs = [_ffi.new("char[]", x.encode('utf8')) for x in uniqueccs]
     retc = _lib.ffAlgNumericSparseLSolve(graph,
@@ -778,7 +775,7 @@ def AlgAnalyticSparseLSolveEx(graph, in_nodes, n_vars,
                    for row in non_zero_els]
     two_n_wgs = sum(sum(len(y) for y in row) for row in nonzero_wgs)
     if two_n_wgs != 2*len(non_zero_coeffs):
-        raise ERROR
+        raise ValueError("Inconsistent data for rows or weights.")
     n_weights = [tuple(len(sub)//2 for sub in row) for row in nonzero_wgs]
     libfuncall = _lib.ffAlgAnalyticSparseLSolveIdxEx
     retc = libfuncall(graph, in_nodes, len(in_nodes),
@@ -837,7 +834,7 @@ def NewRatFunList(nvars, allterms):
     resc = _lib.ffNewRatFunList(nvars, len(allterms), n_num_terms, n_den_terms,
                                 coeffs, exponents)
     if resc == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     res = RatFunList()
     res._ptr = resc
     return res
@@ -854,13 +851,13 @@ def NewIdxRatFunList(nvars, allterms, indexes = None):
 
 def EvaluateRatFunList(rf, z, prime_no):
     if not type(rf) is RatFunList:
-        raise TypeError("First argument of EvaluateRatFunList() must be " +
+        raise TypeError("First argument of EvaluateRatFunList() must be "
                         "a RatFunList")
     if rf._ptr == _ffi.NULL or rf.nvars() != len(z):
-        raise FAILED
+        raise Failed()
     retc = _lib.ffEvaluateRatFunList(rf._ptr, z, prime_no)
     if retc == _ffi.NULL:
-        raise FAILED
+        raise Failed()
     ret = _ffi.unpack(retc, _lib.ffRatFunListSize(rf._ptr))
     _lib.ffFreeMemoryU64(retc)
     return ret
@@ -870,9 +867,11 @@ def _ReconstructFunction(cfun, graph, **kwargs):
     recopt = _ffi.new("FFRecOptions *",kwargs)
     res = _ffi.new("FFRatFunList **")
     ret = _to_status[cfun(graph,recopt[0],res)]
-    if ret is SUCCESS:
+    if ret is Success:
         ret = RatFunList()
         ret._ptr = res[0]
+    else:
+        ret = ret()
     return ret
 
 def ReconstructFunction(graph, **kwargs):
@@ -916,7 +915,7 @@ def AllDegrees(graph,**kwargs):
     recopt = _ffi.new("FFRecOptions *",kwargs)
     degptr = _lib.ffAllDegrees(graph,recopt[0])
     if degptr == _ffi.NULL:
-        raise ERROR
+        raise FFlowError()
     nout = GraphNParsOut(graph)
     ret = iter(_ffi.unpack(degptr, 2*nout))
     _lib.ffFreeMemoryU32(degptr)
@@ -985,7 +984,7 @@ def EvaluatePoints(graph,points,prime_no=0,n_threads=0):
     full_pts = list(_chain(*map(appto,points)))
     ret = _lib.ffEvaluatePoints(graph,full_pts,len(points),n_threads)
     if ret == _ffi.NULL:
-        raise ERROR
+        raise Failed()
 
     nparsout = GraphNParsOut(graph)
     res = list(tuple(ret[i:i+nparsout]) for i in range(len(points)))
@@ -1005,10 +1004,10 @@ def AlgRatExprEval(graph, in_node, functions,
     '''
     if variables is None:
         if variable_prefix is None:
-            raise ValueError("At least one between variables " +
+            raise ValueError("At least one between variables "
                              "and variable_prefix must be given as input.")
         if n_vars is None:
-            raise ValueError("At least one between variables " +
+            raise ValueError("At least one between variables "
                              "and n_vars must be given as input.")
     else:
         if not (n_vars is None) and n_vars != len(variables):
@@ -1043,7 +1042,7 @@ def RatExprToRatFunList(expressions,
         if type(rec) is RatFunList:
             return rec
         else:
-            raise RuntimeError("Reconstruction Failed")
+            raise rec
 
 
 def ReconstructNumeric(graph, **kwargs):
@@ -1051,7 +1050,7 @@ def ReconstructNumeric(graph, **kwargs):
     recopt = _ffi.new("FFRecOptions *",kwargs)
     retc = _lib.ffReconstructNumeric(graph,recopt[0])
     if retc == _ffi.NULL:
-        raise FAILED
+        raise Failed()
     ret = list(_ffi.string(retc[i]).decode() for i in range(nparsout))
     _lib.ffFreeCStrArray(retc)
     return ret
@@ -1067,7 +1066,7 @@ def ChineseRemainder(z1, mod1, z2, mod2):
 
     retc = _lib.ffChineseRemainder(z1c,mod1c,z2,mod2,length)
     if retc == _ffi.NULL:
-        raise FAILED
+        raise Failed()
     ret = list(_ffi.string(retc[i]).decode() for i in range(length))
     mod = _ffi.string(retc[length]).decode()
     _lib.ffFreeCStrArray(retc)
@@ -1081,7 +1080,7 @@ def _RatRec(cfun, z, mod):
 
     retc = cfun(zc,modc,length)
     if retc == _ffi.NULL:
-        raise FAILED
+        raise Failed()
     ret = list(_ffi.string(retc[i]).decode() for i in range(length))
     _lib.ffFreeCStrArray(retc)
 

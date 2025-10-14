@@ -423,16 +423,17 @@ def testUnivariate_(parallel,mod):
     check = list((1+2**i) % pp for i in range(1,nfuns+1))
 
     if evals == check:
-        return SUCCESS
+        return Success()
     else:
         print("- Check failed with parallel = {}, mod = {}"
               .format(parallel,mod))
-        return ERROR
+        return FFlowError()
 
     DeleteGraph(g)
 
 def testUnivariate():
     print("Testing univariate reconstruction")
+    SUCCESS = Success()
     if testUnivariate_(False,False) != SUCCESS:
         exit(1)
     if testUnivariate_(False,True) != SUCCESS:

@@ -78,7 +78,7 @@ if ff.LSolveDepVars(graph,invmat2) != [0,1]:
     print("Unexpected list of dependent variables!")
 if ff.LSolveIndepVars(graph,invmat2) != [2,3]:
     print("Unexpected list of independent variables!")
-    raise ff.ERROR
+    raise ff.FFlowError()
 
 # NOTE: LSolveDepVars(...) are not guaranteed to be sorted, so in
 #       general we may need to reorder the output before moving to the
@@ -113,7 +113,7 @@ if check_inverse:
         print("Successfully checked: `inverse(mat2) . mat2 == identity`")
     else:
         print("Check of inverse matrix failed!")
-        raise ff.ERROR
+        raise ff.FFlowError()
 
 # We now perform the matrix multiplication we said we wanted,
 # i.e. mat1.invmat2...

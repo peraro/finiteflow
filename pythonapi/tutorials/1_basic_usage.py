@@ -103,7 +103,7 @@ if type(recfun) is ff.RatFunList:
 else:
     print("Something went terribly wrong here!")
     print("- the reconstruction returned: {}".format(recfun))
-    raise ff.ERROR
+    raise ff.FFlowError()
 
 # We may now convert the list of reconstructed functions to a list of
 # strings containing their analytic expression
@@ -167,7 +167,7 @@ rflist2 = ff.ParseRatFun(["x1","x2","x3"],
 # functions we just defined:
 if not (rflist.monomials() == rflist2.monomials() == mondata):
     print("Monomial data is not what we expected!")
-    raise ff.ERROR
+    raise ff.FFlowError()
 
 # Finally, we can JSON-serialize such a list of functions using:
 #
