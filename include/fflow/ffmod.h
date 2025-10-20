@@ -71,7 +71,7 @@ extern "C" {
    * number `n` satisfying n >= 2^63.  Hence, in our division
    * algorithm, we first multiply `n` and the `dividend` by 2 (with a
    * shift) to satisfy this requirement, and then we shift back the
-   * reminder.
+   * remainder.
    */
 
   inline FFMod ffPrecomputedReciprocalMod(FFU64 n)

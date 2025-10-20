@@ -65,6 +65,7 @@ class Failed(Exception):
 
 
 class RatFunList:
+    '''An opaque object representing a list of rational functions.'''
     def __init__(self):
         self._ptr = _ffi.NULL
 
@@ -823,8 +824,8 @@ def NewRatFunList(nvars, allterms):
     for ratfun in allterms:
         if len(ratfun) != 2:
             raise ValueError("For each rational function, terms should be "
-                             + "listed for both the numerator and the "
-                             + "denominator.")
+                             "listed for both the numerator and the "
+                             "denominator.")
         n_num_terms.append(len(ratfun[0]))
         n_den_terms.append(len(ratfun[1]))
         for poly in ratfun:
@@ -834,8 +835,9 @@ def NewRatFunList(nvars, allterms):
                     raise ValueError("The length of the exponents' list is not "
                                      + str(nvars))
                 exponents.extend(t[1])
-    resc = _lib.ffNewRatFunList(nvars, len(allterms), n_num_terms, n_den_terms,
-                                coeffs, exponents)
+                resc = _lib.ffNewRatFunList(nvars, len(allterms),
+                                            n_num_terms, n_den_terms,
+                                            coeffs, exponents)
     if resc == _ffi.NULL:
         raise FFlowError()
     res = RatFunList()
@@ -998,11 +1000,20 @@ def EvaluatePoints(graph,points,prime_no=0,n_threads=0):
 
 def AlgRatExprEval(graph, in_node, functions,
                    variables=None, variable_prefix=None, n_vars=None):
-    '''At least one between variables and variable_prefix must be
-       specified.  The latter is especially recommended when the list
-       of variables is long and it allows to refer to the variables in
-       the expressions as "`variable_prefix``idx`" where `idx` is
-       their index (zero-based).
+    '''AlgRatExprEval(graph, in_node, functions, ...) creates a node
+    which evaluates a list of rational expressions passed as the list
+    of strings `functions`.
+
+    The variables can either be passed as a list of strings using the
+    keyword argument `variables` (note that this is not optimized for
+    long lists) or by a common prefix using the keyword argument
+    `variable_prefix`.
+
+    At least one between `variables` and `variable_prefix` must be
+    specified.  The latter is especially recommended when the list of
+    variables is long and it allows to refer to the variables in the
+    expressions as "`variable_prefix``idx`" where `idx` is their index
+    (zero-based).
 
     '''
     if variables is None:
@@ -1033,6 +1044,10 @@ def AlgRatExprEval(graph, in_node, functions,
 def RatExprToRatFunList(expressions,
                         variables=None, variable_prefix=None, n_vars=None,
                         **kwargs):
+    '''Parses a list of rational expressions and reconstructs them as
+    a list of rational functions.
+
+    '''
     if n_vars is None and not (variables is None):
         n_vars = len(variables)
     with GraphContextWithInput(n_vars) as (g,inp):
@@ -1126,7 +1141,13 @@ def RatMod(rationals, prime_no):
 
 def ParallelReconstructDegreeData(graph,**kwargs):
     '''Reconstruct degree data parallelizing univariate
-    reconstructions.'''
+    reconstructions.
+
+    The output can be used as an argument of
+    ReconstructFunctionWithDegrees, ReconstructFunctionWithDegreesMod
+    and SetDegrees.
+
+    '''
 
     pmin = PrimeNo(NAvailablePrimes()-1)
     rand = lambda : _randint(123456789123456789, pmin-1)

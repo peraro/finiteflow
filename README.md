@@ -76,6 +76,8 @@ cmake . && make install
 
 On Apple Silicon Macs (with M1 processor or newer) add the option `-DCMAKE_OSX_ARCHITECTURES=arm64` to the `cmake` command.
 
+In order to use the Python 3 API, install its dependencies and then add the option `-DFFLOW_PYTHON=1` to the `cmake` command (see [these instructions](pythonapi/README.md) for more details).
+
 In order to install FiniteFlow in a custom path, or specify a
 different path for its dependencies use
 ```
