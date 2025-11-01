@@ -2,8 +2,10 @@
 
 import pathlib
 from cffi import FFI
+import sys
 
 thisfile = pathlib.Path(__file__).resolve()
+only_source = len(sys.argv)>=2 and sys.argv[1] == '--source-only'
 
 def getFFlowPath():
     try:
@@ -18,26 +20,37 @@ def getFFlowPath():
 
 ffibuilder = FFI()
 
-fflowpath = getFFlowPath()
+if not only_source:
+    fflowpath = getFFlowPath()
 header = open(str((thisfile.parent.parent / 'include' / 'fflow' / 'capi.h').resolve())).read()
 header = header.split("/* API begin */")[1].split("/* API end */")[0]
 
 ffibuilder.cdef(header)
 
-fflowlibdir = str(fflowpath.parent.resolve())
+if not only_source:
+    fflowlibdir = str(fflowpath.parent.resolve())
 includedir = str(thisfile.parent.parent / 'include')
+
+if only_source:
+    extra_link_args = []
+    libraries = []
+else:
+    extra_link_args = ["-L" + fflowlibdir, "-Wl,-rpath," + fflowlibdir]
+    libraries = ['fflow']
 
 ffibuilder.set_source("_cffi_fflow",
                       r'''
                       #include <fflow/capi.h>
                       ''',
-                      libraries = ['fflow'],
+                      libraries = libraries,
                       include_dirs=[includedir],
                       verbose=True,
-                      extra_link_args=["-L" + fflowlibdir,
-                                       "-Wl,-rpath," + fflowlibdir]
+                      extra_link_args=extra_link_args
                       )
 
 if __name__ == "__main__":
     pathlib.Path("_cffi_fflow.c").touch()
-    ffibuilder.compile(verbose=True)
+    if not only_source:
+        ffibuilder.compile(verbose=True)
+    else:
+        ffibuilder.emit_c_code("_cffi_fflow.c")

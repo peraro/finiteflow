@@ -239,7 +239,12 @@ set(FFLOW_MATHEMATICA_SOURCES
     mathlink/fflowmlink.cc
     )
 
-find_package(Mathematica COMPONENTS MathLink WolframLibrary)
+set(FFLOW_MATHEMATICA ON CACHE BOOL
+    "Build Mathematica interface")
+
+if (FFLOW_MATHEMATICA)
+    find_package(Mathematica COMPONENTS MathLink WolframLibrary)
+endif()
 
 if (Mathematica_FOUND)
 
@@ -269,7 +274,7 @@ during configuration."
             )
     endif()
 
-else()
+elseif(FFLOW_MATHEMATICA)
 
     message(WARNING "\
 The Mathematica interface cannot be installed \
@@ -280,22 +285,48 @@ endif()
 
 
 set(FFLOW_PYTHON OFF CACHE BOOL "Build Python interface")
+set(FFLOW_PYTHON_INSTALL "" CACHE PATH
+    "Installation path for Python interface")
 if (FFLOW_PYTHON)
-    find_package (Python3 COMPONENTS Interpreter)
+    find_package (Python3 COMPONENTS Interpreter Development)
     if (Python3_FOUND)
+        file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/_python_gen)
         add_custom_command(
             DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/include/fflow/capi.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/fflow_build.py"
-            COMMAND ${Python3_EXECUTABLE} "fflow_build.py"
-            OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/_cffi_fflow.c"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi"
+            COMMAND
+            ${Python3_EXECUTABLE}
+            "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/fflow_build.py"
+            "--source-only"
+            OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/_python_gen/_cffi_fflow.c"
+            WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/_python_gen"
         )
         add_custom_target(
-            fflow_python_interface ALL
+            fflow_python_interface_src ALL
             DEPENDS
-            "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/_cffi_fflow.c"
+            "${PROJECT_BINARY_DIR}/_python_gen/_cffi_fflow.c"
         )
+        Python3_add_library(_cffi_fflow
+            MODULE
+            "${PROJECT_BINARY_DIR}/_python_gen/_cffi_fflow.c"
+        )
+        add_dependencies(_cffi_fflow fflow_python_interface_src)
+        target_link_libraries(_cffi_fflow PRIVATE fflow ${LIBS})
+        if (FFLOW_PYTHON_INSTALL)
+            install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/fflow.py"
+                DESTINATION ${FFLOW_PYTHON_INSTALL})
+            install(TARGETS _cffi_fflow
+                DESTINATION ${FFLOW_PYTHON_INSTALL})
+        else()
+            execute_process(COMMAND ${Python3_EXECUTABLE} -m site --user-site
+                OUTPUT_VARIABLE FFLOW_PYTHON_USER_SITE
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+            install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/fflow.py"
+                DESTINATION ${FFLOW_PYTHON_USER_SITE})
+            install(TARGETS _cffi_fflow
+                DESTINATION ${FFLOW_PYTHON_USER_SITE})
+        endif()
     endif()
 endif()
 

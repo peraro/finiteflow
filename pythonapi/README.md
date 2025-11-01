@@ -25,6 +25,11 @@ The Python 3 API can be installed in two ways.
 
 Once the dependencies are installed, you can compile the Python 3 API as part of the regular installation procedure of FiniteFlow, simply by adding the option `-DFFLOW_PYTHON=1` to the `cmake` command.
 
+Python modules will be installed in a default directory, which is suited for most use cases (it does *not* require admin privileges).  You may still optionally customize the installation directory of Python modules, using `-DFFLOW_PYTHON_INSTALL=/path/to/installation/dir`.  If you do so, consider updating your `$PYTHONPATH` by adding the following to your `~/.bashrc`, `~/.zshrc` or `~/.bash_profile`
+```
+export PYTHONPATH=$PYTHONPATH:/path/to/installation/dir
+```
+
 
 #### Option 2: Manual installation
 
@@ -36,10 +41,7 @@ cd /path/to/finiteflow/pythonapi
 python3 fflow_build.py
 ```
 
-You should generally repeat this step when you update FiniteFlow.
-
-
-### Customize paths
+You should generally repeat the step above when you update FiniteFlow.
 
 Consider updating your `$PYTHONPATH` by adding the following to your `~/.bashrc`, `~/.zshrc` or `~/.bash_profile`
 ```
