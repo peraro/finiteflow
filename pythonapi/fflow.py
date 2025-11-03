@@ -835,9 +835,8 @@ def NewRatFunList(nvars, allterms):
                     raise ValueError("The length of the exponents' list is not "
                                      + str(nvars))
                 exponents.extend(t[1])
-                resc = _lib.ffNewRatFunList(nvars, len(allterms),
-                                            n_num_terms, n_den_terms,
-                                            coeffs, exponents)
+    resc = _lib.ffNewRatFunList(nvars, len(allterms), n_num_terms, n_den_terms,
+                                coeffs, exponents)
     if resc == _ffi.NULL:
         raise FFlowError()
     res = RatFunList()
