@@ -505,6 +505,10 @@ namespace fflow {
       if (base_type == RatExprToken::VAR) {
         push_machinenum(tk->val);
         bytecode->push_back(AnalyticExpression::VAR);
+        if (exponentsign == -1) {
+          push_machinenum(1);
+          bytecode->push_back(AnalyticExpression::NEGPOW);
+        }
         ++n_factors;
         return tk+1;
       }
@@ -514,6 +518,10 @@ namespace fflow {
         unsigned idx = (*varspow_map)[key];
         push_machinenum(idx);
         bytecode->push_back(AnalyticExpression::VARPOW);
+        if (exponentsign == -1) {
+          push_machinenum(1);
+          bytecode->push_back(AnalyticExpression::NEGPOW);
+        }
         ++n_factors;
         return tk+1;
       }
