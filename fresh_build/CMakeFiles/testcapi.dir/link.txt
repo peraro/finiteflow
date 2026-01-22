@@ -1,0 +1,1 @@
+/usr/bin/cc -O3 -DNDEBUG CMakeFiles/testcapi.dir/tests/testcapi.c.o -o testcapi  -Wl,-rpath,/workspace/fresh_build libfflow.so /usr/lib/x86_64-linux-gnu/libflint.so /usr/lib/x86_64-linux-gnu/libgmp.so 

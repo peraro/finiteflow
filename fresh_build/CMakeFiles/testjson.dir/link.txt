@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/testjson.dir/tests/testjson.cc.o -o testjson  -Wl,-rpath,/workspace/fresh_build libfflow.so /usr/lib/x86_64-linux-gnu/libflint.so /usr/lib/x86_64-linux-gnu/libgmp.so 

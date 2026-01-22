@@ -1,51 +1,25 @@
-*~
-\#*\#
-.*project
-.settings/*
-*.o
-*.la
-*.lo
-*.so
-*.dylib
-*.mod
-*.pyc
-*.tar.gz
-*.out
-.DS_Store
-#COPYING
-INSTALL
-MANIFEST
-Makefile
-config.hh
-config.hh.in.*
-*Minibuf*
-*.dSYM
-compile_commands.json
+```
+# CMake build directories
+build_test/
+fresh_build/
 
+# CMake files
 CMakeCache.txt
-CMakeFiles/*
+CMakeFiles/
 cmake_install.cmake
 cmake_uninstall.cmake
-install_manifest.txt
+Makefile
 
-include/ampff/config.hh
-run*.sh
-tables/*.sh
+# Compiled objects
+*.o
+*.obj
+*.bin
 
-# ignore executables and generated files in mathlink/
-mathlink/librarylink.txt
+# Build artifacts
+build/
+dist/
 
-# ignore executables of the examples
-testmod
-testmp
-testalg
-testio
-testgraph
-testcapi
-testjson
-*.out*
-*.dat
-
-# these files are generated
-tests_json/tinvsys.json
-pythonapi/_cffi_fflow.c
+# Progress and temporary files
+progress.marks
+*.d
+```

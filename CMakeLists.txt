@@ -14,6 +14,16 @@ option(BUILD_SHARED_LIBS "build shared libraries" ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_STANDARD 99)
 
+# Performance optimizations
+if(MSVC)
+    # MSVC optimization flags
+    add_compile_options(/O2 /Ob2 /Oi /Ot /GL)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LTCG")
+else()
+    # GCC/Clang optimization flags
+    add_compile_options(-O3 -march=native -mtune=native -ffast-math -DNDEBUG -ftree-vectorize -funroll-loops)
+endif()
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 set(AMFF_ENABLE_EXCEPTIONS OFF CACHE BOOL
@@ -27,7 +37,7 @@ if(NOT(AMFF_ENABLE_EXCEPTIONS))
     endif()
 endif()
 
-set(FFLOW_THREAD_POOL OFF CACHE BOOL
+set(FFLOW_THREAD_POOL ON CACHE BOOL
     "Use thread pools for parallel tasks")
 
 
@@ -66,10 +76,11 @@ set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 include(TestBigEndian)
 TEST_BIG_ENDIAN(FFLOW_BIG_ENDIAN)
-configure_file(include/fflow/config.hh.in include/fflow/config.hh)
+configure_file(include/fflow/config.hh.in ${CMAKE_CURRENT_BINARY_DIR}/include/fflow/config.hh)
 
 include_directories(
     BEFORE
+    ${CMAKE_CURRENT_BINARY_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     )

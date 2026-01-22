@@ -1,0 +1,2 @@
+#define FFLOW_BIG_ENDIAN 0
+#define FFLOW_THREAD_POOL 1
