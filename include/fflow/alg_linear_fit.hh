@@ -125,6 +125,11 @@ namespace fflow {
       return ls_.indep_eqs();
     }
 
+    bool is_impossible() const
+    {
+      return ls_.is_impossible();
+    }
+
   private:
 
     struct Solver : public DenseLinearSolver {

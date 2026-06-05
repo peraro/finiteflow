@@ -2254,6 +2254,13 @@ extern "C" {
           SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
           ret = ls.is_impossible();
 
+      } else if (dynamic_cast<LinearFit*>(alg) ||
+                 dynamic_cast<SubgraphFit*>(alg)) {
+        const LinearFit & ls = (dynamic_cast<LinearFit*>(alg) ?
+                                *static_cast<LinearFit*>(alg)
+                                : static_cast<SubgraphFit*>(alg)->linear_fit());
+        ret = ls.is_impossible();
+
       } else {
         okay = false;
       }
