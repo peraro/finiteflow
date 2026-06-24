@@ -1484,8 +1484,8 @@ FFSparseSolve[eqs_, vars_, OptionsPattern[]] := Module[
       
       res = FFAlgSparseSolver[graph,sys,{in},params,eqs,vars,
                                 Sequence@@FilterRules[{opt}, Options[FFAlgSparseSolver]]];
-      FFSparseSolverOptimizeZeroVars[graph,sys];
       If[res==$Failed,Throw[$Failed]];
+      FFSparseSolverOptimizeZeroVars[graph,sys];
       If[(!TrueQ[OptionValue["IndepVarsOnly"]]) && TrueQ[OptionValue["SparseOutput"]],
         FFSolverSparseOutput[graph,sys];
       ];
