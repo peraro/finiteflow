@@ -35,11 +35,12 @@ namespace fflow {
         std::size_t hash = HASH_SEED;
         if (q.get()->_mp_num._mp_size < 0)
           hash += 134;
+        const std::size_t LIMB_SIZE = sizeof(mp_limb_t);
         hash = SpookyHash::Hash64(q.get()->_mp_den._mp_d,
-                                  iabs(q.get()->_mp_den._mp_size),
+                                  iabs(q.get()->_mp_den._mp_size)*LIMB_SIZE,
                                   hash);
         hash = SpookyHash::Hash64(q.get()->_mp_num._mp_d,
-                                  iabs(q.get()->_mp_num._mp_size),
+                                  iabs(q.get()->_mp_num._mp_size)*LIMB_SIZE,
                                   hash);
         return hash;
       }
