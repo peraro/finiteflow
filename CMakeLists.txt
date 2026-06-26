@@ -215,6 +215,11 @@ target_link_libraries(fflow ${LIBS})
 install(FILES ${FFLOW_HEADERS} DESTINATION include/fflow)
 install(TARGETS fflow ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
 
+install(
+    DIRECTORY ${PROJECT_SOURCE_DIR}/cmake/
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/FFlowCMake/cmake
+)
+
 
 # tests
 
