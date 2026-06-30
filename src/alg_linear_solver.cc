@@ -617,10 +617,11 @@ namespace fflow {
                                        unsigned needed_size)
   {
     const unsigned nv = nvars();
+    const flag_t was_needed = has_max_col_() ? LSVar::IS_NEEDED :
+      LSVar::IS_NEEDED_ANY;
 
     for (unsigned i=0; i<needed_size; ++i)
-      if (needed_vars[i] >= nv ||
-          !(xinfo_[needed_vars[i]] & flag_t(LSVar::IS_NEEDED))) {
+      if (needed_vars[i] >= nv || !(xinfo_[needed_vars[i]] & was_needed)) {
         logerr("New set of needed variables is not a subset of "
                "the previous one");
         return FAILED;
