@@ -75,6 +75,12 @@ namespace fflow {
         rinfo[i] = RowInfo();
   }
 
+  static UInt zero_sparse_ccs_(UInt res)
+  {
+    logerr("Sparse linear-system matrix of coefficients contains zeroes");
+    return FAILED;
+  }
+
   Ret NumericSparseSolver::fill_matrix(Context *,
                                        unsigned n_rows,
                                        const unsigned rows[],
@@ -104,8 +110,11 @@ namespace fflow {
         unsigned col = *cols;
         if (info[col] & LSVar::IS_NON_ZERO) {
           rat_mod(c[*idx], mpmod, mpres);
+          UInt res = mpres.to_uint();
+          if (FF_ERRCOND(res == 0))
+            return zero_sparse_ccs_(res);
           r.el(oj).col = col;
-          r.el(oj).val.set(mpres.to_uint());
+          r.el(oj).val.set(res);
           ++oj;
         }
       }
