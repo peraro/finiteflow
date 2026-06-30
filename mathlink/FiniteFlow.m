@@ -1060,6 +1060,7 @@ FFSparseSolverLearn[gid_,vars_]:=Module[
 
 
 ConvertDenseLearn[learn_,vars_]:=Module[{depv,indepv,zerov},
+    If[learn===FFImpossible, Return[FFImpossible]];
     {depv,indepv,zerov} = learn;
     If[Length[depv]==0 && Length[indepv]==0  && Length[zerov]==0, Return[FFImpossible]];
     {"DepVars"->vars[[depv+1]],"IndepVars"->vars[[indepv+1]],"ZeroVars"->vars[[zerov+1]]}
@@ -1675,7 +1676,7 @@ FFAlgSubgraphFit[gid_,id_,inputs_List,subgraphid_,samplevars_,coeffs_,OptionsPat
 
 TakeMultiFitElemsToInternal[a___]:>Throw[$Failed];
 TakeMultiFitElemsToInternal[a_List->b_List]:=Module[{position},
-  If[!SubsetQ[a,Union@@b],Throw[$Failed];];
+  If[!SubsetQ[a,Union@@b],Message[FF::badtakepattern];Throw[$Failed];];
   position = Association[{}];
   Table[(position[a[[ii]]]=ii-1);,{ii,Length[a]}];
   (position/@#)&/@b
@@ -1686,7 +1687,7 @@ RegisterAlgSubgraphMultiFit[gid_,inputs_,{subgraphid_,samplevars_,take_,neededva
     neededvars = If[TrueQ[neededvarsin==Automatic], take[[2]], neededvarsin];
     CheckVariables[samplevars];
     CheckVariables[take[[1]]];
-    If[!TrueQ[And@@(Table[SubsetQ[take[[2,ii]],neededvars[[ii]]],{ii,Length[take[[2]]]}])],Throw[$Failed]];
+    If[!TrueQ[And@@(Table[SubsetQ[take[[2,ii]],neededvars[[ii]]],{ii,Length[take[[2]]]}])],Message[FF::badneededvars];Throw[$Failed]];
     FFSubgraphMultiFitImplem[gid,inputs,GetGraphId[subgraphid],Length[samplevars],
                                 TakeMultiFitElemsToInternal[take],
                                 Table[((Position[take[[2,ii]],#][[1,1]])&/@neededvars[[ii]])-1,{ii,Length[take[[2]]]}],

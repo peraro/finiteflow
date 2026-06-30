@@ -876,6 +876,11 @@ namespace  {
         for (unsigned j=0; j<nfits; ++j) {
           const LinearFit & ls = multifit.linear_fit(j);
 
+          if (ls.is_impossible()) {
+            MLPutSymbol(mlp, "FiniteFlow`FFImpossible");
+            continue;
+          }
+
           MLPutFunction(mlp, "List", 3);
 
           if (sizeof(std::size_t) == 8)
