@@ -75,7 +75,7 @@ namespace fflow {
         rinfo[i] = RowInfo();
   }
 
-  static UInt zero_sparse_ccs_(UInt res)
+  static UInt zero_sparse_ccs_()
   {
     logerr("Sparse linear-system matrix of coefficients contains zeroes");
     return FAILED;
@@ -112,7 +112,7 @@ namespace fflow {
           rat_mod(c[*idx], mpmod, mpres);
           UInt res = mpres.to_uint();
           if (FF_ERRCOND(res == 0))
-            return zero_sparse_ccs_(res);
+            return zero_sparse_ccs_();
           r.el(oj).col = col;
           r.el(oj).val.set(res);
           ++oj;
