@@ -1551,15 +1551,11 @@ extern "C" {
 
     } else if(dynamic_cast<SparseLinearSolver *>(alg)) {
       SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
-      if (ls.marked_and_sweeped()) {
+      Ret ret = ls.reset_needed(session.alg_data(graph, node), vars, n_vars);
+      if (ret == SUCCESS)
+        session.invalidate_subctxt_alg_data(graph, node);
+      else
         return FF_ERROR;
-      } else {
-        Ret ret = ls.reset_needed(session.alg_data(graph, node), vars, n_vars);
-        if (ret == SUCCESS)
-          session.invalidate_subctxt_alg_data(graph, node);
-        else
-          return FF_ERROR;
-      }
 
     } else {
       return FF_ERROR;
@@ -1739,9 +1735,9 @@ extern "C" {
 
     if (dynamic_cast<SparseLinearSolver *>(alg)) {
       SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
-      if (ls.marked_and_sweeped())
+      Ret ret = ls.mark_and_sweep_eqs(session.alg_data(graph, node));
+      if (ret != SUCCESS)
         return FF_ERROR;
-      ls.mark_and_sweep_eqs(session.alg_data(graph, node));
       session.invalidate_subctxt_alg_data(graph, node);
     } else {
       return FF_ERROR;

@@ -2202,17 +2202,13 @@ extern "C" {
             okay = false;
 
       } else if(dynamic_cast<SparseLinearSolver *>(alg)) {
-          SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
-          if (ls.marked_and_sweeped()) {
-            okay = false;
-          } else {
-            Ret ret = ls.reset_needed(session.alg_data(id, nodeid),
-                                      (unsigned*)neededv, needed_size);
-            if (ret == SUCCESS)
-              session.invalidate_subctxt_alg_data(id, nodeid);
-            else
-              okay = false;
-          }
+        SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
+        Ret ret = ls.reset_needed(session.alg_data(id, nodeid),
+                                  (unsigned*)neededv, needed_size);
+        if (ret == SUCCESS)
+          session.invalidate_subctxt_alg_data(id, nodeid);
+        else
+          okay = false;
 
       } else {
         okay = false;
@@ -2520,13 +2516,13 @@ extern "C" {
     if (!alg) {
       MLPutSymbol(mlp, "$Failed");
     } else if (dynamic_cast<SparseLinearSolver *>(alg)) {
-      SparseLinearSolver & ls = *static_cast<SparseLinearSolver *>(alg);
-      if (ls.marked_and_sweeped()) {
-        MLPutSymbol(mlp, "$Failed");
-      } else {
-        ls.mark_and_sweep_eqs(session.alg_data(id, nodeid));
+      SparseLinearSolver &ls = *static_cast<SparseLinearSolver *>(alg);
+      Ret ret = ls.mark_and_sweep_eqs(session.alg_data(id, nodeid));
+      if (ret == SUCCESS) {
         session.invalidate_subctxt_alg_data(id, nodeid);
         MLPutInteger32(mlp, ls.n_indep_eqs());
+      } else {
+        MLPutSymbol(mlp, "$Failed");
       }
     } else {
       MLPutSymbol(mlp, "$Failed");

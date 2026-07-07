@@ -307,7 +307,7 @@ namespace fflow {
       return indepeqs_.get();
     }
 
-    void mark_and_sweep_eqs(AlgorithmData * data);
+    Ret mark_and_sweep_eqs(AlgorithmData * data);
 
     Ret only_homogeneous(bool flag = true);
     Ret only_non_homogeneous(bool flag = true);

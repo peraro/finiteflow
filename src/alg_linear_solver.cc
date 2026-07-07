@@ -616,6 +616,9 @@ namespace fflow {
                                        const unsigned * needed_vars,
                                        unsigned needed_size)
   {
+    if (!is_mutable())
+      return MUTABILITY_ERROR;
+
     const unsigned nv = nvars();
     const flag_t was_needed = has_max_col_() ? LSVar::IS_NEEDED :
       LSVar::IS_NEEDED_ANY;
@@ -1010,10 +1013,12 @@ namespace fflow {
       mark_eq_(eqdeps, deq, marked);
   }
 
-  void SparseLinearSolver::mark_and_sweep_eqs(AlgorithmData * data)
+  Ret SparseLinearSolver::mark_and_sweep_eqs(AlgorithmData * data)
   {
-    if (eqdeps_.empty())
-      return;
+    if (eqdeps_.empty()) {
+      logerr("Missing learning phase before Mark and Sweep.");
+      return FAILED;
+    }
 
     std::unique_ptr<bool[]> marked(new bool[nnindepeqs_]());
 
@@ -1031,12 +1036,13 @@ namespace fflow {
     unsigned neqs_old = mat.nrows();
     unsigned outeq=0;
     for (unsigned i=0; i<neqs_old; ++i) {
-      const auto & row = mat.row(i);
+      auto & row = mat.row(i);
       unsigned depv = row.first_nonzero_column();
       if (marked[i]) {
         indepeqs_[new_nnindepeqs] = row.id();
         if (xinfo_[depv] & LSVar::IS_NEEDED)
           outeq_pos_[outeq++] = new_nnindepeqs;
+        mat.row(new_nnindepeqs).swap(row);
         ++new_nnindepeqs;
       } else {
         xinfo_[depv] |= LSVar::IS_SWEEPED;
@@ -1049,6 +1055,8 @@ namespace fflow {
     eqdeps_.shrink_to_fit();
 
     flag_ |= MARKED_AND_SWEEPED_;
+
+    return SUCCESS;
   }
 
   Ret SparseLinearSolver::only_homogeneous(bool flag)
