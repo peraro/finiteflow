@@ -1015,10 +1015,8 @@ namespace fflow {
 
   Ret SparseLinearSolver::mark_and_sweep_eqs(AlgorithmData * data)
   {
-    if (eqdeps_.empty()) {
-      logerr("Missing learning phase before Mark and Sweep.");
-      return FAILED;
-    }
+    if (eqdeps_.empty())
+      return SUCCESS;
 
     std::unique_ptr<bool[]> marked(new bool[nnindepeqs_]());
 
