@@ -8,7 +8,6 @@
 #include <fflow/univariate_reconstruction.hh>
 #include <fflow/multivariate_reconstruction_details.hh>
 #include <fflow/function_cache.hh>
-#include <flint/flint.h>
 
 namespace fflow {
 
