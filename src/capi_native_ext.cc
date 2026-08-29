@@ -4,7 +4,7 @@
 #include <fflow/mp_gcd.hh>
 using namespace fflow;
 
-#define session global_session
+#define session (*global_session)
 
 extern "C" {
 

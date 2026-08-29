@@ -4,6 +4,7 @@
 #include <fflow/algorithm.hh>
 #include <fflow/alg_mp_reconstruction.hh>
 #include <fflow/refcounted_ptr.hh>
+#include <fflow/global.hh>
 #include <future>
 #if FFLOW_THREAD_POOL
 # include <fflow/thread_pool.hh>
@@ -557,7 +558,7 @@ namespace fflow {
 
   };
 
-  extern Session global_session;
+  extern Global<Session> global_session;
 
 
 } // namespace fflow

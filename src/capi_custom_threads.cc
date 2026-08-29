@@ -2,7 +2,7 @@
 #include <fflow/graph.hh>
 using namespace fflow;
 
-#define session global_session
+#define session (*global_session)
 
 struct FFMTGraphEvaluator {
   GraphExtParallelEvaluator eval;

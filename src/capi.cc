@@ -31,7 +31,7 @@ using namespace fflow;
 
 #define FF_MIN_ERROR (FF_ERROR - 10)
 
-#define session global_session
+#define session (*global_session)
 
 bool ffIsError(unsigned val)
 {

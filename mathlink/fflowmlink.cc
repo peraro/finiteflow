@@ -128,7 +128,7 @@ namespace  {
 namespace  {
 
   // use the global session
-# define session global_session
+# define session (*global_session)
 
 
   // internal classes, functions and methods

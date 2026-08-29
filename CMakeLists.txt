@@ -203,6 +203,7 @@ set(FFLOW_HEADERS
     include/fflow/subgraph_reconstruct.hh
     include/fflow/cached_subgraph.hh
     include/fflow/eval_count.hh
+    include/fflow/global.hh
     include/fflow/ffmod.h
     include/fflow/capi.h
     include/fflow/capi_native_ext.h

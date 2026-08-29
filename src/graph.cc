@@ -13,7 +13,7 @@
 
 namespace fflow {
 
-  Session global_session;
+  Global<Session> global_session;
 
   Node::~Node()
   {
