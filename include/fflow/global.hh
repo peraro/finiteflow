@@ -1,6 +1,8 @@
 #ifndef FFLOW_GLOBAL_HH
 #define FFLOW_GLOBAL_HH
 
+#include <new>
+
 namespace fflow {
 
 // Defines a variable whose destructor is never called.  The type T
@@ -16,6 +18,9 @@ public:
   {
     new(&bytes_) T();
   }
+
+  Global(const Global & oth) = delete;
+  Global & operator=(const Global & oth) = delete;
 
   const T & operator*() const
   {
