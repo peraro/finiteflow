@@ -1958,7 +1958,7 @@ namespace fflow {
     if (var >= nparsin)
       return FAILED;
 
-    std::unique_ptr<UInt> xdata(new UInt[nparsin+2*nparsout]);
+    std::unique_ptr<UInt[]> xdata(new UInt[nparsin+2*nparsout]);
 
     UInt * xin = xdata.get();
     UInt * xout1 = xdata.get() + nparsin;
