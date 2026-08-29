@@ -1,4 +1,6 @@
 
+namespace fflow {
+
 // Defines a variable whose destructor is never called.  The type T
 // must be default-constructible.  It is used for global variables, as
 // calling their destructors can cause issues, especially when
@@ -26,3 +28,5 @@ public:
 private:
   alignas(T) char bytes_[sizeof(T)];
 };
+
+}
