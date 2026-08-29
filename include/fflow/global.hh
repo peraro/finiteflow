@@ -1,3 +1,5 @@
+#ifndef FFLOW_GLOBAL_HH
+#define FFLOW_GLOBAL_HH
 
 namespace fflow {
 
@@ -30,3 +32,5 @@ private:
 };
 
 }
+
+#endif  // FFLOW_GLOBAL_HH
