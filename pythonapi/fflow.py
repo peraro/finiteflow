@@ -1002,7 +1002,7 @@ def NParsFromDegreeFile(filename):
     nparsin = _ffi.new('unsigned[1]')
     nparsout = _ffi.new('unsigned[1]')
     cfile = _ffi.new("char[]", filename.encode('utf8'))
-    ret = _StatusCheck(_lib.ffNParsFromDegreeFile(cfile,nparsin,nparsout))
+    _StatusCheck(_lib.ffNParsFromDegreeFile(cfile,nparsin,nparsout))
     return (nparsin[0],nparsout[0])
 
 def LoadDegrees(graph,filename):
@@ -1199,22 +1199,28 @@ def AllGraphs():
     graphs = _lib.ffAllGraphs(n_graphs)
     if graphs == _ffi.NULL:
         raise Failed()
-    return _ffi.unpack(graphs, n_graphs[0])
+    ret = _ffi.unpack(graphs, n_graphs[0])
+    _lib.ffFreeMemoryU32(graphs)
+    return ret
 
 def GraphNodes(graph,pruned=False):
     n_nodes = _ffi.new('unsigned[1]')
     nodes = _lib.ffGraphNodes(graph,pruned,n_nodes)
     if nodes == _ffi.NULL:
         raise Failed()
-    return _ffi.unpack(nodes, n_nodes[0])
+    ret = _ffi.unpack(nodes, n_nodes[0])
+    _lib.ffFreeMemoryU32(nodes)
+    return ret
 
 def GraphEdges(graph,pruned=False):
     n_edges = _ffi.new('unsigned[1]')
-    edges = _lib.ffGraphEdges(graph,pruned,n_edges)
-    if edges == _ffi.NULL:
+    cedges = _lib.ffGraphEdges(graph,pruned,n_edges)
+    if cedges == _ffi.NULL:
         raise Failed()
-    edges = iter(_ffi.unpack(edges, n_edges[0]*2))
-    return [(next(edges),next(edges)) for i in range(n_edges[0])]
+    edges = iter(_ffi.unpack(cedges, n_edges[0]*2))
+    ret = [(next(edges),next(edges)) for i in range(n_edges[0])]
+    _lib.ffFreeMemoryU32(cedges)
+    return ret
 
 
 def U32ListToJSON(filename, uint_list):
@@ -1256,7 +1262,7 @@ def SparseSystemToJSON(filename, n_eqs, n_vars, n_params,
 
 
 # The following functions are additional utilities implemented using
-# in the Python API, which are not part of the C API (yet).
+# the Python API, which are not part of the C API (yet).
 
 
 def RatMod(rationals, prime_no):
