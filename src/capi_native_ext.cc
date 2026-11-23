@@ -223,7 +223,7 @@ extern "C" {
     return ((Context*)ctx)->ww.get();
   }
 
-  size_t ffContextWorkspaceSize(void)
+  size_t ffWorkspaceSize(void)
   {
     return session.main_context()->ww.size();
   }
