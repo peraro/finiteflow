@@ -104,6 +104,17 @@ namespace fflow {
         return RatExprToken{0,0,RatExprToken::INVALID,{0}};
       }
 
+      bool next_token_is_pow() const
+      {
+        return *cur == '^' || (end>cur && *cur == '*' && *(cur+1) == '*');
+      }
+
+      // this assumes `cur` points to the start of a POW token
+      unsigned pow_token_len() const
+      {
+        return 1 + unsigned(*cur == '*');
+      }
+
       void init();
 
       RatExprToken parse_var_or_varpow();
@@ -139,6 +150,7 @@ namespace fflow {
                 });
     }
 
+
     RatExprToken RatExprTokenizer::next_token()
     {
       if (cur > end)
@@ -164,7 +176,7 @@ namespace fflow {
       if (*cur == '-')
         return RatExprToken{cur++,1,RatExprToken::MINUS,{0}};
 
-      if (*cur == '*')
+      if (*cur == '*' && (end==cur || *(cur+1) != '*'))
         return RatExprToken{cur++,1,RatExprToken::TIMES,{0}};
 
       if (*cur == '/')
@@ -179,8 +191,12 @@ namespace fflow {
       if (std::isalpha(*cur) || *cur == '_')
         return parse_var_or_varpow();
 
-      if (*cur == '^')
-        return RatExprToken{cur++,1,RatExprToken::POW,{0}};
+      if (next_token_is_pow()) {
+        const char * this_cur = cur;
+        const unsigned pow_len = pow_token_len();
+        cur += pow_len;
+        return RatExprToken{this_cur,pow_len,RatExprToken::POW,{0}};
+      }
 
       return invalid_token();
     }
@@ -233,10 +249,10 @@ namespace fflow {
       while (std::isspace(*cur))
         ++cur;
 
-      if (*cur == '^') {
+      if (next_token_is_pow()) {
         // For powers of variables we parse the exponent directly here
         // and consider var^exponent as a single token
-        ++cur;
+        cur += pow_token_len();
         while (std::isspace(*cur))
           ++cur;
         bool open_par = false;

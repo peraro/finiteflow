@@ -94,7 +94,7 @@ namespace fflow {
       if (*cur == '+' || *cur == '-' || std::isdigit(*cur))
         return parse_coeff();
 
-      if (*cur == '*') {
+      if (*cur == '*' && (end==cur || *(cur+1) != '*')) {
         RatFunToken tok{RatFunToken::TIMES, cur, 1, 0};
         ++cur;
         return tok;
@@ -121,9 +121,9 @@ namespace fflow {
       if (std::isalpha(*cur) || *cur == '_')
         return parse_var();
 
-      if (*cur == '^') {
+      if (*cur == '^' || (end>cur && *cur == '*' && *(cur+1) == '*')) {
         unsigned val;
-        ++cur;
+        cur += 1 + (*cur == '*');
         const char * start = cur;
         val = std::strtol(cur, const_cast<char**>(&cur), 10);
         return RatFunToken{RatFunToken::EXPONENT,
