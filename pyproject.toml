@@ -1,0 +1,34 @@
+[build-system]
+requires = ["scikit-build-core>1.0", "cffi>1.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "finiteflow"
+version = "2.0.0"
+authors = [{ name = "Tiziano Peraro" }]
+description = "FiniteFlow: multivariate functional reconstruction using finite fields and dataflow graphs"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.md"]
+requires-python = ">=3.8"
+dependencies = ["cffi>=1.0"]
+classifiers = [
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: C",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://github.com/peraro/finiteflow"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.18"
+cmake.build-type = "Release"
+wheel.packages = []
+sdist.exclude = ["tests_json", "mathlink"]

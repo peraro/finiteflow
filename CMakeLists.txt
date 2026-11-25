@@ -13,6 +13,10 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 option(BUILD_SHARED_LIBS "build shared libraries" ON)
+if (SKBUILD)
+    set(BUILD_SHARED_LIBS OFF)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_STANDARD 99)
@@ -57,9 +61,20 @@ endif("${isSystemDir}" STREQUAL "-1")
 
 # external dependencies
 
+if (SKBUILD)
+    set(FFLOW_DOWNLOAD_GMP ON CACHE BOOL
+        "Download and statically link GMP.")
+else()
+    set(FFLOW_DOWNLOAD_GMP OFF CACHE BOOL
+        "Download and statically link GMP.")
+endif()
+
 set(FFLOW_USE_FLINT ON CACHE BOOL
     "Use FLINT to compute multiplicative inverses")
-if (FFLOW_USE_FLINT)
+if (FFLOW_USE_FLINT AND FFLOW_DOWNLOAD_GMP)
+    message("-- disabling FLINT, because it is incompatible "
+        "with FFLOW_DOWNLOAD_GMP")
+elseif(FFLOW_USE_FLINT)
     find_package(FLINT)
     if (FLINT_LIBRARY)
         include_directories(SYSTEM ${FLINT_INCLUDE_DIRS})
@@ -74,7 +89,11 @@ if (NOT FLINT_LIBRARY)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFFLOW_USE_FLINT=0")
 endif()
 
-find_package(GMP REQUIRED)
+if (FFLOW_DOWNLOAD_GMP)
+    include(FFlowDownloadGMP)
+else()
+    find_package(GMP REQUIRED)
+endif()
 include_directories(SYSTEM ${GMP_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${GMP_TARGETS})
 
@@ -213,6 +232,8 @@ set(FFLOW_HEADERS
 add_library(fflow ${FFLOW_SOURCES})
 target_link_libraries(fflow ${LIBS})
 
+if (NOT SKBUILD)
+
 install(FILES ${FFLOW_HEADERS} DESTINATION include/fflow)
 install(TARGETS fflow ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
 
@@ -220,6 +241,8 @@ install(
     DIRECTORY ${PROJECT_SOURCE_DIR}/cmake/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/share/FFlowCMake/cmake
 )
+
+endif()
 
 
 # tests
@@ -266,6 +289,10 @@ set(FFLOW_MATHEMATICA_SOURCES
 set(FFLOW_MATHEMATICA ON CACHE BOOL
     "Build Mathematica interface")
 
+if (SKBUILD)
+    set(FFLOW_MATHEMATICA OFF)
+endif()
+
 if (FFLOW_MATHEMATICA)
     find_package(Mathematica COMPONENTS MathLink WolframLibrary)
 endif()
@@ -311,8 +338,15 @@ endif()
 set(FFLOW_PYTHON OFF CACHE BOOL "Build Python interface")
 set(FFLOW_PYTHON_INSTALL "" CACHE PATH
     "Installation path for Python interface")
+if (SKBUILD)
+    set(FFLOW_PYTHON ON)
+endif()
 if (FFLOW_PYTHON)
-    find_package (Python3 COMPONENTS Interpreter Development)
+    if (SKBUILD)
+        find_package (Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+    else()
+        find_package (Python3 COMPONENTS Interpreter Development)
+    endif()
     if (Python3_FOUND)
         file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/_python_gen)
         add_custom_command(
@@ -337,7 +371,15 @@ if (FFLOW_PYTHON)
         )
         add_dependencies(_cffi_fflow fflow_python_interface_src)
         target_link_libraries(_cffi_fflow PRIVATE fflow ${LIBS})
-        if (FFLOW_PYTHON_INSTALL)
+        if (SKBUILD AND NOT APPLE)
+            # needed on Linux
+            target_link_options(_cffi_fflow PRIVATE "LINKER:--exclude-libs,ALL")
+        endif()
+        if (SKBUILD)
+            install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/fflow.py"
+                DESTINATION .)
+            install(TARGETS _cffi_fflow DESTINATION .)
+        elseif (FFLOW_PYTHON_INSTALL)
             install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/pythonapi/fflow.py"
                 DESTINATION ${FFLOW_PYTHON_INSTALL})
             install(TARGETS _cffi_fflow

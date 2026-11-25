@@ -25,8 +25,8 @@ This implementation is written in C++ and includes C, Python and
 Mathematica interfaces.
 
 
-Installation
-------------
+Installation from source
+------------------------
 
 ### Dependencies
 
@@ -89,7 +89,7 @@ make install
 where you can omit any of the options in order to pick a default value
 for them.
 
-In order to use the Python 3 interface, add the option `-DFFLOW_PYTHON=1` to the `cmake` command (note that it requires the `cffi` Python package, see [these instructions](pythonapi/README.md) for more details).
+In order to use the Python 3 interface, add the option `-DFFLOW_PYTHON=1` to the `cmake` command (note that it requires the `cffi` Python package, see [these instructions](https://github.com/peraro/finiteflow/blob/master/pythonapi/README.md) for more details).
 
 In order to use FiniteFlow from the Mathematica interface, consider
 adding the following to your Mathematica `init.m` file
@@ -104,15 +104,22 @@ If[Not[MemberQ[$Path,$FiniteFlowPath]],$Path = Flatten[{$Path, $FiniteFlowPath }
 ```
 
 
+Installation with `pip` (Python interface only)
+-----------------------------------------------
+
+If you only need to use the Python interface of FiniteFlow, it can be installed with the command
+```
+pip install finiteflow
+```
+You may need to add the `--user` option if you don't have admin privileges.  By default, this command also downloads and links the [GMP](https://gmplib.org/) library.  It requires a C/C++ compiler, `make`, and `m4` to be installed on your system (they often come preinstalled, or can be easily installed with available package managers).
+
+
 Tutorials, examples and FAQ
 ---------------------------
 
-A tutorial using the Mathematica interface is included, in the file
-[mathlink/tutorial.wl](mathlink/tutorial.wl).  Tutorials using the
-Python interface are included in the directory
-[pythonapi/tutorials](pythonapi/tutorials/README.md).
+A tutorial using the Mathematica interface is included, in the file [mathlink/tutorial.wl](https://github.com/peraro/finiteflow/blob/master/mathlink/tutorial.wl).  Tutorials using the Python interface are included in the directory [pythonapi/tutorials](https://github.com/peraro/finiteflow/blob/master/pythonapi/tutorials/README.md).
 
 Additional packages and examples are in the repositories [finiteflow-mathtools](https://github.com/peraro/finiteflow-mathtools), [finiteflow-pytools](https://github.com/peraro/finiteflow-pytools) and [ff_native_ext_template](https://github.com/peraro/ff_native_ext_template).
 
-A list of frequently asked questions is in the file [FAQ.md](FAQ.md).
+A list of frequently asked questions is in the file [FAQ.md](https://github.com/peraro/finiteflow/blob/master/FAQ.md).
 We kindly ask users to read it before reporting an issue.

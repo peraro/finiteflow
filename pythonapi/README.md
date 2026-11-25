@@ -5,7 +5,7 @@ The FiniteFlow program comes with a Python 3 API, built on top of its C API.  Th
 At the moment, it is still a work in progress and the API is not stable.
 
 
-## Installation
+## Installation from source
 
 ### Dependencies
 
@@ -26,7 +26,13 @@ export PYTHONPATH=$PYTHONPATH:/path/to/installation/dir
 ```
 
 
+## Installation from `pip`
+
+If you only need the Python interface of FiniteFlow, you can simply install it with the command `pip install finiteflow --user`.  See the instruction in the [main README file](../README.md) for more details.
+
+
 ## Usage
+
 The installation process described above, creates and installs the `fflow` package, which can be imported and used as any Python program.
 
 Tutorials using this interface can be found in the [tutorials/](tutorials/README.md) subdirectory.  Additional applications can be found in [`tests.py`](tests.py) and [`test_solver.py`](test_solver.py).
